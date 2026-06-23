@@ -29,9 +29,13 @@ export function MovieCard({ item, priorityBadge, onSelect, compact = false, grid
   const cardClass = `${sizeClass} group relative ${grid ? '' : 'shrink-0'} overflow-hidden rounded-[8px] border border-white/[0.07] bg-[#111] text-left shadow-[0_16px_44px_rgba(0,0,0,0.62)] transition duration-300 hover:-translate-y-1 hover:border-[#e50914]/80 hover:shadow-glow md:rounded-[10px] md:shadow-[0_24px_70px_rgba(0,0,0,0.65)]`;
   const content = (
     <>
-      <div
-        className="absolute inset-0 bg-cover bg-center transition duration-700 group-hover:scale-110"
-        style={{ backgroundImage: `url(${item.posterUrl})` }}
+      <img
+        src={item.posterUrl}
+        alt={item.title}
+        loading="lazy"
+        decoding="async"
+        sizes={grid ? '(max-width: 640px) 25vw, (max-width: 1024px) 16vw, 12vw' : compact ? '(max-width: 640px) 104px, 170px' : '(max-width: 640px) 116px, 196px'}
+        className="absolute inset-0 h-full w-full object-cover object-center transition duration-700 group-hover:scale-110"
       />
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.05)_0%,rgba(0,0,0,0.0)_42%,rgba(0,0,0,0.9)_100%)]" />
 
