@@ -78,6 +78,19 @@ type TmdbCast = {
   profile_path?: string | null;
 };
 
+type WatchLinkRecord = {
+  tmdb_id: number;
+  media_type: MediaType;
+  title?: string | null;
+  title_th?: string | null;
+  watch_url?: string | null;
+  trailer_url?: string | null;
+  provider?: string | null;
+  notes?: string | null;
+};
+
+type WatchLinkLookup = Map<string, WatchLinkRecord>;
+
 const imageBase = 'https://image.tmdb.org/t/p/original';
 const posterBase = 'https://image.tmdb.org/t/p/w500';
 const profileBase = 'https://image.tmdb.org/t/p/w185';
@@ -117,19 +130,98 @@ function demoTrailerUrl(title: string) {
 }
 
 function deriveStatus(rating: number, index: number): MovieStatus {
-  if (rating >= 8 || index % 5 === 0) return 'published';
+  if (rating >= 8 || index % 5 === 0) return 'review';
   if (index % 7 === 0) return 'review';
   return 'draft';
 }
 
 function buildBadges(item: { rating: number; status?: MovieStatus; language?: string; isWatchReady?: boolean }, index: number) {
   const badges: string[] = [];
-  if (item.status === 'published' || item.isWatchReady) badges.push('พร้อมดู');
+  if (item.isWatchReady) badges.push('พร้อมดู');
   if (item.rating >= 8) badges.push('8+');
   if (index < 4) badges.push('ใหม่');
   if (item.language === 'th') badges.push('พากย์ไทย');
   badges.push('HD');
   return badges.slice(0, 3);
+}
+
+function watchLinkKey(mediaType: MediaType, id: number) {
+  return `${mediaType}-${id}`;
+}
+
+function normalizeDrivePreviewUrl(value?: string | null) {
+  const url = value?.trim();
+  if (!url) return undefined;
+
+  const fileMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+  if (fileMatch?.[1]) return `https://drive.google.com/file/d/${fileMatch[1]}/preview`;
+
+  const openMatch = url.match(/[?&]id=([^&]+)/);
+  if (url.includes('drive.google.com') && openMatch?.[1]) return `https://drive.google.com/file/d/${openMatch[1]}/preview`;
+
+  return url;
+}
+
+async function fetchActiveWatchLinks(): Promise<WatchLinkLookup> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const links = new Map<string, WatchLinkRecord>();
+
+  if (!supabaseUrl || !anonKey) return links;
+
+  const endpoint = `${supabaseUrl}/rest/v1/admin_movie_links?is_active=eq.true&watch_url=not.is.null&select=tmdb_id,media_type,title,title_th,watch_url,trailer_url,provider,notes`;
+
+  try {
+    const response = await fetch(endpoint, {
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${anonKey}`,
+        accept: 'application/json',
+      },
+      next: { revalidate: 60 },
+    });
+
+    if (!response.ok) return links;
+
+    const records = (await response.json()) as WatchLinkRecord[];
+    for (const record of records) {
+      const watchUrl = normalizeDrivePreviewUrl(record.watch_url);
+      if (!record.tmdb_id || !record.media_type || !watchUrl) continue;
+      links.set(watchLinkKey(record.media_type, record.tmdb_id), { ...record, watch_url: watchUrl });
+    }
+  } catch {
+    return links;
+  }
+
+  return links;
+}
+
+function applyWatchLink(item: MovieItem, links: WatchLinkLookup, index: number): MovieItem {
+  const link = links.get(watchLinkKey(item.mediaType, item.id));
+
+  if (!link) {
+    const nextItem = { ...item, isWatchReady: false, watchUrl: undefined };
+    return { ...nextItem, badges: buildBadges(nextItem, index) };
+  }
+
+  const watchUrl = normalizeDrivePreviewUrl(link.watch_url);
+  const trailerUrl = normalizeDrivePreviewUrl(link.trailer_url) || item.trailerUrl;
+  const nextItem: MovieItem = {
+    ...item,
+    title: link.title_th || item.title,
+    titleEn: link.title || item.titleEn,
+    watchUrl,
+    trailerUrl,
+    isWatchReady: Boolean(watchUrl),
+    status: watchUrl ? 'published' : item.status,
+    label: watchUrl ? 'พร้อมดู' : item.label,
+  };
+
+  return { ...nextItem, badges: buildBadges(nextItem, index) };
+}
+
+function applyWatchLinks(items: MovieItem[], links: WatchLinkLookup, offset = 0) {
+  return items.map((item, index) => applyWatchLink(item, links, index + offset));
 }
 
 function toMovieItem(item: TmdbItem, mediaType: MediaType, index: number): MovieItem {
@@ -138,15 +230,13 @@ function toMovieItem(item: TmdbItem, mediaType: MediaType, index: number): Movie
   const year = (item.release_date || item.first_air_date || '').slice(0, 4) || '2026';
   const rating = Number(item.vote_average || 0);
   const status = deriveStatus(rating, index);
-  const isWatchReady = status === 'published';
   const title = item.title || item.name || item.original_title || item.original_name || fallbackTitles[index % fallbackTitles.length];
   const language = item.original_language || 'th';
   const runtime = item.runtime || item.episode_run_time?.[0];
   const genres = item.genres?.length
     ? item.genres.slice(0, 3).map((genre) => genre.name)
     : (item.genre_ids || []).slice(0, 3).map((id) => genreNames[id] || 'ภาพยนตร์');
-
-  return {
+  const base: MovieItem = {
     id: item.id,
     mediaType,
     title,
@@ -160,12 +250,12 @@ function toMovieItem(item: TmdbItem, mediaType: MediaType, index: number): Movie
     runtime,
     language,
     status,
-    isWatchReady,
-    watchUrl: isWatchReady ? demoWatchUrl({ id: item.id, mediaType }) : undefined,
+    isWatchReady: false,
     trailerUrl: demoTrailerUrl(title),
     label: rating >= 8 ? '8+' : index < 3 ? 'ใหม่' : undefined,
-    badges: buildBadges({ rating, status, language, isWatchReady }, index),
   };
+
+  return { ...base, badges: buildBadges(base, index) };
 }
 
 function fallbackItem(index: number, overrides: Partial<MovieItem> = {}): MovieItem {
@@ -278,6 +368,7 @@ export async function getHomePayload(): Promise<HomePayload> {
     romance,
     fantasy,
     documentary,
+    watchLinks,
   ] = await Promise.all([
     tmdbCollection('/movie/now_playing?language=th-TH&region=TH', 3),
     tmdbCollection('/movie/popular?language=th-TH&region=TH', 4),
@@ -294,28 +385,37 @@ export async function getHomePayload(): Promise<HomePayload> {
     tmdbCollection('/discover/movie?language=th-TH&with_genres=10749&sort_by=popularity.desc', 2),
     tmdbCollection('/discover/movie?language=th-TH&with_genres=14&sort_by=popularity.desc', 2),
     tmdbCollection('/discover/movie?language=th-TH&with_genres=99&sort_by=popularity.desc', 2),
+    fetchActiveWatchLinks(),
   ]);
 
   if (!nowPlaying?.results?.length && !popular?.results?.length && !tvPopular?.results?.length) return fallback;
 
-  const nowItems = mapItems(nowPlaying, 'movie', 0, 60);
-  const popularItems = mapItems(popular, 'movie', 80, 80);
-  const topItems = mapItems(topRated, 'movie', 180, 80);
-  const thaiItems = mapItems(thai, 'movie', 280, 60);
-  const tvItems = mapItems(tvPopular, 'tv', 360, 60);
-  const upcomingItems = mapItems(upcoming, 'movie', 440, 60);
-  const actionItems = mapItems(action, 'movie', 520, 40);
-  const dramaItems = mapItems(drama, 'movie', 580, 40);
-  const thrillerItems = mapItems(thriller, 'movie', 640, 40);
-  const horrorItems = mapItems(horror, 'movie', 700, 40);
-  const comedyItems = mapItems(comedy, 'movie', 760, 40);
-  const sciFiItems = mapItems(sciFi, 'movie', 820, 40);
-  const romanceItems = mapItems(romance, 'movie', 880, 40);
-  const fantasyItems = mapItems(fantasy, 'movie', 940, 40);
-  const documentaryItems = mapItems(documentary, 'movie', 1000, 40);
+  const nowItems = applyWatchLinks(mapItems(nowPlaying, 'movie', 0, 60), watchLinks, 0);
+  const popularItems = applyWatchLinks(mapItems(popular, 'movie', 80, 80), watchLinks, 80);
+  const topItems = applyWatchLinks(mapItems(topRated, 'movie', 180, 80), watchLinks, 180);
+  const thaiItems = applyWatchLinks(mapItems(thai, 'movie', 280, 60), watchLinks, 280);
+  const tvItems = applyWatchLinks(mapItems(tvPopular, 'tv', 360, 60), watchLinks, 360);
+  const upcomingItems = applyWatchLinks(mapItems(upcoming, 'movie', 440, 60), watchLinks, 440);
+  const actionItems = applyWatchLinks(mapItems(action, 'movie', 520, 40), watchLinks, 520);
+  const dramaItems = applyWatchLinks(mapItems(drama, 'movie', 580, 40), watchLinks, 580);
+  const thrillerItems = applyWatchLinks(mapItems(thriller, 'movie', 640, 40), watchLinks, 640);
+  const horrorItems = applyWatchLinks(mapItems(horror, 'movie', 700, 40), watchLinks, 700);
+  const comedyItems = applyWatchLinks(mapItems(comedy, 'movie', 760, 40), watchLinks, 760);
+  const sciFiItems = applyWatchLinks(mapItems(sciFi, 'movie', 820, 40), watchLinks, 820);
+  const romanceItems = applyWatchLinks(mapItems(romance, 'movie', 880, 40), watchLinks, 880);
+  const fantasyItems = applyWatchLinks(mapItems(fantasy, 'movie', 940, 40), watchLinks, 940);
+  const documentaryItems = applyWatchLinks(mapItems(documentary, 'movie', 1000, 40), watchLinks, 1000);
 
   const heroItems = uniqueItems([...nowItems, ...popularItems, ...upcomingItems, ...topItems]).filter((item) => item.backdropUrl).slice(0, 12);
-  const readyItems = uniqueItems([...topItems, ...nowItems, ...popularItems, ...upcomingItems, ...actionItems, ...thaiItems]).filter((item) => item.isWatchReady).slice(0, 100);
+  const linkedItems = uniqueItems([
+    ...topItems,
+    ...nowItems,
+    ...popularItems,
+    ...upcomingItems,
+    ...actionItems,
+    ...thaiItems,
+    ...tvItems,
+  ]).filter((item) => item.isWatchReady && item.watchUrl);
 
   return {
     source: 'tmdb',
@@ -326,8 +426,8 @@ export async function getHomePayload(): Promise<HomePayload> {
         slug: 'watch-ready',
         eyebrow: 'พร้อมรับชม',
         title: 'แนะนำสำหรับคุณ',
-        description: 'คัดเรื่องที่มีสถานะพร้อมดู คะแนนสูง และเหมาะสำหรับผู้ใช้หน้าแรก',
-        items: readyItems.length ? readyItems : popularItems,
+        description: 'คัดเรื่องที่มีลิงก์รับชมจากระบบของคุณ โดยใช้ข้อมูลหนังจาก TMDB',
+        items: linkedItems.length ? linkedItems : popularItems,
       },
       {
         slug: 'now-playing',
@@ -396,11 +496,12 @@ export async function getDetailPayload(mediaType: MediaType, id: string): Promis
     return { item, cast: [], trailerUrl: item.trailerUrl, recommendations: fallbackSections[0].items, source: 'fallback' };
   }
 
-  const [detail, videos, credits, recommendations] = await Promise.all([
+  const [detail, videos, credits, recommendations, watchLinks] = await Promise.all([
     tmdb(`/${mediaType}/${numericId}?language=th-TH`),
     tmdb(`/${mediaType}/${numericId}/videos?language=th-TH`),
     tmdb(`/${mediaType}/${numericId}/credits?language=th-TH`),
     tmdb(`/${mediaType}/${numericId}/recommendations?language=th-TH&page=1`),
+    fetchActiveWatchLinks(),
   ]);
 
   if (!detail?.id) {
@@ -408,29 +509,35 @@ export async function getDetailPayload(mediaType: MediaType, id: string): Promis
     return { item, cast: [], trailerUrl: item.trailerUrl, recommendations: fallbackSections[0].items, source: 'fallback' };
   }
 
-  const item = toMovieItem(detail, mediaType, 0);
-  const trailerUrl = youtubeTrailer(videos?.results, item.title);
+  const baseItem = toMovieItem(detail, mediaType, 0);
+  const trailerUrl = youtubeTrailer(videos?.results, baseItem.title);
+  const item = applyWatchLink({ ...baseItem, trailerUrl }, watchLinks, 0);
   const cast = (credits?.cast || []).slice(0, 8).map((person: TmdbCast) => ({
     id: person.id,
     name: person.name,
     character: person.character,
     profileUrl: person.profile_path ? `${profileBase}${person.profile_path}` : undefined,
   }));
-  const recItems = (recommendations?.results || []).slice(0, 24).map((rec: TmdbItem, index: number) => toMovieItem(rec, mediaType, index + 1));
+  const recItems = applyWatchLinks(
+    (recommendations?.results || []).slice(0, 24).map((rec: TmdbItem, index: number) => toMovieItem(rec, mediaType, index + 1)),
+    watchLinks,
+    1
+  );
 
-  return { item: { ...item, trailerUrl }, cast, trailerUrl, recommendations: recItems.length ? recItems : fallbackSections[0].items, source: 'tmdb' };
+  return { item, cast, trailerUrl: item.trailerUrl, recommendations: recItems.length ? recItems : fallbackSections[0].items, source: 'tmdb' };
 }
 
 export async function getWatchReadyItems() {
   const home = await getHomePayload();
-  return uniqueItems(home.sections.flatMap((section) => section.items)).filter((item) => item.isWatchReady || item.rating >= 8);
+  return uniqueItems(home.sections.flatMap((section) => section.items)).filter((item) => item.isWatchReady && item.watchUrl);
 }
 
 export async function searchMovies(query: string) {
   if (!query.trim()) return [];
-  const [movie, tv] = await Promise.all([
+  const [movie, tv, watchLinks] = await Promise.all([
     tmdbCollection(`/search/movie?language=th-TH&query=${encodeURIComponent(query)}&include_adult=false`, 3),
     tmdbCollection(`/search/tv?language=th-TH&query=${encodeURIComponent(query)}&include_adult=false`, 3),
+    fetchActiveWatchLinks(),
   ]);
 
   const items = [
@@ -438,5 +545,6 @@ export async function searchMovies(query: string) {
     ...(tv?.results || []).slice(0, 60).map((item: TmdbItem, index: number) => toMovieItem(item, 'tv', index + 80)),
   ];
 
-  return items.length ? items : fallbackSections[0].items.filter((item) => item.title.toLowerCase().includes(query.toLowerCase()));
+  const linkedItems = applyWatchLinks(items, watchLinks);
+  return linkedItems.length ? linkedItems : fallbackSections[0].items.filter((item) => item.title.toLowerCase().includes(query.toLowerCase()));
 }
