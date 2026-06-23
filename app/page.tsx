@@ -9,6 +9,7 @@ export default async function HomePage() {
   const home = await getHomePayload();
   const hero = home.hero;
   const recommendationItems = home.sections[0]?.items || [];
+  const recommendationCarouselItems = recommendationItems.slice(0, 10);
   const heroTitle = hero.title && hero.title.length <= 8 ? hero.title : 'เงามรณะ';
   const heroOverview =
     hero.overview && hero.overview.length <= 120
@@ -123,8 +124,19 @@ export default async function HomePage() {
             <h2 className="text-[25px] font-black tracking-[-0.04em] md:text-[30px]">แนะนำสำหรับคุณ</h2>
             <a href="#" className="text-[16px] font-black text-white/50 hover:text-white">ดูทั้งหมด ›</a>
           </div>
-          <div className="movie-rail flex gap-4 overflow-x-auto pb-4 md:gap-5">
-            {recommendationItems.slice(0, 10).map((item, index) => <MovieCard key={`recommended-${item.id}-${index}`} item={item} priorityBadge={index % 3 === 0 ? 'ใหม่' : index % 3 === 1 ? 'พรีเมียม' : undefined} />)}
+          <div className="auto-carousel relative overflow-hidden pb-4">
+            <div className="auto-carousel-track flex w-max">
+              <div className="auto-carousel-group flex gap-4 pr-4 md:gap-5 md:pr-5">
+                {recommendationCarouselItems.map((item, index) => (
+                  <MovieCard key={`recommended-a-${item.id}-${index}`} item={item} priorityBadge={index % 3 === 0 ? 'ใหม่' : index % 3 === 1 ? 'พรีเมียม' : undefined} />
+                ))}
+              </div>
+              <div className="auto-carousel-group flex gap-4 pr-4 md:gap-5 md:pr-5" aria-hidden="true">
+                {recommendationCarouselItems.map((item, index) => (
+                  <MovieCard key={`recommended-b-${item.id}-${index}`} item={item} priorityBadge={index % 3 === 0 ? 'ใหม่' : index % 3 === 1 ? 'พรีเมียม' : undefined} />
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
