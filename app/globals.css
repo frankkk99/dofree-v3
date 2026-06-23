@@ -4,7 +4,7 @@
 
 :root {
   color-scheme: dark;
-  background: #050505;
+  background: #030303;
   color: #ffffff;
 }
 
@@ -20,9 +20,9 @@ body {
   min-height: 100vh;
   margin: 0;
   background:
-    radial-gradient(circle at top left, rgba(229, 9, 20, 0.18), transparent 34rem),
-    radial-gradient(circle at top right, rgba(255, 255, 255, 0.08), transparent 28rem),
-    #050505;
+    radial-gradient(circle at top left, rgba(229, 9, 20, 0.22), transparent 34rem),
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.06), transparent 28rem),
+    #030303;
   color: #ffffff;
   font-family: Arial, Helvetica, sans-serif;
 }
@@ -30,6 +30,30 @@ body {
 button,
 a {
   -webkit-tap-highlight-color: transparent;
+}
+
+.hero-title {
+  text-shadow:
+    0 2px 0 rgba(255,255,255,0.28),
+    0 18px 80px rgba(0,0,0,0.95),
+    0 0 36px rgba(229,9,20,0.18);
+}
+
+.shadow-glow {
+  box-shadow: 0 0 0 1px rgba(229, 9, 20, 0.1), 0 18px 55px rgba(229, 9, 20, 0.32);
+}
+
+.movie-rail {
+  scrollbar-width: none;
+}
+
+.movie-rail::-webkit-scrollbar {
+  display: none;
+}
+
+::selection {
+  background: rgba(229, 9, 20, 0.65);
+  color: #ffffff;
 }
 
 ::-webkit-scrollbar {
@@ -44,12 +68,4 @@ a {
 ::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.18);
   border-radius: 999px;
-}
-
-.movie-rail {
-  scrollbar-width: none;
-}
-
-.movie-rail::-webkit-scrollbar {
-  display: none;
 }
