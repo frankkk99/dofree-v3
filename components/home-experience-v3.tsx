@@ -7,8 +7,6 @@ import type { HomePayload, MovieItem } from '@/lib/tmdb';
 import { MovieCard } from '@/components/movie-card';
 import { DetailWindow } from '@/components/window-system';
 
-const categoryIcons = ['▣', '◎', '▤', '◈', '♡', '☻', '◐', '⊘', '✺', '▥'];
-
 function uniqueMovies(items: MovieItem[]) {
   const map = new Map<string, MovieItem>();
   for (const item of items) map.set(`${item.mediaType}-${item.id}`, item);
@@ -123,21 +121,23 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
       </section>
 
       <section className="relative z-20 mx-auto -mt-5 max-w-[1920px] px-4 md:-mt-7 md:px-7">
-        <div className="mx-auto max-w-[760px] rounded-[22px] border border-white/16 bg-white/[0.10] p-2.5 shadow-[0_22px_85px_rgba(0,0,0,0.72)] backdrop-blur-2xl md:max-w-[920px] md:p-4">
-          <form onSubmit={onSubmit} className="flex h-9 items-center gap-2 rounded-[14px] border border-white/14 bg-white/[0.20] px-3 text-white md:h-12 md:rounded-[18px] md:px-4">
-            <span className="text-[15px] text-white/70 md:text-xl">⌕</span>
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหา" className="min-w-0 flex-1 bg-transparent text-[12px] font-bold text-white outline-none placeholder:text-white/48 md:text-[15px]" />
-            {query ? <button type="button" onClick={() => setQuery('')} className="grid h-6 w-6 place-items-center rounded-full bg-black/28 text-[11px] text-white/80">×</button> : null}
-          </form>
-          <div className="mt-2.5 flex max-h-[88px] flex-wrap gap-1.5 overflow-hidden md:mt-3 md:max-h-[104px] md:gap-2">
-            {categoryChips.map((chip, index) => {
-              const active = activeCategory === chip;
-              return (
-                <button key={chip} type="button" onClick={() => chooseCategory(chip)} className={`inline-flex h-6 items-center gap-1.5 rounded-full px-2.5 text-[10px] font-black transition md:h-8 md:px-3.5 md:text-[12px] ${active ? 'bg-[#e50914] text-white shadow-glow' : 'bg-black/28 text-white/70 hover:bg-white/16 hover:text-white'}`}>
-                  <span>{categoryIcons[index % categoryIcons.length]}</span><span>{chip}</span>
-                </button>
-              );
-            })}
+        <div className="mx-auto max-w-[760px] rounded-[20px] border border-white/24 bg-black/30 p-1.5 shadow-[0_22px_85px_rgba(0,0,0,0.72)] backdrop-blur-2xl md:max-w-[920px] md:rounded-[26px] md:p-2.5">
+          <div className="rounded-[17px] border border-white/10 bg-white/[0.065] p-1.5 backdrop-blur-xl md:rounded-[22px] md:p-2.5">
+            <form onSubmit={onSubmit} className="flex h-8 items-center gap-1.5 rounded-[12px] border border-white/26 bg-white/[0.105] px-2.5 text-white md:h-11 md:rounded-[16px] md:px-3.5">
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหา" className="min-w-0 flex-1 bg-transparent text-[11px] font-bold text-white outline-none placeholder:text-white/50 md:text-[14px]" />
+              {query ? <button type="button" onClick={() => setQuery('')} className="grid h-5 w-5 place-items-center rounded-full border border-white/16 bg-black/28 text-[10px] text-white/80">×</button> : null}
+              <button type="submit" className="rounded-full border border-white/18 bg-white/[0.10] px-2 py-1 text-[9px] font-black text-white/72 md:px-3 md:text-[11px]">ค้นหา</button>
+            </form>
+            <div className="mt-1.5 flex max-h-[74px] flex-wrap gap-1 overflow-hidden md:mt-2 md:max-h-[92px] md:gap-1.5">
+              {categoryChips.map((chip) => {
+                const active = activeCategory === chip;
+                return (
+                  <button key={chip} type="button" onClick={() => chooseCategory(chip)} className={`inline-flex h-[21px] items-center rounded-full border px-2 text-[9px] font-black leading-none transition md:h-7 md:px-3 md:text-[11px] ${active ? 'border-[#e50914]/90 bg-[#e50914] text-white shadow-glow' : 'border-white/18 bg-white/[0.055] text-white/72 hover:border-white/30 hover:bg-white/[0.11] hover:text-white'}`}>
+                    {chip}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </section>
