@@ -1,7 +1,7 @@
-import { HomeExperience } from '@/components/home-experience-windows';
+import { HomeExperienceV3 } from '@/components/home-experience-v3';
 import { getHomePayload } from '@/lib/tmdb';
 
 export default async function HomePage() {
   const home = await getHomePayload();
-  return <HomeExperience home={home} />;
+  return <HomeExperienceV3 home={home} />;
 }
