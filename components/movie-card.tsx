@@ -1,22 +1,37 @@
 import type { MovieItem } from '@/lib/tmdb';
 
-export function MovieCard({ item }: { item: MovieItem }) {
+type MovieCardProps = {
+  item: MovieItem;
+  priorityBadge?: string;
+};
+
+export function MovieCard({ item, priorityBadge }: MovieCardProps) {
+  const badge = priorityBadge || item.label;
+
   return (
-    <article className="group relative w-[152px] shrink-0 overflow-hidden rounded-[1.35rem] border border-white/10 bg-white/[0.04] shadow-2xl transition duration-300 hover:-translate-y-1 hover:border-red-500/55 md:w-[190px]">
-      <div className="aspect-[2/3] overflow-hidden bg-neutral-900">
-        <div
-          className="h-full w-full bg-cover bg-center transition duration-500 group-hover:scale-110"
-          style={{ backgroundImage: `url(${item.posterUrl})` }}
-        />
+    <article className="group relative h-[250px] w-[150px] shrink-0 overflow-hidden rounded-[10px] border border-white/[0.08] bg-[#111] shadow-[0_24px_70px_rgba(0,0,0,0.65)] transition duration-300 hover:-translate-y-1 hover:border-[#e50914]/70 hover:shadow-glow md:h-[280px] md:w-[180px] xl:h-[300px] xl:w-[196px]">
+      <div
+        className="absolute inset-0 bg-cover bg-center transition duration-700 group-hover:scale-110"
+        style={{ backgroundImage: `url(${item.posterUrl})` }}
+      />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.12)_0%,rgba(0,0,0,0.08)_45%,rgba(0,0,0,0.88)_100%)]" />
+
+      <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
+        {badge ? (
+          <span className={`${badge === 'พรีเมียม' ? 'bg-black/55 text-[#f4c46b]' : 'bg-[#e50914] text-white'} rounded-md px-2 py-1 text-[11px] font-black shadow-lg backdrop-blur-md`}>
+            {badge === 'พรีเมียม' ? '♛ พรีเมียม' : badge}
+          </span>
+        ) : null}
+        {item.isWatchReady ? <span className="rounded-md bg-black/55 px-2 py-1 text-[11px] font-black text-white/90 backdrop-blur-md">HD</span> : null}
       </div>
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/78 to-transparent p-3 pt-14">
-        <div className="mb-2 flex flex-wrap gap-1.5">
-          {item.label ? <span className="rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-black text-white">{item.label}</span> : null}
-          {item.isWatchReady ? <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-black text-black">พร้อมดู</span> : null}
-          <span className="rounded-full bg-yellow-400/90 px-2 py-0.5 text-[10px] font-black text-black">★ {item.rating.toFixed(1)}</span>
+
+      <div className="absolute inset-x-0 bottom-0 p-3.5">
+        <h3 className="line-clamp-2 text-[14px] font-black leading-tight text-white drop-shadow md:text-[15px]">{item.title}</h3>
+        <div className="mt-2 flex items-center gap-2 text-[11px] font-bold text-white/58">
+          <span className="text-[#f4c46b]">★ {item.rating.toFixed(1)}</span>
+          <span>•</span>
+          <span>{item.year}</span>
         </div>
-        <h3 className="line-clamp-2 text-sm font-black text-white">{item.title}</h3>
-        <p className="mt-1 text-[11px] text-white/48">{item.year} • {item.genres?.[0] || 'Movie'}</p>
       </div>
     </article>
   );
