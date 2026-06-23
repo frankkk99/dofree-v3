@@ -1,4 +1,4 @@
-import { HomeExperience } from '@/components/home-experience';
+import { HomeExperience } from '@/components/home-experience-windows';
 import { getHomePayload } from '@/lib/tmdb';
 
 export default async function HomePage() {
