@@ -121,12 +121,12 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
       </section>
 
       <section className="relative z-20 mx-auto -mt-5 max-w-[1920px] px-4 md:-mt-7 md:px-7">
-        <div className="mx-auto max-w-[760px] rounded-[20px] border border-white/24 bg-black/30 p-1.5 shadow-[0_22px_85px_rgba(0,0,0,0.72)] backdrop-blur-2xl md:max-w-[920px] md:rounded-[26px] md:p-2.5">
-          <div className="rounded-[17px] border border-white/10 bg-white/[0.065] p-1.5 backdrop-blur-xl md:rounded-[22px] md:p-2.5">
-            <form onSubmit={onSubmit} className="flex h-8 items-center gap-1.5 rounded-[12px] border border-white/26 bg-white/[0.105] px-2.5 text-white md:h-11 md:rounded-[16px] md:px-3.5">
+        <div className="mx-auto max-w-[760px] rounded-[20px] bg-black/28 p-1.5 shadow-[0_22px_85px_rgba(0,0,0,0.72)] backdrop-blur-2xl md:max-w-[920px] md:rounded-[26px] md:p-2.5">
+          <div className="rounded-[17px] bg-white/[0.055] p-1.5 backdrop-blur-xl md:rounded-[22px] md:p-2.5">
+            <form onSubmit={onSubmit} className="flex h-8 items-center gap-1.5 rounded-[12px] bg-white/[0.105] px-2.5 text-white md:h-11 md:rounded-[16px] md:px-3.5">
               <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหา" className="min-w-0 flex-1 bg-transparent text-[11px] font-bold text-white outline-none placeholder:text-white/50 md:text-[14px]" />
-              {query ? <button type="button" onClick={() => setQuery('')} className="grid h-5 w-5 place-items-center rounded-full border border-white/16 bg-black/28 text-[10px] text-white/80">×</button> : null}
-              <button type="submit" className="rounded-full border border-white/18 bg-white/[0.10] px-2 py-1 text-[9px] font-black text-white/72 md:px-3 md:text-[11px]">ค้นหา</button>
+              {query ? <button type="button" onClick={() => setQuery('')} className="grid h-5 w-5 place-items-center rounded-full bg-black/28 text-[10px] text-white/80">×</button> : null}
+              <button type="submit" className="rounded-full bg-white/[0.12] px-2 py-1 text-[9px] font-black text-white/72 md:px-3 md:text-[11px]">ค้นหา</button>
             </form>
             <div className="mt-1.5 flex max-h-[74px] flex-wrap gap-1 overflow-hidden md:mt-2 md:max-h-[92px] md:gap-1.5">
               {categoryChips.map((chip) => {
@@ -173,7 +173,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
                   <a href="/watch-ready" className="text-[12px] font-black text-white/50 hover:text-white md:text-[16px]">ดูทั้งหมด ›</a>
                 </div>
                 <div className="movie-rail flex gap-2.5 overflow-x-auto pb-3 sm:gap-3 md:gap-5 md:pb-4">
-                  {section.items.slice(0, 12).map((item, index) => <MovieCard key={`${section.slug}-${item.id}-${index}`} item={item} onSelect={setSelected} priorityBadge={index % 4 === 0 ? 'ใหม่' : index % 4 === 1 ? 'พรีเมียม' : undefined} />)}
+                  {section.items.map((item, index) => <MovieCard key={`${section.slug}-${item.id}-${index}`} item={item} onSelect={setSelected} priorityBadge={index % 4 === 0 ? 'ใหม่' : index % 4 === 1 ? 'พรีเมียม' : undefined} />)}
                 </div>
               </div>
             ))}
