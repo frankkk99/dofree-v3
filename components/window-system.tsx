@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { MovieItem } from '@/lib/tmdb';
 import { MovieCard } from '@/components/movie-card';
 
@@ -42,13 +42,38 @@ export function SearchWindow({ query, setQuery, items, onClose, onSelect }: {
   onSelect: (item: MovieItem) => void;
 }) {
   const normalizedQuery = query.trim().toLowerCase();
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const [visibleCount, setVisibleCount] = useState(24);
   const filteredItems = useMemo(() => {
-    if (!normalizedQuery) return items.slice(0, 12);
+    if (!normalizedQuery) return items;
     return items.filter((item) => {
       const haystack = [item.title, item.titleEn, item.year, item.mediaType, ...(item.genres || [])].join(' ').toLowerCase();
       return haystack.includes(normalizedQuery);
-    }).slice(0, 16);
+    });
   }, [items, normalizedQuery]);
+  const visibleItems = filteredItems.slice(0, visibleCount);
+
+  useEffect(() => {
+    setVisibleCount(24);
+  }, [normalizedQuery]);
+
+  useEffect(() => {
+    if (visibleCount >= filteredItems.length) return;
+    if (typeof IntersectionObserver === 'undefined') return;
+
+    const node = loadMoreRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) setVisibleCount((count) => Math.min(count + 24, filteredItems.length));
+      },
+      { rootMargin: '520px' }
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [filteredItems.length, visibleCount]);
 
   return (
     <div className="fixed inset-0 z-[95] overflow-y-auto bg-black/90 px-3 py-4 text-white backdrop-blur-2xl" role="dialog" aria-modal="true">
@@ -70,10 +95,11 @@ export function SearchWindow({ query, setQuery, items, onClose, onSelect }: {
           />
         </label>
         <div className="mt-4 grid grid-cols-4 gap-2.5 md:grid-cols-6">
-          {filteredItems.map((item) => (
+          {visibleItems.map((item) => (
             <MovieCard key={`search-${item.mediaType}-${item.id}`} item={item} grid onSelect={(nextItem) => { onClose(); onSelect(nextItem); }} />
           ))}
         </div>
+        {visibleItems.length < filteredItems.length ? <div ref={loadMoreRef} className="py-5 text-center text-[11px] font-black text-white/35">กำลังโหลดเพิ่ม...</div> : null}
       </div>
     </div>
   );
@@ -88,8 +114,33 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
   const [reported, setReported] = useState(false);
   const [activeTab, setActiveTab] = useState<ModalTab>('detail');
   const [expanded, setExpanded] = useState(false);
+  const [visibleRecCount, setVisibleRecCount] = useState(8);
+  const recLoadRef = useRef<HTMLDivElement | null>(null);
   const cast = mockCast(item);
   const primaryHref = item.watchUrl || item.trailerUrl || `/${item.mediaType}/${item.id}`;
+  const visibleRecommendations = recommendations.slice(0, visibleRecCount);
+
+  useEffect(() => {
+    setVisibleRecCount(8);
+  }, [item.id, item.mediaType]);
+
+  useEffect(() => {
+    if (activeTab !== 'recommend' || visibleRecCount >= recommendations.length) return;
+    if (typeof IntersectionObserver === 'undefined') return;
+
+    const node = recLoadRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) setVisibleRecCount((count) => Math.min(count + 8, recommendations.length));
+      },
+      { rootMargin: '420px' }
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [activeTab, recommendations.length, visibleRecCount]);
 
   async function reportIssue() {
     setReported(true);
@@ -112,7 +163,7 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
           <button onClick={onClose} className="absolute right-3 top-3 z-20 grid h-8 w-8 place-items-center rounded-full border border-white/10 bg-black/70 text-lg font-black text-white/80 hover:bg-white/10 md:right-4 md:top-4 md:h-10 md:w-10 md:text-2xl" aria-label="ปิดรายละเอียด">×</button>
           <div className="relative z-10 grid grid-cols-[92px_1fr] gap-3 p-3.5 pt-5 md:grid-cols-[120px_1fr] md:gap-4 md:p-5">
             <div className="overflow-hidden rounded-xl border border-white/10 bg-black shadow-[0_20px_55px_rgba(0,0,0,0.75)] md:rounded-2xl">
-              <img src={item.posterUrl} alt={item.title} className="h-[138px] w-full object-cover md:h-[180px]" />
+              <img src={item.posterUrl} alt={item.title} loading="lazy" decoding="async" sizes="(max-width: 768px) 92px, 120px" className="h-[138px] w-full object-cover md:h-[180px]" />
             </div>
             <div className="min-w-0 pr-8 md:pr-10">
               <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#e50914] md:text-[10px] md:tracking-[0.24em]">{item.mediaType === 'tv' ? 'Series' : 'Movie'}</p>
@@ -185,7 +236,8 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
               <div>
                 <h3 className="text-base font-black md:text-xl">ตัวอย่างภาพยนตร์</h3>
                 <div className="mt-3 overflow-hidden rounded-xl border border-white/10 bg-black md:rounded-2xl">
-                  <div className="relative aspect-video bg-cover bg-center" style={{ backgroundImage: `url(${item.backdropUrl || item.posterUrl})` }}>
+                  <div className="relative aspect-video overflow-hidden">
+                    <img src={item.backdropUrl || item.posterUrl} alt={`ตัวอย่าง ${item.title}`} loading="lazy" decoding="async" sizes="(max-width: 768px) 92vw, 720px" className="absolute inset-0 h-full w-full object-cover object-center" />
                     <div className="absolute inset-0 bg-black/45" />
                     <a href={item.trailerUrl || `/${item.mediaType}/${item.id}`} className="absolute inset-0 grid place-items-center"><span className="grid h-12 w-12 place-items-center rounded-full bg-[#e50914] text-xl font-black text-white shadow-glow md:h-16 md:w-16 md:text-2xl">▶</span></a>
                     <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between bg-gradient-to-t from-black to-transparent p-3 text-[10px] font-bold text-white/70 md:text-xs"><span>0:00 / 1:32</span><span>เสียง • เต็มจอ</span></div>
@@ -198,8 +250,9 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
               <div>
                 <h3 className="text-base font-black md:text-xl">แนะนำสำหรับคุณ</h3>
                 <div className="mt-3 grid grid-cols-3 gap-2 md:grid-cols-4 md:gap-3">
-                  {recommendations.slice(0, 8).map((movie, index) => <MovieCard key={`modal-rec-${movie.mediaType}-${movie.id}-${index}`} item={movie} grid compact onSelect={(nextItem) => { onSelect(nextItem); setActiveTab('detail'); setExpanded(false); }} priorityBadge={index % 2 === 0 ? 'แนะนำ' : undefined} />)}
+                  {visibleRecommendations.map((movie, index) => <MovieCard key={`modal-rec-${movie.mediaType}-${movie.id}-${index}`} item={movie} grid compact onSelect={(nextItem) => { onSelect(nextItem); setActiveTab('detail'); setExpanded(false); }} priorityBadge={index % 2 === 0 ? 'แนะนำ' : undefined} />)}
                 </div>
+                {visibleRecommendations.length < recommendations.length ? <div ref={recLoadRef} className="py-4 text-center text-[10px] font-black text-white/35">กำลังโหลดเพิ่ม...</div> : null}
               </div>
             )}
 
