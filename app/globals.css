@@ -51,6 +51,36 @@ a {
   display: none;
 }
 
+.auto-carousel {
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 4%, #000 96%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 4%, #000 96%, transparent 100%);
+}
+
+.auto-carousel-track {
+  animation: auto-carousel-scroll 42s linear infinite;
+  will-change: transform;
+}
+
+.auto-carousel:hover .auto-carousel-track {
+  animation-play-state: paused;
+}
+
+@keyframes auto-carousel-scroll {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auto-carousel-track {
+    animation: none;
+  }
+}
+
 ::selection {
   background: rgba(229, 9, 20, 0.65);
   color: #ffffff;
