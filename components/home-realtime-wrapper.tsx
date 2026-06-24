@@ -37,11 +37,8 @@ function RealtimeAddedCarousel({ items }: { items: MovieItem[] }) {
     const timer = window.setInterval(() => {
       const nextLeft = rail.scrollLeft + 210;
       const half = rail.scrollWidth / 2;
-      if (nextLeft >= half) {
-        rail.scrollTo({ left: 0, behavior: 'auto' });
-      } else {
-        rail.scrollTo({ left: nextLeft, behavior: 'smooth' });
-      }
+      if (nextLeft >= half) rail.scrollTo({ left: 0, behavior: 'auto' });
+      else rail.scrollTo({ left: nextLeft, behavior: 'smooth' });
     }, 2600);
 
     return () => window.clearInterval(timer);
@@ -78,7 +75,6 @@ function RealtimeAddedCarousel({ items }: { items: MovieItem[] }) {
           <MovieCard
             key={`realtime-${item.mediaType}-${item.id}-${index}`}
             item={item}
-            onSelect={() => window.dispatchEvent(new CustomEvent('dofree:open-movie', { detail: item }))}
             priority={index < 8}
             priorityBadge={index % 3 === 0 ? 'เข้าใหม่' : index % 3 === 1 ? 'พร้อมดู' : undefined}
           />
@@ -103,18 +99,6 @@ function RealtimePortal({ home }: { home: HomePayload }) {
       searchSection.insertAdjacentElement('afterend', node);
     }
     setHost(node);
-  }, []);
-
-  useEffect(() => {
-    function handleOpen(event: Event) {
-      const item = (event as CustomEvent<MovieItem>).detail;
-      const buttons = Array.from(document.querySelectorAll('button'));
-      const matched = buttons.find((button) => button.getAttribute('aria-label')?.includes(item.title));
-      matched?.click();
-    }
-
-    window.addEventListener('dofree:open-movie', handleOpen);
-    return () => window.removeEventListener('dofree:open-movie', handleOpen);
   }, []);
 
   return host ? createPortal(<RealtimeAddedCarousel items={items} />, host) : null;
