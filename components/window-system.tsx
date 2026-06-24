@@ -267,7 +267,6 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
   const displayItem = detailItem;
   const cast = realCast.length ? realCast : fallbackCast(displayItem);
   const visibleRecommendations = detailRecommendations.slice(0, visibleRecCount);
-  const canPlayTrailer = Boolean(playerUrl(displayItem.trailerUrl));
 
   useEffect(() => {
     let cancelled = false;
@@ -465,7 +464,7 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
                   </div>
                 ) : personLoading ? (
                   <div className="mt-4 grid grid-cols-3 gap-2 md:grid-cols-4 md:gap-3" aria-hidden="true">
-                    {Array.from({ length: 9 }).map((_, index) => <div key={index} className="aspect-[2/3] animate-pulse rounded-[8px] bg-white/[0.055] md:rounded-[10px] />)}
+                    {Array.from({ length: 9 }).map((_, index) => <div key={index} className="aspect-[2/3] animate-pulse rounded-[8px] bg-white/[0.055] md:rounded-[10px]" />)}
                   </div>
                 ) : personMovies.length ? (
                   <div className="mt-4 grid grid-cols-3 gap-2 md:grid-cols-4 md:gap-3">
