@@ -110,7 +110,7 @@ function matchCategory(item: MovieItem, category: string | null) {
   }
 }
 
-function useLazyMount(initiallyMounted = false, rootMargin = '640px') {
+function useLazyMount(initiallyMounted = false, rootMargin = '420px') {
   const ref = useRef<HTMLDivElement | null>(null);
   const [mounted, setMounted] = useState(initiallyMounted);
 
@@ -144,7 +144,7 @@ function useLazyMount(initiallyMounted = false, rootMargin = '640px') {
 function RailSkeleton() {
   return (
     <div className="movie-rail flex gap-2.5 overflow-hidden pb-3 sm:gap-3 md:gap-5 md:pb-4" aria-hidden="true">
-      {Array.from({ length: 8 }).map((_, index) => (
+      {Array.from({ length: 6 }).map((_, index) => (
         <div key={index} className="h-[176px] w-[116px] shrink-0 animate-pulse rounded-[8px] bg-white/[0.045] sm:h-[220px] sm:w-[140px] md:h-[280px] md:w-[180px] xl:h-[300px] xl:w-[196px]" />
       ))}
     </div>
@@ -152,30 +152,31 @@ function RailSkeleton() {
 }
 
 function LazyMovieRail({ section, sectionIndex, onSelect }: { section: MovieSection; sectionIndex: number; onSelect: (item: MovieItem) => void }) {
-  const initiallyMounted = sectionIndex < 2;
-  const { ref, mounted } = useLazyMount(initiallyMounted, '760px');
-  const [visibleCount, setVisibleCount] = useState(initiallyMounted ? 30 : 18);
+  const initiallyMounted = sectionIndex === 0;
+  const { ref, mounted } = useLazyMount(initiallyMounted, '520px');
+  const initialCount = initiallyMounted ? 16 : 10;
+  const [visibleCount, setVisibleCount] = useState(initialCount);
 
   useEffect(() => {
-    if (mounted) setVisibleCount((count) => Math.max(count, 24));
-  }, [mounted]);
+    if (mounted) setVisibleCount((count) => Math.max(count, initialCount));
+  }, [initialCount, mounted]);
 
   useEffect(() => {
-    setVisibleCount(initiallyMounted ? 30 : 18);
-  }, [initiallyMounted, section.items]);
+    setVisibleCount(initialCount);
+  }, [initialCount, section.items]);
 
   const visibleItems = mounted ? section.items.slice(0, visibleCount) : [];
   const hasMore = mounted && visibleCount < section.items.length;
 
   return (
-    <div ref={ref}>
+    <div ref={ref} style={{ contentVisibility: 'auto', containIntrinsicSize: '340px 1000px' }}>
       {mounted ? (
         <div className="movie-rail flex gap-2.5 overflow-x-auto pb-3 sm:gap-3 md:gap-5 md:pb-4">
           {visibleItems.map((item, index) => (
-            <MovieCard key={`${section.slug}-${item.id}-${index}`} item={item} onSelect={onSelect} priorityBadge={index % 4 === 0 ? 'ใหม่' : index % 4 === 1 ? 'พรีเมียม' : undefined} />
+            <MovieCard key={`${section.slug}-${item.id}-${index}`} item={item} onSelect={onSelect} priority={sectionIndex === 0 && index < 6} priorityBadge={index % 4 === 0 ? 'ใหม่' : index % 4 === 1 ? 'พรีเมียม' : undefined} />
           ))}
           {hasMore ? (
-            <button type="button" onClick={() => setVisibleCount((count) => count + 24)} className="grid h-[176px] w-[92px] shrink-0 place-items-center rounded-[8px] border border-white/8 bg-white/[0.035] px-3 text-center text-[10px] font-black text-white/55 backdrop-blur-xl sm:h-[220px] md:h-[280px] md:w-[120px] md:text-xs xl:h-[300px]">
+            <button type="button" onClick={() => setVisibleCount((count) => count + 16)} className="grid h-[176px] w-[92px] shrink-0 place-items-center rounded-[8px] border border-white/8 bg-white/[0.035] px-3 text-center text-[10px] font-black text-white/55 backdrop-blur-xl sm:h-[220px] md:h-[280px] md:w-[120px] md:text-xs xl:h-[300px]">
               โหลดเพิ่ม
             </button>
           ) : null}
@@ -193,16 +194,16 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
   const heroItems = useMemo(() => {
     const candidates = uniqueMovies([
       ...(home.heroItems?.length ? home.heroItems : [home.hero]),
-      ...randomizedSections.flatMap((section) => section.items.slice(0, 18)),
+      ...randomizedSections.flatMap((section) => section.items.slice(0, 12)),
     ]);
-    return shuffleMovies(candidates.length ? candidates : [home.hero], shuffleSeed + 101, 'hero').slice(0, 36);
+    return shuffleMovies(candidates.length ? candidates : [home.hero], shuffleSeed + 101, 'hero').slice(0, 24);
   }, [home.hero, home.heroItems, randomizedSections, shuffleSeed]);
   const allItems = useMemo(() => uniqueMovies([...heroItems, ...randomizedSections.flatMap((section) => section.items)]), [heroItems, randomizedSections]);
   const [heroIndex, setHeroIndex] = useState(0);
   const [selected, setSelected] = useState<MovieItem | null>(null);
   const [query, setQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [visibleFilterCount, setVisibleFilterCount] = useState(32);
+  const [visibleFilterCount, setVisibleFilterCount] = useState(24);
   const filterLoadRef = useRef<HTMLDivElement | null>(null);
   const hero = heroItems[heroIndex] || home.hero;
   const filterMode = Boolean(query.trim()) || Boolean(activeCategory);
@@ -224,7 +225,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
   }, [shuffleSeed]);
 
   useEffect(() => {
-    setVisibleFilterCount(32);
+    setVisibleFilterCount(24);
   }, [activeCategory, query]);
 
   useEffect(() => {
@@ -236,9 +237,9 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) setVisibleFilterCount((count) => Math.min(count + 32, filteredItems.length));
+        if (entry.isIntersecting) setVisibleFilterCount((count) => Math.min(count + 24, filteredItems.length));
       },
-      { rootMargin: '720px' }
+      { rootMargin: '520px' }
     );
 
     observer.observe(node);
@@ -285,9 +286,9 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
       <section className="relative min-h-[500px] border-b border-white/[0.08] pt-[58px] md:min-h-[585px] md:pt-[76px] xl:min-h-[610px] xl:pt-[88px]">
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute inset-y-0 right-0 w-full bg-cover bg-center opacity-90 transition duration-700 md:w-[78%]" style={{ backgroundImage: `url(${hero.backdropUrl})` }} />
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,#030303_0%,rgba(3,3,3,0.94)_24%,rgba(16,0,0,0.7)_52%,rgba(0,0,0,0.28)_78%,#030303_100%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,#030303_0%,rgba(3,3,3,0.96)_24%,rgba(3,3,3,0.78)_52%,rgba(0,0,0,0.32)_78%,#030303_100%)]" />
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.06)_0%,rgba(0,0,0,0.10)_42%,#030303_100%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_42%,rgba(229,9,20,0.34),transparent_18rem)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_42%,rgba(0,0,0,0.48),transparent_18rem)]" />
         </div>
 
         <div className="relative z-10 mx-auto flex min-h-[442px] max-w-[1920px] flex-col justify-end px-4 pb-9 md:min-h-[509px] md:justify-center md:px-7 md:pb-0">
@@ -329,7 +330,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
 
       <section id="sections" className="mx-auto max-w-[1920px] scroll-mt-[220px] bg-black px-4 py-6 md:scroll-mt-[240px] md:px-7 md:py-8 xl:scroll-mt-[260px]">
         {filterMode ? (
-          <div>
+          <div style={{ contentVisibility: 'auto', containIntrinsicSize: '780px 1000px' }}>
             <div className="mb-4 flex items-end justify-between gap-3">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#e50914]/80">ผลลัพธ์</p>
@@ -341,7 +342,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
             {visibleFilteredItems.length ? (
               <>
                 <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-5 md:grid-cols-6 md:gap-4 lg:grid-cols-7 xl:grid-cols-8">
-                  {visibleFilteredItems.map((item, index) => <MovieCard key={`filter-${item.mediaType}-${item.id}-${index}`} item={item} onSelect={setSelected} grid priorityBadge={activeCategory && activeCategory !== 'ทั้งหมด' ? activeCategory : undefined} />)}
+                  {visibleFilteredItems.map((item, index) => <MovieCard key={`filter-${item.mediaType}-${item.id}-${index}`} item={item} onSelect={setSelected} grid priority={index < 8} priorityBadge={activeCategory && activeCategory !== 'ทั้งหมด' ? activeCategory : undefined} />)}
                 </div>
                 {visibleFilteredItems.length < filteredItems.length ? <div ref={filterLoadRef} className="py-6 text-center text-[11px] font-black text-white/38">กำลังโหลดเพิ่ม...</div> : null}
               </>
@@ -352,7 +353,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
         ) : (
           <div className="space-y-8 md:space-y-12">
             {randomizedSections.map((section, sectionIndex) => (
-              <div key={section.slug} className="relative">
+              <div key={section.slug} className="relative" style={{ contentVisibility: sectionIndex > 1 ? 'auto' : 'visible', containIntrinsicSize: '360px 1000px' }}>
                 <div className="mb-3 flex items-center justify-between md:mb-6">
                   <div>
                     {sectionIndex > 0 ? <p className="text-[9px] font-black uppercase tracking-[0.26em] text-[#e50914]/80">{section.eyebrow}</p> : null}
