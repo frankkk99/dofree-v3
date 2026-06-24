@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import type { MovieItem } from '@/lib/tmdb';
 import { MovieCard } from '@/components/movie-card';
 
@@ -9,7 +10,6 @@ const modalTabs = [
   { id: 'detail', label: 'รายละเอียด' },
   { id: 'recommend', label: 'แนะนำ' },
   { id: 'spoiler', label: 'สปอยหนัง' },
-  { id: 'teaser', label: 'ตัวอย่าง' },
   { id: 'watch', label: 'รับชม' },
 ] as const;
 
@@ -114,7 +114,7 @@ function InlinePlayer({ url, title, fallbackImage, emptyLabel }: { url?: string;
         <div className="relative z-10 px-6">
           <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-white/[0.08] text-xl font-black text-white/55 md:h-16 md:w-16 md:text-2xl">▶</div>
           <p className="mt-3 text-xs font-black text-white/72 md:text-sm">{emptyLabel}</p>
-          <p className="mt-1 text-[10px] font-semibold text-white/38 md:text-xs">ไม่เปิดปลายทางภายนอก ระบบจะแสดง player ที่ฝังได้ใน Modal เท่านั้น</p>
+          <p className="mt-1 text-[10px] font-semibold text-white/38 md:text-xs">ระบบจะแสดง player ที่ฝังได้ใน Modal เท่านั้น</p>
         </div>
       </div>
     );
@@ -171,6 +171,14 @@ function ActorCard({ person, onSelect, selected }: { person: CastPerson; onSelec
         {canOpen ? <p className="mt-1 text-[7px] font-black text-[#e50914] md:text-[9px]">กดดูผลงาน</p> : null}
       </div>
     </button>
+  );
+}
+
+function StatusBadge({ children, active = false }: { children: ReactNode; active?: boolean }) {
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-[9px] font-black md:text-[11px] ${active ? 'bg-[#e50914]/20 text-red-100' : 'bg-white/10 text-white/78'}`}>
+      {children}
+    </span>
   );
 }
 
@@ -252,9 +260,8 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
   onSelect: (item: MovieItem) => void;
 }) {
   const [reported, setReported] = useState(false);
-  const [activeTab, setActiveTab] = useState<ModalTab>('detail');
+  const [activeTab, setActiveTab] = useState<ModalTab>('cast');
   const [expanded, setExpanded] = useState(false);
-  const [inlineTrailerOpen, setInlineTrailerOpen] = useState(false);
   const [visibleRecCount, setVisibleRecCount] = useState(8);
   const [detailItem, setDetailItem] = useState<MovieItem>(item);
   const [realCast, setRealCast] = useState<CastPerson[]>([]);
@@ -272,9 +279,8 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
     let cancelled = false;
     const controller = new AbortController();
 
-    setActiveTab('detail');
+    setActiveTab('cast');
     setExpanded(false);
-    setInlineTrailerOpen(false);
     setReported(false);
     setVisibleRecCount(8);
     setDetailItem(item);
@@ -362,57 +368,45 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
   }
 
   return (
-    <div onClick={onClose} className="fixed inset-0 z-[90] flex items-end overflow-hidden bg-black/72 px-2 pb-2 pt-12 text-white backdrop-blur-xl md:items-center md:bg-black/84 md:px-4 md:py-6" role="dialog" aria-modal="true">
-      <div onClick={(event) => event.stopPropagation()} className="mx-auto flex h-[82vh] max-h-[690px] min-h-[620px] w-full max-w-[760px] flex-col overflow-hidden rounded-t-[24px] border border-white/12 bg-[#050505] shadow-[0_38px_120px_rgba(0,0,0,0.92)] md:h-[680px] md:min-h-0 md:rounded-[28px]">
+    <div onClick={onClose} className="fixed inset-0 z-[90] flex items-end overflow-hidden bg-black/72 px-2 pb-2 pt-10 text-white backdrop-blur-xl md:items-center md:bg-black/84 md:px-4 md:py-5" role="dialog" aria-modal="true">
+      <div onClick={(event) => event.stopPropagation()} className="mx-auto flex h-[92dvh] max-h-[920px] min-h-[620px] w-full max-w-[820px] flex-col overflow-hidden rounded-t-[24px] border border-white/12 bg-[#050505] shadow-[0_38px_120px_rgba(0,0,0,0.92)] md:h-[92vh] md:min-h-0 md:rounded-[28px]">
         <div className="mx-auto mt-2 h-1.5 w-12 shrink-0 rounded-full bg-white/25 md:hidden" />
         <div className="relative shrink-0 border-b border-white/8 bg-black">
           <div className="absolute inset-0 bg-cover bg-center opacity-25" style={{ backgroundImage: `url(${displayItem.backdropUrl || displayItem.posterUrl})` }} />
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,5,5,0.6),#050505_100%)] md:bg-[linear-gradient(90deg,#050505_0%,rgba(5,5,5,0.9)_38%,rgba(5,5,5,0.56)_100%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,5,5,0.55),#050505_100%)] md:bg-[linear-gradient(90deg,#050505_0%,rgba(5,5,5,0.9)_38%,rgba(5,5,5,0.56)_100%)]" />
           <button onClick={onClose} className="absolute right-3 top-3 z-20 grid h-8 w-8 place-items-center rounded-full border border-white/10 bg-black/70 text-lg font-black text-white/80 hover:bg-white/10 md:right-4 md:top-4 md:h-10 md:w-10 md:text-2xl" aria-label="ปิดรายละเอียด">×</button>
-          <div className="relative z-10 grid grid-cols-[92px_1fr] gap-3 p-3.5 pt-5 md:grid-cols-[120px_1fr] md:gap-4 md:p-5 md:pb-4">
+
+          <div className="relative z-10 grid grid-cols-[86px_1fr] gap-3 p-3.5 pt-5 md:grid-cols-[118px_1fr] md:gap-4 md:p-5 md:pb-4">
             <div className="min-w-0">
               <div className="overflow-hidden rounded-xl border border-white/10 bg-black shadow-[0_20px_55px_rgba(0,0,0,0.75)] md:rounded-2xl">
-                <img src={displayItem.posterUrl} alt={displayItem.title} loading="lazy" decoding="async" sizes="(max-width: 768px) 92px, 120px" className="h-[138px] w-full object-cover md:h-[180px]" />
+                <img src={displayItem.posterUrl} alt={displayItem.title} loading="lazy" decoding="async" sizes="(max-width: 768px) 86px, 118px" className="h-[130px] w-full object-cover md:h-[176px]" />
               </div>
-              <button
-                type="button"
-                onClick={() => setInlineTrailerOpen((value) => !value)}
-                disabled={!displayItem.trailerUrl && !detailLoading}
-                className={`mt-2 h-8 w-full rounded-lg text-[10px] font-black transition md:h-9 md:text-[11px] ${displayItem.trailerUrl ? 'bg-[#e50914] text-white shadow-glow hover:bg-red-600' : 'bg-white/[0.08] text-white/38'}`}
-              >
-                {inlineTrailerOpen ? 'ซ่อนตัวอย่าง' : detailLoading && !displayItem.trailerUrl ? 'กำลังหา...' : '▶ ตัวอย่าง'}
-              </button>
             </div>
             <div className="min-w-0 pr-8 md:pr-10">
               <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#e50914] md:text-[10px] md:tracking-[0.24em]">{displayItem.mediaType === 'tv' ? 'Series' : 'Movie'}</p>
-              <h2 className="modal-title mt-1.5 line-clamp-2 text-[20px] font-black leading-[0.98] tracking-[-0.06em] text-white md:text-[28px]">{displayItem.title}</h2>
-              <div className="mt-2 flex flex-wrap gap-1.5 text-[9px] font-black text-white/78 md:text-[11px]">
-                <span className="rounded-full bg-white/10 px-2 py-0.5">★ {displayItem.rating.toFixed(1)}</span>
-                <span className="rounded-full bg-white/10 px-2 py-0.5">{displayItem.year}</span>
-                <span className="rounded-full bg-white/10 px-2 py-0.5">{displayItem.language === 'th' ? 'TH' : (displayItem.language || 'EN')}</span>
-                <span className="rounded-full bg-[#e50914]/20 px-2 py-0.5 text-red-100">{displayItem.status === 'published' ? 'HD' : 'ZOOM'}</span>
+              <h2 className="modal-title mt-1.5 line-clamp-2 text-[20px] font-black leading-[0.98] tracking-[-0.06em] text-white md:text-[30px]">{displayItem.title}</h2>
+              <div className="mt-2 flex flex-wrap gap-1.5 text-[9px] font-black md:text-[11px]">
+                <StatusBadge>★ {displayItem.rating.toFixed(1)}</StatusBadge>
+                <StatusBadge>{displayItem.year}</StatusBadge>
+                <StatusBadge>{displayItem.language === 'th' ? 'TH' : (displayItem.language || 'EN')}</StatusBadge>
+                <StatusBadge active>{displayItem.status === 'published' ? 'HD' : 'ZOOM'}</StatusBadge>
               </div>
               <p className={`${expanded ? '' : 'line-clamp-3'} mt-2 text-[11px] font-medium leading-4 text-white/58 md:text-[13px] md:leading-5`}>{displayItem.overview}</p>
               <button onClick={() => setExpanded((value) => !value)} className="mt-1 text-[10px] font-black text-red-200/80 hover:text-red-100 md:text-xs">{expanded ? 'ย่อ' : 'ดูเพิ่มเติม'}</button>
               <div className="mt-3 flex flex-wrap gap-2">
                 <button onClick={() => displayItem.watchUrl && setActiveTab('watch')} disabled={!displayItem.watchUrl} className={`inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-[11px] font-black text-white md:h-9 md:px-4 md:text-xs ${displayItem.watchUrl ? 'bg-[#e50914] shadow-glow' : 'bg-white/10 text-white/40'}`}>▶ รับชม</button>
-                <button onClick={() => { setInlineTrailerOpen(true); setActiveTab('detail'); }} className="inline-flex h-8 items-center rounded-lg border border-white/10 bg-white/[0.1] px-3 text-[11px] font-black text-white/82 hover:bg-white/[0.16] md:h-9 md:px-4 md:text-xs">ตัวอย่าง</button>
                 <button onClick={() => setActiveTab('recommend')} className="inline-flex h-8 items-center rounded-lg border border-white/10 bg-white/[0.1] px-3 text-[11px] font-black text-white/82 hover:bg-white/[0.16] md:h-9 md:px-4 md:text-xs">+ รายการโปรด</button>
               </div>
             </div>
           </div>
-          {inlineTrailerOpen ? (
-            <div className="relative z-10 px-3.5 pb-4 md:px-5 md:pb-5">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-red-100/70 md:text-xs">TRAILER PREVIEW</p>
-                <button type="button" onClick={() => setInlineTrailerOpen(false)} className="rounded-full bg-white/[0.08] px-2.5 py-1 text-[10px] font-black text-white/58 hover:bg-white/[0.14]">ย่อ</button>
-              </div>
-              <InlinePlayer url={displayItem.trailerUrl} title={`ตัวอย่าง ${displayItem.title}`} fallbackImage={displayItem.backdropUrl || displayItem.posterUrl} emptyLabel="ยังไม่มีตัวอย่างที่ฝังใน Modal ได้" />
-            </div>
-          ) : null}
+
+          <div className="relative z-10 px-3.5 pb-4 md:px-5 md:pb-5">
+            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-red-100/70 md:text-xs">TRAILER PREVIEW</p>
+            <InlinePlayer url={displayItem.trailerUrl} title={`ตัวอย่าง ${displayItem.title}`} fallbackImage={displayItem.backdropUrl || displayItem.posterUrl} emptyLabel={detailLoading ? 'กำลังโหลดตัวอย่างจาก TMDB...' : 'ยังไม่มีตัวอย่างที่ฝังใน Modal ได้'} />
+          </div>
         </div>
 
-        <div className="shrink-0 bg-black/82 px-3 md:px-5">
+        <div className="shrink-0 border-b border-white/8 bg-black/82 px-3 md:px-5">
           <div className="movie-rail flex gap-1 overflow-x-auto py-2 md:gap-1.5 md:py-2.5">
             {modalTabs.map((tab) => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`min-w-max rounded-md px-3 py-1.5 text-[10px] font-black transition md:px-4 md:py-2 md:text-xs ${activeTab === tab.id ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.06] text-white/55 hover:bg-white/[0.1] hover:text-white'}`}>{tab.label}</button>
@@ -422,24 +416,6 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
 
         <div className="movie-rail min-h-0 flex-1 overflow-y-auto p-3 md:p-4">
           <section className="min-h-full rounded-2xl border border-white/8 bg-white/[0.03] p-3.5 md:p-5">
-            {activeTab === 'detail' && (
-              <div>
-                <div className="flex items-center justify-between gap-3">
-                  <h3 className="text-base font-black md:text-xl">เกี่ยวกับภาพยนตร์</h3>
-                  {detailLoading ? <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-black text-white/38">กำลังโหลด TMDB</span> : null}
-                </div>
-                <div className="mt-3 grid gap-2 text-[11px] font-bold text-white/62 sm:grid-cols-2 md:mt-4 md:gap-3 md:text-sm">
-                  <p>ประเภท: {(displayItem.genres || []).join(', ') || 'ภาพยนตร์'}</p>
-                  <p>ความยาว: {displayItem.runtime ? `${displayItem.runtime} นาที` : 'ยังไม่มีข้อมูล'}</p>
-                  <p>วันฉาย: {displayItem.year}</p>
-                  <p>ภาษา: {displayItem.language === 'th' ? 'ไทย' : displayItem.language || 'ไม่ระบุ'}</p>
-                  <p>สถานะ: {displayItem.status === 'published' ? 'พร้อมรับชม' : displayItem.status || 'preview'}</p>
-                  <p>คะแนน: {displayItem.rating.toFixed(1)} / 10</p>
-                </div>
-                <p className="mt-4 text-xs leading-5 text-white/58 md:text-sm md:leading-6">{displayItem.overview}</p>
-              </div>
-            )}
-
             {activeTab === 'cast' && (
               <div>
                 <div className="flex items-center justify-between gap-3">
@@ -468,7 +444,7 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
                   </div>
                 ) : personMovies.length ? (
                   <div className="mt-4 grid grid-cols-3 gap-2 md:grid-cols-4 md:gap-3">
-                    {personMovies.map((movie, index) => <MovieCard key={`actor-${selectedPerson.id}-${movie.mediaType}-${movie.id}-${index}`} item={movie} grid compact onSelect={(nextItem) => { onSelect(nextItem); setActiveTab('detail'); }} priorityBadge={index < 3 ? 'ผลงาน' : undefined} />)}
+                    {personMovies.map((movie, index) => <MovieCard key={`actor-${selectedPerson.id}-${movie.mediaType}-${movie.id}-${index}`} item={movie} grid compact onSelect={(nextItem) => { onSelect(nextItem); setActiveTab('cast'); }} priorityBadge={index < 3 ? 'ผลงาน' : undefined} />)}
                   </div>
                 ) : (
                   <div className="mt-4 rounded-2xl border border-white/8 bg-black/30 p-4 text-center text-xs font-bold text-white/45 md:text-sm">ยังไม่พบผลงานของนักแสดงคนนี้จาก TMDB</div>
@@ -476,22 +452,21 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
               </div>
             )}
 
-            {activeTab === 'spoiler' && (
-              <div>
-                <h3 className="text-base font-black md:text-xl">สปอยหนัง</h3>
-                <div className="mt-3 rounded-2xl border border-yellow-300/15 bg-yellow-300/10 p-3 text-xs leading-5 text-yellow-50/75 md:text-sm md:leading-6">มีเนื้อหาสปอย กดดูเพิ่มเติมเพื่ออ่านเนื้อเรื่องแบบเต็มในเวอร์ชันถัดไป ตอนนี้จะแสดงเฉพาะบทสรุปสั้น: {displayItem.overview}</div>
-              </div>
-            )}
-
-            {activeTab === 'teaser' && (
+            {activeTab === 'detail' && (
               <div>
                 <div className="flex items-center justify-between gap-3">
-                  <h3 className="text-base font-black md:text-xl">ตัวอย่างภาพยนตร์</h3>
-                  <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-black text-white/45 md:text-xs">เล่นใน Modal</span>
+                  <h3 className="text-base font-black md:text-xl">เกี่ยวกับภาพยนตร์</h3>
+                  {detailLoading ? <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-black text-white/38">กำลังโหลด TMDB</span> : null}
                 </div>
-                <div className="mt-3">
-                  <InlinePlayer url={displayItem.trailerUrl} title={`ตัวอย่าง ${displayItem.title}`} fallbackImage={displayItem.backdropUrl || displayItem.posterUrl} emptyLabel="ยังไม่มีตัวอย่างที่ฝังใน Modal ได้" />
+                <div className="mt-3 grid gap-2 text-[11px] font-bold text-white/62 sm:grid-cols-2 md:mt-4 md:gap-3 md:text-sm">
+                  <p>ประเภท: {(displayItem.genres || []).join(', ') || 'ภาพยนตร์'}</p>
+                  <p>ความยาว: {displayItem.runtime ? `${displayItem.runtime} นาที` : 'ยังไม่มีข้อมูล'}</p>
+                  <p>วันฉาย: {displayItem.year}</p>
+                  <p>ภาษา: {displayItem.language === 'th' ? 'ไทย' : displayItem.language || 'ไม่ระบุ'}</p>
+                  <p>สถานะ: {displayItem.status === 'published' ? 'พร้อมรับชม' : displayItem.status || 'preview'}</p>
+                  <p>คะแนน: {displayItem.rating.toFixed(1)} / 10</p>
                 </div>
+                <p className="mt-4 text-xs leading-5 text-white/58 md:text-sm md:leading-6">{displayItem.overview}</p>
               </div>
             )}
 
@@ -499,9 +474,16 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
               <div>
                 <h3 className="text-base font-black md:text-xl">แนะนำสำหรับคุณ</h3>
                 <div className="mt-3 grid grid-cols-3 gap-2 md:grid-cols-4 md:gap-3">
-                  {visibleRecommendations.map((movie, index) => <MovieCard key={`modal-rec-${movie.mediaType}-${movie.id}-${index}`} item={movie} grid compact onSelect={(nextItem) => { onSelect(nextItem); setActiveTab('detail'); setExpanded(false); }} priorityBadge={index % 2 === 0 ? 'แนะนำ' : undefined} />)}
+                  {visibleRecommendations.map((movie, index) => <MovieCard key={`modal-rec-${movie.mediaType}-${movie.id}-${index}`} item={movie} grid compact onSelect={(nextItem) => { onSelect(nextItem); setActiveTab('cast'); setExpanded(false); }} priorityBadge={index % 2 === 0 ? 'แนะนำ' : undefined} />)}
                 </div>
                 {visibleRecommendations.length < detailRecommendations.length ? <div ref={recLoadRef} className="py-4 text-center text-[10px] font-black text-white/35">กำลังโหลดเพิ่ม...</div> : null}
+              </div>
+            )}
+
+            {activeTab === 'spoiler' && (
+              <div>
+                <h3 className="text-base font-black md:text-xl">สปอยหนัง</h3>
+                <div className="mt-3 rounded-2xl border border-yellow-300/15 bg-yellow-300/10 p-3 text-xs leading-5 text-yellow-50/75 md:text-sm md:leading-6">มีเนื้อหาสปอย กดดูเพิ่มเติมเพื่ออ่านเนื้อเรื่องแบบเต็มในเวอร์ชันถัดไป ตอนนี้จะแสดงเฉพาะบทสรุปสั้น: {displayItem.overview}</div>
               </div>
             )}
 
