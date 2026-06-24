@@ -55,6 +55,7 @@ type TmdbItem = {
   poster_path?: string | null;
   backdrop_path?: string | null;
   vote_average?: number;
+  vote_count?: number;
   release_date?: string;
   first_air_date?: string;
   genre_ids?: number[];
@@ -62,6 +63,7 @@ type TmdbItem = {
   episode_run_time?: number[];
   original_language?: string;
   genres?: { id: number; name: string }[];
+  adult?: boolean;
 };
 
 type TmdbVideo = {
@@ -91,6 +93,12 @@ type WatchLinkRecord = {
 
 type WatchLinkLookup = Map<string, WatchLinkRecord>;
 
+type TmdbResult = {
+  results?: TmdbItem[];
+};
+
+const minTmdbRating = 6.5;
+const minVoteCount = 80;
 const imageBase = 'https://image.tmdb.org/t/p/original';
 const posterBase = 'https://image.tmdb.org/t/p/w500';
 const profileBase = 'https://image.tmdb.org/t/p/w185';
@@ -109,6 +117,10 @@ const genreNames: Record<number, string> = {
   14: 'แฟนตาซี',
   80: 'อาชญากรรม',
   9648: 'ลึกลับ',
+  10751: 'ครอบครัว',
+  36: 'ประวัติศาสตร์',
+  10752: 'สงคราม',
+  10402: 'เพลง',
 };
 
 const fallbackImages = [
@@ -139,6 +151,7 @@ function buildBadges(item: { rating: number; status?: MovieStatus; language?: st
   const badges: string[] = [];
   if (item.isWatchReady) badges.push('พร้อมดู');
   if (item.rating >= 8) badges.push('8+');
+  if (item.rating >= minTmdbRating) badges.push('6.5+');
   if (index < 4) badges.push('ใหม่');
   if (item.language === 'th') badges.push('พากย์ไทย');
   badges.push('HD');
@@ -160,6 +173,15 @@ function normalizeDrivePreviewUrl(value?: string | null) {
   if (url.includes('drive.google.com') && openMatch?.[1]) return `https://drive.google.com/file/d/${openMatch[1]}/preview`;
 
   return url;
+}
+
+function isQualifiedTmdbItem(item: TmdbItem) {
+  const rating = Number(item.vote_average || 0);
+  const voteCount = Number(item.vote_count || 0);
+  const hasImage = Boolean(item.poster_path || item.backdrop_path);
+  const hasTitle = Boolean(item.title || item.name || item.original_title || item.original_name);
+
+  return hasImage && hasTitle && !item.adult && rating >= minTmdbRating && voteCount >= minVoteCount;
 }
 
 async function fetchActiveWatchLinks(): Promise<WatchLinkLookup> {
@@ -226,7 +248,7 @@ function applyWatchLinks(items: MovieItem[], links: WatchLinkLookup, offset = 0)
 
 function toMovieItem(item: TmdbItem, mediaType: MediaType, index: number): MovieItem {
   const posterUrl = item.poster_path ? `${posterBase}${item.poster_path}` : fallbackImages[index % fallbackImages.length];
-  const backdropUrl = item.backdrop_path ? `${imageBase}${item.backdrop_path}` : fallbackImages[(index + 1) % fallbackImages.length];
+  const backdropUrl = item.backdrop_path ? `${imageBase}${item.backdrop_path}` : item.poster_path ? `${posterBase}${item.poster_path}` : fallbackImages[(index + 1) % fallbackImages.length];
   const year = (item.release_date || item.first_air_date || '').slice(0, 4) || '2026';
   const rating = Number(item.vote_average || 0);
   const status = deriveStatus(rating, index);
@@ -236,6 +258,7 @@ function toMovieItem(item: TmdbItem, mediaType: MediaType, index: number): Movie
   const genres = item.genres?.length
     ? item.genres.slice(0, 3).map((genre) => genre.name)
     : (item.genre_ids || []).slice(0, 3).map((id) => genreNames[id] || 'ภาพยนตร์');
+
   const base: MovieItem = {
     id: item.id,
     mediaType,
@@ -329,13 +352,16 @@ async function tmdb(path: string) {
 
 async function tmdbCollection(basePath: string, pages = 3) {
   const joiner = basePath.includes('?') ? '&' : '?';
-  const responses = await Promise.all(
-    Array.from({ length: pages }, (_, index) => tmdb(`${basePath}${joiner}page=${index + 1}`))
-  );
+  const responses = await Promise.all(Array.from({ length: pages }, (_, index) => tmdb(`${basePath}${joiner}page=${index + 1}`)));
 
   return {
     results: responses.flatMap((response) => response?.results || []),
   };
+}
+
+function highRatedDiscoverPath(path: string) {
+  const joiner = path.includes('?') ? '&' : '?';
+  return `${path}${joiner}vote_average.gte=${minTmdbRating}&vote_count.gte=${minVoteCount}&include_adult=false`;
 }
 
 function uniqueItems(items: MovieItem[]) {
@@ -344,9 +370,9 @@ function uniqueItems(items: MovieItem[]) {
   return [...map.values()];
 }
 
-function mapItems(data: { results?: TmdbItem[] } | null, mediaType: MediaType, offset: number, limit = 80) {
+function mapItems(data: TmdbResult | null, mediaType: MediaType, offset: number, limit = 80) {
   return (data?.results || [])
-    .filter((item: TmdbItem) => item.poster_path || item.backdrop_path)
+    .filter(isQualifiedTmdbItem)
     .slice(0, limit)
     .map((item: TmdbItem, index: number) => toMovieItem(item, mediaType, index + offset));
 }
@@ -368,45 +394,69 @@ export async function getHomePayload(): Promise<HomePayload> {
     romance,
     fantasy,
     documentary,
+    adventure,
+    animation,
+    crime,
+    mystery,
+    family,
+    korea,
+    japan,
+    china,
     watchLinks,
   ] = await Promise.all([
-    tmdbCollection('/movie/now_playing?language=th-TH&region=TH', 3),
-    tmdbCollection('/movie/popular?language=th-TH&region=TH', 4),
-    tmdbCollection('/movie/top_rated?language=th-TH', 4),
-    tmdbCollection('/discover/movie?language=th-TH&with_original_language=th&sort_by=popularity.desc', 3),
-    tmdbCollection('/tv/popular?language=th-TH', 3),
-    tmdbCollection('/movie/upcoming?language=th-TH&region=TH', 3),
-    tmdbCollection('/discover/movie?language=th-TH&with_genres=28&sort_by=popularity.desc', 2),
-    tmdbCollection('/discover/movie?language=th-TH&with_genres=18&sort_by=popularity.desc', 2),
-    tmdbCollection('/discover/movie?language=th-TH&with_genres=53&sort_by=popularity.desc', 2),
-    tmdbCollection('/discover/movie?language=th-TH&with_genres=27&sort_by=popularity.desc', 2),
-    tmdbCollection('/discover/movie?language=th-TH&with_genres=35&sort_by=popularity.desc', 2),
-    tmdbCollection('/discover/movie?language=th-TH&with_genres=878&sort_by=popularity.desc', 2),
-    tmdbCollection('/discover/movie?language=th-TH&with_genres=10749&sort_by=popularity.desc', 2),
-    tmdbCollection('/discover/movie?language=th-TH&with_genres=14&sort_by=popularity.desc', 2),
-    tmdbCollection('/discover/movie?language=th-TH&with_genres=99&sort_by=popularity.desc', 2),
+    tmdbCollection('/movie/now_playing?language=th-TH&region=TH', 5),
+    tmdbCollection('/movie/popular?language=th-TH&region=TH', 8),
+    tmdbCollection('/movie/top_rated?language=th-TH', 8),
+    tmdbCollection(highRatedDiscoverPath('/discover/movie?language=th-TH&with_original_language=th&sort_by=popularity.desc'), 6),
+    tmdbCollection('/tv/popular?language=th-TH', 6),
+    tmdbCollection('/movie/upcoming?language=th-TH&region=TH', 5),
+    tmdbCollection(highRatedDiscoverPath('/discover/movie?language=th-TH&with_genres=28&sort_by=popularity.desc'), 5),
+    tmdbCollection(highRatedDiscoverPath('/discover/movie?language=th-TH&with_genres=18&sort_by=popularity.desc'), 5),
+    tmdbCollection(highRatedDiscoverPath('/discover/movie?language=th-TH&with_genres=53&sort_by=popularity.desc'), 5),
+    tmdbCollection(highRatedDiscoverPath('/discover/movie?language=th-TH&with_genres=27&sort_by=popularity.desc'), 5),
+    tmdbCollection(highRatedDiscoverPath('/discover/movie?language=th-TH&with_genres=35&sort_by=popularity.desc'), 5),
+    tmdbCollection(highRatedDiscoverPath('/discover/movie?language=th-TH&with_genres=878&sort_by=popularity.desc'), 5),
+    tmdbCollection(highRatedDiscoverPath('/discover/movie?language=th-TH&with_genres=10749&sort_by=popularity.desc'), 5),
+    tmdbCollection(highRatedDiscoverPath('/discover/movie?language=th-TH&with_genres=14&sort_by=popularity.desc'), 5),
+    tmdbCollection(highRatedDiscoverPath('/discover/movie?language=th-TH&with_genres=99&sort_by=popularity.desc'), 5),
+    tmdbCollection(highRatedDiscoverPath('/discover/movie?language=th-TH&with_genres=12&sort_by=popularity.desc'), 5),
+    tmdbCollection(highRatedDiscoverPath('/discover/movie?language=th-TH&with_genres=16&sort_by=popularity.desc'), 5),
+    tmdbCollection(highRatedDiscoverPath('/discover/movie?language=th-TH&with_genres=80&sort_by=popularity.desc'), 5),
+    tmdbCollection(highRatedDiscoverPath('/discover/movie?language=th-TH&with_genres=9648&sort_by=popularity.desc'), 5),
+    tmdbCollection(highRatedDiscoverPath('/discover/movie?language=th-TH&with_genres=10751&sort_by=popularity.desc'), 5),
+    tmdbCollection(highRatedDiscoverPath('/discover/movie?language=th-TH&with_original_language=ko&sort_by=popularity.desc'), 5),
+    tmdbCollection(highRatedDiscoverPath('/discover/movie?language=th-TH&with_original_language=ja&sort_by=popularity.desc'), 5),
+    tmdbCollection(highRatedDiscoverPath('/discover/movie?language=th-TH&with_original_language=zh&sort_by=popularity.desc'), 5),
     fetchActiveWatchLinks(),
   ]);
 
   if (!nowPlaying?.results?.length && !popular?.results?.length && !tvPopular?.results?.length) return fallback;
 
-  const nowItems = applyWatchLinks(mapItems(nowPlaying, 'movie', 0, 60), watchLinks, 0);
-  const popularItems = applyWatchLinks(mapItems(popular, 'movie', 80, 80), watchLinks, 80);
-  const topItems = applyWatchLinks(mapItems(topRated, 'movie', 180, 80), watchLinks, 180);
-  const thaiItems = applyWatchLinks(mapItems(thai, 'movie', 280, 60), watchLinks, 280);
-  const tvItems = applyWatchLinks(mapItems(tvPopular, 'tv', 360, 60), watchLinks, 360);
-  const upcomingItems = applyWatchLinks(mapItems(upcoming, 'movie', 440, 60), watchLinks, 440);
-  const actionItems = applyWatchLinks(mapItems(action, 'movie', 520, 40), watchLinks, 520);
-  const dramaItems = applyWatchLinks(mapItems(drama, 'movie', 580, 40), watchLinks, 580);
-  const thrillerItems = applyWatchLinks(mapItems(thriller, 'movie', 640, 40), watchLinks, 640);
-  const horrorItems = applyWatchLinks(mapItems(horror, 'movie', 700, 40), watchLinks, 700);
-  const comedyItems = applyWatchLinks(mapItems(comedy, 'movie', 760, 40), watchLinks, 760);
-  const sciFiItems = applyWatchLinks(mapItems(sciFi, 'movie', 820, 40), watchLinks, 820);
-  const romanceItems = applyWatchLinks(mapItems(romance, 'movie', 880, 40), watchLinks, 880);
-  const fantasyItems = applyWatchLinks(mapItems(fantasy, 'movie', 940, 40), watchLinks, 940);
-  const documentaryItems = applyWatchLinks(mapItems(documentary, 'movie', 1000, 40), watchLinks, 1000);
+  const nowItems = applyWatchLinks(mapItems(nowPlaying, 'movie', 0, 100), watchLinks, 0);
+  const popularItems = applyWatchLinks(mapItems(popular, 'movie', 120, 160), watchLinks, 120);
+  const topItems = applyWatchLinks(mapItems(topRated, 'movie', 300, 160), watchLinks, 300);
+  const thaiItems = applyWatchLinks(mapItems(thai, 'movie', 480, 120), watchLinks, 480);
+  const tvItems = applyWatchLinks(mapItems(tvPopular, 'tv', 620, 120), watchLinks, 620);
+  const upcomingItems = applyWatchLinks(mapItems(upcoming, 'movie', 760, 100), watchLinks, 760);
+  const actionItems = applyWatchLinks(mapItems(action, 'movie', 900, 100), watchLinks, 900);
+  const dramaItems = applyWatchLinks(mapItems(drama, 'movie', 1020, 100), watchLinks, 1020);
+  const thrillerItems = applyWatchLinks(mapItems(thriller, 'movie', 1140, 100), watchLinks, 1140);
+  const horrorItems = applyWatchLinks(mapItems(horror, 'movie', 1260, 100), watchLinks, 1260);
+  const comedyItems = applyWatchLinks(mapItems(comedy, 'movie', 1380, 100), watchLinks, 1380);
+  const sciFiItems = applyWatchLinks(mapItems(sciFi, 'movie', 1500, 100), watchLinks, 1500);
+  const romanceItems = applyWatchLinks(mapItems(romance, 'movie', 1620, 100), watchLinks, 1620);
+  const fantasyItems = applyWatchLinks(mapItems(fantasy, 'movie', 1740, 100), watchLinks, 1740);
+  const documentaryItems = applyWatchLinks(mapItems(documentary, 'movie', 1860, 80), watchLinks, 1860);
+  const adventureItems = applyWatchLinks(mapItems(adventure, 'movie', 1980, 100), watchLinks, 1980);
+  const animationItems = applyWatchLinks(mapItems(animation, 'movie', 2100, 100), watchLinks, 2100);
+  const crimeItems = applyWatchLinks(mapItems(crime, 'movie', 2220, 100), watchLinks, 2220);
+  const mysteryItems = applyWatchLinks(mapItems(mystery, 'movie', 2340, 100), watchLinks, 2340);
+  const familyItems = applyWatchLinks(mapItems(family, 'movie', 2460, 100), watchLinks, 2460);
+  const koreaItems = applyWatchLinks(mapItems(korea, 'movie', 2580, 100), watchLinks, 2580);
+  const japanItems = applyWatchLinks(mapItems(japan, 'movie', 2700, 100), watchLinks, 2700);
+  const chinaItems = applyWatchLinks(mapItems(china, 'movie', 2820, 100), watchLinks, 2820);
 
-  const heroItems = uniqueItems([...nowItems, ...popularItems, ...upcomingItems, ...topItems]).filter((item) => item.backdropUrl).slice(0, 12);
+  const heroItems = uniqueItems([...topItems, ...popularItems, ...nowItems, ...upcomingItems]).filter((item) => item.backdropUrl).slice(0, 18);
   const linkedItems = uniqueItems([
     ...topItems,
     ...nowItems,
@@ -415,63 +465,31 @@ export async function getHomePayload(): Promise<HomePayload> {
     ...actionItems,
     ...thaiItems,
     ...tvItems,
-  ]).filter((item) => item.isWatchReady && item.watchUrl);
+    ...koreaItems,
+    ...japanItems,
+  ]).filter((item) => item.isWatchReady && item.watchUrl && item.rating >= minTmdbRating);
 
   return {
     source: 'tmdb',
-    hero: heroItems[0] || nowItems[0] || popularItems[0] || fallback.hero,
+    hero: heroItems[0] || topItems[0] || popularItems[0] || fallback.hero,
     heroItems: heroItems.length ? heroItems : fallback.heroItems,
     sections: [
       {
         slug: 'watch-ready',
         eyebrow: 'พร้อมรับชม',
         title: 'แนะนำสำหรับคุณ',
-        description: 'คัดเรื่องที่มีลิงก์รับชมจากระบบของคุณ โดยใช้ข้อมูลหนังจาก TMDB',
+        description: 'คัดเรื่องที่มีลิงก์รับชมและคะแนน 6.5+ จากระบบของคุณ โดยใช้ข้อมูลหนังจาก TMDB',
         items: linkedItems.length ? linkedItems : popularItems,
       },
-      {
-        slug: 'now-playing',
-        eyebrow: 'มาใหม่',
-        title: 'ภาพยนตร์มาใหม่',
-        description: 'แถวภาพยนตร์ใหม่สำหรับสร้างความรู้สึกสดและมีชีวิต',
-        items: nowItems,
-      },
-      {
-        slug: 'popular',
-        eyebrow: 'กำลังนิยม',
-        title: 'ยอดนิยมตอนนี้',
-        description: 'หนังที่คนค้นหาและมีแนวโน้มคลิกสูง',
-        items: popularItems,
-      },
-      {
-        slug: 'top-rated',
-        eyebrow: 'คะแนนสูง',
-        title: 'คะแนนสูงน่าดู',
-        description: 'รวมหนังคะแนนดีสำหรับคนเลือกจากคุณภาพ',
-        items: topItems,
-      },
-      {
-        slug: 'upcoming',
-        eyebrow: 'กำลังเข้าใหม่',
-        title: 'เร็ว ๆ นี้',
-        description: 'หนังใหม่ที่เหมาะสำหรับทำแถวรออัปเดต',
-        items: upcomingItems,
-      },
-      {
-        slug: 'series',
-        eyebrow: 'ซีรีส์',
-        title: 'ซีรีส์น่าติดตาม',
-        description: 'คอนเทนต์ซีรีส์ที่ต่อยอดหน้า TV detail ได้',
-        items: tvItems,
-      },
-      {
-        slug: 'thai',
-        eyebrow: 'Local Focus',
-        title: 'หนังไทย',
-        description: 'หมวดเฉพาะทางสำหรับตลาดไทยและ SEO ภาษาไทย',
-        items: thaiItems,
-      },
+      { slug: 'top-rated', eyebrow: 'คะแนนสูง', title: 'คะแนน 6.5+ น่าดู', description: 'รวมหนังคะแนนดีสำหรับคนเลือกจากคุณภาพ', items: topItems },
+      { slug: 'popular', eyebrow: 'กำลังนิยม', title: 'ยอดนิยมคะแนนดี', description: 'หนังที่คนค้นหาและคะแนนผ่าน 6.5+', items: popularItems },
+      { slug: 'now-playing', eyebrow: 'มาใหม่', title: 'ภาพยนตร์มาใหม่คะแนนดี', description: 'แถวภาพยนตร์ใหม่ที่คะแนนผ่านเกณฑ์', items: nowItems },
+      { slug: 'upcoming', eyebrow: 'กำลังเข้าใหม่', title: 'เร็ว ๆ นี้', description: 'หนังใหม่ที่เหมาะสำหรับทำแถวรออัปเดต', items: upcomingItems },
+      { slug: 'series', eyebrow: 'ซีรีส์', title: 'ซีรีส์น่าติดตาม', description: 'ซีรีส์คะแนนดีที่เหมาะกับหน้า TV detail', items: tvItems },
+      { slug: 'thai', eyebrow: 'Local Focus', title: 'หนังไทยคะแนนดี', description: 'หมวดเฉพาะทางสำหรับตลาดไทยและ SEO ภาษาไทย', items: thaiItems },
       { slug: 'action', eyebrow: 'Action', title: 'แอ็กชัน', description: 'หนังแอ็กชันสำหรับคนชอบจังหวะเร็ว', items: actionItems },
+      { slug: 'adventure', eyebrow: 'Adventure', title: 'ผจญภัย', description: 'หนังเดินทางและโลกกว้าง', items: adventureItems },
+      { slug: 'animation', eyebrow: 'Animation', title: 'แอนิเมชัน', description: 'แอนิเมชันคะแนนดีสำหรับทุกวัย', items: animationItems },
       { slug: 'drama', eyebrow: 'Drama', title: 'ดราม่า', description: 'ดราม่าที่มีอารมณ์และตัวละครชัด', items: dramaItems },
       { slug: 'thriller', eyebrow: 'Thriller', title: 'ระทึกขวัญ', description: 'หนังลุ้นและเข้มข้น', items: thrillerItems },
       { slug: 'horror', eyebrow: 'Horror', title: 'สยองขวัญ', description: 'หนังสยองที่เหมาะกับโทนมืดของเว็บ', items: horrorItems },
@@ -479,6 +497,12 @@ export async function getHomePayload(): Promise<HomePayload> {
       { slug: 'sci-fi', eyebrow: 'Sci-Fi', title: 'ไซไฟ', description: 'หนังโลกอนาคตและจินตนาการ', items: sciFiItems },
       { slug: 'romance', eyebrow: 'Romance', title: 'โรแมนติก', description: 'หนังรักและความสัมพันธ์', items: romanceItems },
       { slug: 'fantasy', eyebrow: 'Fantasy', title: 'แฟนตาซี', description: 'โลกเหนือจริงและการผจญภัย', items: fantasyItems },
+      { slug: 'crime', eyebrow: 'Crime', title: 'อาชญากรรม', description: 'หนังอาชญากรรมและการสืบสวน', items: crimeItems },
+      { slug: 'mystery', eyebrow: 'Mystery', title: 'ลึกลับ', description: 'หนังปริศนาและความลับ', items: mysteryItems },
+      { slug: 'family', eyebrow: 'Family', title: 'ครอบครัว', description: 'หนังดูง่ายสำหรับหลายวัย', items: familyItems },
+      { slug: 'korea', eyebrow: 'Korea', title: 'หนังเกาหลี', description: 'คัดหนังเกาหลีคะแนนดี', items: koreaItems },
+      { slug: 'japan', eyebrow: 'Japan', title: 'หนังญี่ปุ่น', description: 'คัดหนังญี่ปุ่นคะแนนดี', items: japanItems },
+      { slug: 'china', eyebrow: 'China', title: 'หนังจีน', description: 'คัดหนังจีนคะแนนดี', items: chinaItems },
       { slug: 'documentary', eyebrow: 'Documentary', title: 'สารคดี', description: 'สารคดีและเรื่องจริง', items: documentaryItems },
     ].filter((section) => section.items.length),
   };
@@ -496,7 +520,7 @@ function youtubeTrailer(videos: TmdbVideo[] = []) {
   return video?.key ? `https://www.youtube.com/watch?v=${video.key}` : undefined;
 }
 
-function mergeVideos(...groups: Array<{ results?: TmdbVideo[] } | null | undefined>) {
+function mergeVideos(...groups: Array<{ results?: TmdbVideo[] } | null | undefined) {
   const seen = new Set<string>();
   const videos: TmdbVideo[] = [];
 
@@ -541,31 +565,27 @@ export async function getDetailPayload(mediaType: MediaType, id: string): Promis
     character: person.character,
     profileUrl: person.profile_path ? `${profileBase}${person.profile_path}` : undefined,
   }));
-  const recItems = applyWatchLinks(
-    (recommendations?.results || []).slice(0, 24).map((rec: TmdbItem, index: number) => toMovieItem(rec, mediaType, index + 1)),
-    watchLinks,
-    1
-  );
+  const recItems = applyWatchLinks(mapItems(recommendations, mediaType, 1, 24), watchLinks, 1);
 
   return { item, cast, trailerUrl: item.trailerUrl, recommendations: recItems.length ? recItems : fallbackSections[0].items, source: 'tmdb' };
 }
 
 export async function getWatchReadyItems() {
   const home = await getHomePayload();
-  return uniqueItems(home.sections.flatMap((section) => section.items)).filter((item) => item.isWatchReady && item.watchUrl);
+  return uniqueItems(home.sections.flatMap((section) => section.items)).filter((item) => item.isWatchReady && item.watchUrl && item.rating >= minTmdbRating);
 }
 
 export async function searchMovies(query: string) {
   if (!query.trim()) return [];
   const [movie, tv, watchLinks] = await Promise.all([
-    tmdbCollection(`/search/movie?language=th-TH&query=${encodeURIComponent(query)}&include_adult=false`, 3),
-    tmdbCollection(`/search/tv?language=th-TH&query=${encodeURIComponent(query)}&include_adult=false`, 3),
+    tmdbCollection(`/search/movie?language=th-TH&query=${encodeURIComponent(query)}&include_adult=false`, 5),
+    tmdbCollection(`/search/tv?language=th-TH&query=${encodeURIComponent(query)}&include_adult=false`, 5),
     fetchActiveWatchLinks(),
   ]);
 
   const items = [
-    ...(movie?.results || []).slice(0, 60).map((item: TmdbItem, index: number) => toMovieItem(item, 'movie', index)),
-    ...(tv?.results || []).slice(0, 60).map((item: TmdbItem, index: number) => toMovieItem(item, 'tv', index + 80)),
+    ...mapItems(movie, 'movie', 0, 100),
+    ...mapItems(tv, 'tv', 120, 100),
   ];
 
   const linkedItems = applyWatchLinks(items, watchLinks);
