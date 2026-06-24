@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
-import { AdminCmsDashboardClean } from '@/components/admin-cms-dashboard-clean';
+import { AdminCatalogBrowser } from '@/components/admin-catalog-browser';
 
 export const metadata: Metadata = {
-  title: 'Admin CMS Dashboard',
-  description: 'หน้าแดชบอร์ดสำหรับจัดการคอนเทนต์ ลิงก์รับชม หมวดหมู่ และสถานะของ DOFree v3',
+  title: 'Admin Catalog Browser',
+  description: 'DOFree v3 admin catalog browser',
   robots: {
     index: false,
     follow: false,
@@ -11,5 +11,5 @@ export const metadata: Metadata = {
 };
 
 export default function AdminPage() {
-  return <AdminCmsDashboardClean />;
+  return <AdminCatalogBrowser />;
 }
