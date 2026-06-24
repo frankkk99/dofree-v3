@@ -12,7 +12,7 @@ function unique(items: MovieItem[]) {
   return [...map.values()];
 }
 
-function recentlyAdded(home: HomePayload) {
+function fallbackRecentlyAdded(home: HomePayload) {
   const watchReady = home.sections.find((section) => section.slug === 'watch-ready')?.items || [];
   const nowPlaying = home.sections.find((section) => section.slug === 'now-playing')?.items || [];
   const popular = home.sections.find((section) => section.slug === 'popular')?.items || [];
@@ -56,9 +56,9 @@ function RealtimeAddedCarousel({ items }: { items: MovieItem[] }) {
     <section className="mx-auto max-w-[1920px] bg-[#030303] px-4 pb-4 pt-2 md:px-7 md:pb-6 md:pt-3">
       <div className="mb-3 flex items-end justify-between gap-3 md:mb-4">
         <div>
-          <p className="text-[9px] font-black uppercase tracking-[0.28em] text-[#e50914]/80">Live Updated</p>
-          <h2 className="mt-1 text-[20px] font-black tracking-[-0.04em] md:text-[30px]">หนังเข้าใหม่</h2>
-          <p className="mt-1 text-[11px] font-semibold text-white/42">อัปเดตจากรายการล่าสุดในระบบ • เลื่อนอัตโนมัติและปัดเองได้</p>
+          <p className="text-[9px] font-black uppercase tracking-[0.28em] text-[#e50914]/80">Release Window</p>
+          <h2 className="mt-1 text-[20px] font-black tracking-[-0.04em] md:text-[30px]">หนังเข้าใหม่ / กำลังจะเข้า</h2>
+          <p className="mt-1 text-[11px] font-semibold text-white/42">ช่วงย้อนหลัง 2 เดือนถึงหนังที่กำลังจะเข้าฉาย • อัปเดตจาก Supabase</p>
         </div>
         <span className="rounded-full bg-white/[0.07] px-3 py-1.5 text-[10px] font-black text-white/52">Auto loop</span>
       </div>
@@ -76,7 +76,7 @@ function RealtimeAddedCarousel({ items }: { items: MovieItem[] }) {
             key={`realtime-${item.mediaType}-${item.id}-${index}`}
             item={item}
             priority={index < 8}
-            priorityBadge={index % 3 === 0 ? 'เข้าใหม่' : index % 3 === 1 ? 'พร้อมดู' : undefined}
+            priorityBadge={item.label || (index % 3 === 0 ? 'เข้าใหม่' : index % 3 === 1 ? 'พร้อมดู' : undefined)}
           />
         ))}
       </div>
@@ -86,7 +86,9 @@ function RealtimeAddedCarousel({ items }: { items: MovieItem[] }) {
 
 function RealtimePortal({ home }: { home: HomePayload }) {
   const [host, setHost] = useState<HTMLElement | null>(null);
-  const items = useMemo(() => recentlyAdded(home), [home]);
+  const [liveItems, setLiveItems] = useState<MovieItem[]>([]);
+  const fallbackItems = useMemo(() => fallbackRecentlyAdded(home), [home]);
+  const items = liveItems.length ? liveItems : fallbackItems;
 
   useEffect(() => {
     const searchSection = document.querySelector('main section.sticky');
@@ -99,6 +101,26 @@ function RealtimePortal({ home }: { home: HomePayload }) {
       searchSection.insertAdjacentElement('afterend', node);
     }
     setHost(node);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadRecent() {
+      try {
+        const response = await fetch('/api/catalog/recent', { cache: 'no-store' });
+        const payload = (await response.json()) as { ok?: boolean; items?: MovieItem[] };
+        if (active && payload.ok && payload.items?.length) setLiveItems(payload.items);
+      } catch {}
+    }
+
+    void loadRecent();
+    const timer = window.setInterval(loadRecent, 60_000);
+
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
   }, []);
 
   return host ? createPortal(<RealtimeAddedCarousel items={items} />, host) : null;
