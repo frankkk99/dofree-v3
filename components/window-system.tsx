@@ -103,16 +103,20 @@ function playerUrl(value?: string) {
   return youtubeEmbedUrl(url) || drivePreviewUrl(url) || url;
 }
 
+function Surface({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return <div className={`rounded-[22px] bg-white/[0.045] shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_22px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl ${className}`}>{children}</div>;
+}
+
 function InlinePlayer({ url, title, fallbackImage, emptyLabel }: { url?: string; title: string; fallbackImage: string; emptyLabel: string }) {
   const src = playerUrl(url);
 
   if (!src) {
     return (
-      <div className="relative grid aspect-video place-items-center overflow-hidden rounded-xl border border-white/10 bg-black text-center md:rounded-2xl">
-        <img src={fallbackImage} alt={title} loading="lazy" decoding="async" sizes="(max-width: 768px) 92vw, 720px" className="absolute inset-0 h-full w-full object-cover opacity-35" />
-        <div className="absolute inset-0 bg-black/55" />
+      <div className="relative grid aspect-video place-items-center overflow-hidden rounded-[20px] bg-black/58 text-center shadow-[0_24px_90px_rgba(0,0,0,0.72)] backdrop-blur-md md:rounded-[26px]">
+        <img src={fallbackImage} alt={title} loading="lazy" decoding="async" sizes="(max-width: 768px) 92vw, 780px" className="absolute inset-0 h-full w-full object-cover opacity-25 blur-[1px]" />
+        <div className="absolute inset-0 bg-black/62" />
         <div className="relative z-10 px-6">
-          <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-white/[0.08] text-xl font-black text-white/55 md:h-16 md:w-16 md:text-2xl">▶</div>
+          <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-white/[0.1] text-xl font-black text-white/58 shadow-[0_18px_50px_rgba(0,0,0,0.72)] backdrop-blur-xl md:h-16 md:w-16 md:text-2xl">▶</div>
           <p className="mt-3 text-xs font-black text-white/72 md:text-sm">{emptyLabel}</p>
           <p className="mt-1 text-[10px] font-semibold text-white/38 md:text-xs">ระบบจะแสดง player ที่ฝังได้ใน Modal เท่านั้น</p>
         </div>
@@ -124,7 +128,7 @@ function InlinePlayer({ url, title, fallbackImage, emptyLabel }: { url?: string;
     return (
       <video
         src={src}
-        className="aspect-video w-full rounded-xl border border-white/10 bg-black object-contain md:rounded-2xl"
+        className="aspect-video w-full rounded-[20px] bg-black object-contain shadow-[0_24px_90px_rgba(0,0,0,0.72)] md:rounded-[26px]"
         controls
         playsInline
         preload="metadata"
@@ -133,7 +137,7 @@ function InlinePlayer({ url, title, fallbackImage, emptyLabel }: { url?: string;
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-white/10 bg-black md:rounded-2xl">
+    <div className="overflow-hidden rounded-[20px] bg-black shadow-[0_24px_90px_rgba(0,0,0,0.72)] md:rounded-[26px]">
       <iframe
         src={src}
         title={title}
@@ -141,7 +145,7 @@ function InlinePlayer({ url, title, fallbackImage, emptyLabel }: { url?: string;
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
         allowFullScreen
         referrerPolicy="no-referrer-when-downgrade"
-        className="aspect-video w-full border-0 bg-black"
+        className="aspect-video w-full bg-black"
       />
     </div>
   );
@@ -155,7 +159,7 @@ function ActorCard({ person, onSelect, selected }: { person: CastPerson; onSelec
       type="button"
       onClick={() => canOpen && onSelect(person)}
       disabled={!canOpen}
-      className={`group relative aspect-[2/3] min-w-0 overflow-hidden rounded-[8px] border bg-[#111] text-left shadow-[0_16px_44px_rgba(0,0,0,0.62)] transition duration-300 md:rounded-[10px] ${selected ? 'border-[#e50914] shadow-glow' : 'border-white/[0.07] hover:-translate-y-1 hover:border-[#e50914]/80'} ${canOpen ? '' : 'cursor-not-allowed opacity-60'}`}
+      className={`group relative aspect-[2/3] min-w-0 overflow-hidden rounded-[12px] bg-white/[0.055] text-left shadow-[0_16px_54px_rgba(0,0,0,0.55)] backdrop-blur-xl transition duration-300 md:rounded-[16px] ${selected ? 'ring-1 ring-[#e50914]/80 shadow-glow' : 'hover:-translate-y-1 hover:bg-white/[0.085]'} ${canOpen ? '' : 'cursor-not-allowed opacity-60'}`}
       aria-label={`ดูผลงานของ ${person.name}`}
     >
       {person.profileUrl ? (
@@ -163,8 +167,8 @@ function ActorCard({ person, onSelect, selected }: { person: CastPerson; onSelec
       ) : (
         <div className="absolute inset-0 grid place-items-center bg-[radial-gradient(circle_at_50%_24%,#8a111b,#111_62%)] text-4xl font-black text-white/78 md:text-5xl">{person.initial || personInitial(person.name)}</div>
       )}
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.06)_0%,rgba(0,0,0,0.06)_44%,rgba(0,0,0,0.92)_100%)]" />
-      <div className="absolute left-1.5 top-1.5 rounded bg-[#e50914] px-1.5 py-0.5 text-[7px] font-black uppercase tracking-[0.12em] text-white md:left-2.5 md:top-2.5 md:px-2 md:py-1 md:text-[9px]">ACTOR</div>
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.04)_0%,rgba(0,0,0,0.06)_44%,rgba(0,0,0,0.92)_100%)]" />
+      <div className="absolute left-1.5 top-1.5 rounded-md bg-[#e50914]/92 px-1.5 py-0.5 text-[7px] font-black uppercase tracking-[0.12em] text-white shadow-[0_10px_28px_rgba(229,9,20,0.38)] md:left-2.5 md:top-2.5 md:px-2 md:py-1 md:text-[9px]">ACTOR</div>
       <div className="absolute inset-x-0 bottom-0 p-2 md:p-3">
         <h4 className="line-clamp-2 text-[10px] font-black leading-tight text-white drop-shadow md:text-sm">{person.name}</h4>
         <p className="mt-1 line-clamp-2 text-[8px] font-bold leading-3 text-white/52 md:text-[10px] md:leading-4">{person.character || person.role || 'นักแสดง'}</p>
@@ -176,7 +180,7 @@ function ActorCard({ person, onSelect, selected }: { person: CastPerson; onSelec
 
 function StatusBadge({ children, active = false }: { children: ReactNode; active?: boolean }) {
   return (
-    <span className={`rounded-full px-2 py-0.5 text-[9px] font-black md:text-[11px] ${active ? 'bg-[#e50914]/20 text-red-100' : 'bg-white/10 text-white/78'}`}>
+    <span className={`rounded-full px-2 py-0.5 text-[9px] font-black shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md md:text-[11px] ${active ? 'bg-[#e50914]/22 text-red-100' : 'bg-white/[0.105] text-white/78'}`}>
       {children}
     </span>
   );
@@ -224,16 +228,16 @@ export function SearchWindow({ query, setQuery, items, onClose, onSelect }: {
   }, [filteredItems.length, visibleCount]);
 
   return (
-    <div className="fixed inset-0 z-[95] overflow-y-auto bg-black/90 px-3 py-4 text-white backdrop-blur-2xl" role="dialog" aria-modal="true">
-      <div className="mx-auto max-w-4xl rounded-[24px] border border-white/10 bg-[#050505] p-4 shadow-[0_38px_120px_rgba(0,0,0,0.9)] md:p-6">
+    <div className="fixed inset-0 z-[95] overflow-y-auto bg-black/88 px-3 py-4 text-white backdrop-blur-2xl" role="dialog" aria-modal="true">
+      <div className="mx-auto max-w-4xl rounded-[28px] bg-[#050505]/92 p-4 shadow-[0_38px_120px_rgba(0,0,0,0.9)] backdrop-blur-2xl md:p-6">
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#e50914]">DOFree Search</p>
             <h2 className="mt-1 text-2xl font-black tracking-[-0.06em]">ค้นหาภาพยนตร์</h2>
           </div>
-          <button onClick={onClose} className="grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-white/[0.06] text-xl font-black text-white/80">×</button>
+          <button onClick={onClose} className="grid h-9 w-9 place-items-center rounded-full bg-white/[0.08] text-xl font-black text-white/80 shadow-[0_12px_36px_rgba(0,0,0,0.55)] backdrop-blur-xl hover:bg-white/[0.14]">×</button>
         </div>
-        <label className="mt-4 flex h-11 items-center rounded-2xl border border-white/10 bg-white/[0.08] px-4">
+        <label className="mt-4 flex h-11 items-center rounded-2xl bg-white/[0.08] px-4 backdrop-blur-xl">
           <input
             autoFocus
             value={query}
@@ -368,23 +372,24 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
   }
 
   return (
-    <div onClick={onClose} className="fixed inset-0 z-[90] flex items-end overflow-hidden bg-black/72 px-2 pb-2 pt-10 text-white backdrop-blur-xl md:items-center md:bg-black/84 md:px-4 md:py-5" role="dialog" aria-modal="true">
-      <div onClick={(event) => event.stopPropagation()} className="mx-auto flex h-[92dvh] max-h-[920px] min-h-[620px] w-full max-w-[820px] flex-col overflow-hidden rounded-t-[24px] border border-white/12 bg-[#050505] shadow-[0_38px_120px_rgba(0,0,0,0.92)] md:h-[92vh] md:min-h-0 md:rounded-[28px]">
-        <div className="mx-auto mt-2 h-1.5 w-12 shrink-0 rounded-full bg-white/25 md:hidden" />
-        <div className="relative shrink-0 border-b border-white/8 bg-black">
-          <div className="absolute inset-0 bg-cover bg-center opacity-25" style={{ backgroundImage: `url(${displayItem.backdropUrl || displayItem.posterUrl})` }} />
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,5,5,0.55),#050505_100%)] md:bg-[linear-gradient(90deg,#050505_0%,rgba(5,5,5,0.9)_38%,rgba(5,5,5,0.56)_100%)]" />
-          <button onClick={onClose} className="absolute right-3 top-3 z-20 grid h-8 w-8 place-items-center rounded-full border border-white/10 bg-black/70 text-lg font-black text-white/80 hover:bg-white/10 md:right-4 md:top-4 md:h-10 md:w-10 md:text-2xl" aria-label="ปิดรายละเอียด">×</button>
+    <div onClick={onClose} className="fixed inset-0 z-[90] overflow-y-auto bg-black/70 px-2 py-4 text-white backdrop-blur-2xl md:bg-black/78 md:px-4 md:py-7" role="dialog" aria-modal="true">
+      <div onClick={(event) => event.stopPropagation()} className="mx-auto w-full max-w-[860px] overflow-hidden rounded-[28px] bg-[#050505]/88 shadow-[0_42px_150px_rgba(0,0,0,0.94)] backdrop-blur-2xl md:rounded-[34px]">
+        <div className="mx-auto mt-2 h-1.5 w-12 rounded-full bg-white/16 md:hidden" />
 
-          <div className="relative z-10 grid grid-cols-[86px_1fr] gap-3 p-3.5 pt-5 md:grid-cols-[118px_1fr] md:gap-4 md:p-5 md:pb-4">
+        <div className="relative bg-black/42 shadow-[inset_0_-80px_110px_rgba(0,0,0,0.55)] backdrop-blur-xl">
+          <div className="absolute inset-0 bg-cover bg-center opacity-24 blur-[1px]" style={{ backgroundImage: `url(${displayItem.backdropUrl || displayItem.posterUrl})` }} />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,5,5,0.42),rgba(5,5,5,0.86)_55%,rgba(5,5,5,0.98)_100%)] md:bg-[linear-gradient(90deg,rgba(5,5,5,0.98)_0%,rgba(5,5,5,0.86)_42%,rgba(5,5,5,0.48)_100%)]" />
+          <button onClick={onClose} className="absolute right-3 top-3 z-20 grid h-9 w-9 place-items-center rounded-full bg-black/62 text-xl font-black text-white/80 shadow-[0_14px_42px_rgba(0,0,0,0.72)] backdrop-blur-xl hover:bg-white/[0.12] md:right-4 md:top-4 md:h-11 md:w-11 md:text-2xl" aria-label="ปิดรายละเอียด">×</button>
+
+          <div className="relative z-10 grid grid-cols-[88px_1fr] gap-3 p-4 pt-5 md:grid-cols-[118px_1fr] md:gap-4 md:p-5 md:pb-4">
             <div className="min-w-0">
-              <div className="overflow-hidden rounded-xl border border-white/10 bg-black shadow-[0_20px_55px_rgba(0,0,0,0.75)] md:rounded-2xl">
-                <img src={displayItem.posterUrl} alt={displayItem.title} loading="lazy" decoding="async" sizes="(max-width: 768px) 86px, 118px" className="h-[130px] w-full object-cover md:h-[176px]" />
+              <div className="overflow-hidden rounded-[16px] bg-black/40 shadow-[0_20px_55px_rgba(0,0,0,0.75)] backdrop-blur-md md:rounded-[20px]">
+                <img src={displayItem.posterUrl} alt={displayItem.title} loading="lazy" decoding="async" sizes="(max-width: 768px) 88px, 118px" className="h-[132px] w-full object-cover md:h-[176px]" />
               </div>
             </div>
-            <div className="min-w-0 pr-8 md:pr-10">
+            <div className="min-w-0 pr-9 md:pr-11">
               <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#e50914] md:text-[10px] md:tracking-[0.24em]">{displayItem.mediaType === 'tv' ? 'Series' : 'Movie'}</p>
-              <h2 className="modal-title mt-1.5 line-clamp-2 text-[20px] font-black leading-[0.98] tracking-[-0.06em] text-white md:text-[30px]">{displayItem.title}</h2>
+              <h2 className="modal-title mt-1.5 line-clamp-2 text-[21px] font-black leading-[0.98] tracking-[-0.06em] text-white md:text-[31px]">{displayItem.title}</h2>
               <div className="mt-2 flex flex-wrap gap-1.5 text-[9px] font-black md:text-[11px]">
                 <StatusBadge>★ {displayItem.rating.toFixed(1)}</StatusBadge>
                 <StatusBadge>{displayItem.year}</StatusBadge>
@@ -394,28 +399,28 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
               <p className={`${expanded ? '' : 'line-clamp-3'} mt-2 text-[11px] font-medium leading-4 text-white/58 md:text-[13px] md:leading-5`}>{displayItem.overview}</p>
               <button onClick={() => setExpanded((value) => !value)} className="mt-1 text-[10px] font-black text-red-200/80 hover:text-red-100 md:text-xs">{expanded ? 'ย่อ' : 'ดูเพิ่มเติม'}</button>
               <div className="mt-3 flex flex-wrap gap-2">
-                <button onClick={() => displayItem.watchUrl && setActiveTab('watch')} disabled={!displayItem.watchUrl} className={`inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-[11px] font-black text-white md:h-9 md:px-4 md:text-xs ${displayItem.watchUrl ? 'bg-[#e50914] shadow-glow' : 'bg-white/10 text-white/40'}`}>▶ รับชม</button>
-                <button onClick={() => setActiveTab('recommend')} className="inline-flex h-8 items-center rounded-lg border border-white/10 bg-white/[0.1] px-3 text-[11px] font-black text-white/82 hover:bg-white/[0.16] md:h-9 md:px-4 md:text-xs">+ รายการโปรด</button>
+                <button onClick={() => displayItem.watchUrl && setActiveTab('watch')} disabled={!displayItem.watchUrl} className={`inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-[11px] font-black text-white shadow-[0_14px_36px_rgba(0,0,0,0.42)] backdrop-blur-xl md:h-9 md:px-4 md:text-xs ${displayItem.watchUrl ? 'bg-[#e50914]' : 'bg-white/[0.09] text-white/40'}`}>▶ รับชม</button>
+                <button onClick={() => setActiveTab('recommend')} className="inline-flex h-8 items-center rounded-lg bg-white/[0.1] px-3 text-[11px] font-black text-white/82 shadow-[0_14px_36px_rgba(0,0,0,0.32)] backdrop-blur-xl hover:bg-white/[0.16] md:h-9 md:px-4 md:text-xs">+ รายการโปรด</button>
               </div>
             </div>
           </div>
 
-          <div className="relative z-10 px-3.5 pb-4 md:px-5 md:pb-5">
-            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-red-100/70 md:text-xs">TRAILER PREVIEW</p>
+          <div className="relative z-10 px-4 pb-4 md:px-5 md:pb-5">
+            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-red-100/68 md:text-xs">TRAILER PREVIEW</p>
             <InlinePlayer url={displayItem.trailerUrl} title={`ตัวอย่าง ${displayItem.title}`} fallbackImage={displayItem.backdropUrl || displayItem.posterUrl} emptyLabel={detailLoading ? 'กำลังโหลดตัวอย่างจาก TMDB...' : 'ยังไม่มีตัวอย่างที่ฝังใน Modal ได้'} />
           </div>
         </div>
 
-        <div className="shrink-0 border-b border-white/8 bg-black/82 px-3 md:px-5">
-          <div className="movie-rail flex gap-1 overflow-x-auto py-2 md:gap-1.5 md:py-2.5">
+        <div className="sticky top-0 z-20 bg-black/62 px-3 shadow-[0_20px_60px_rgba(0,0,0,0.58)] backdrop-blur-2xl md:px-5">
+          <div className="movie-rail flex gap-1 overflow-x-auto py-2.5 md:gap-1.5 md:py-3">
             {modalTabs.map((tab) => (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`min-w-max rounded-md px-3 py-1.5 text-[10px] font-black transition md:px-4 md:py-2 md:text-xs ${activeTab === tab.id ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.06] text-white/55 hover:bg-white/[0.1] hover:text-white'}`}>{tab.label}</button>
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`min-w-max rounded-md px-3 py-1.5 text-[10px] font-black transition shadow-[0_12px_32px_rgba(0,0,0,0.28)] backdrop-blur-xl md:px-4 md:py-2 md:text-xs ${activeTab === tab.id ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.07] text-white/55 hover:bg-white/[0.12] hover:text-white'}`}>{tab.label}</button>
             ))}
           </div>
         </div>
 
-        <div className="movie-rail min-h-0 flex-1 overflow-y-auto p-3 md:p-4">
-          <section className="min-h-full rounded-2xl border border-white/8 bg-white/[0.03] p-3.5 md:p-5">
+        <div className="p-3 md:p-4">
+          <Surface className="min-h-[320px] p-4 md:p-5">
             {activeTab === 'cast' && (
               <div>
                 <div className="flex items-center justify-between gap-3">
@@ -424,11 +429,11 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
                     {selectedPerson ? <p className="mt-1 text-[10px] font-bold text-white/42 md:text-xs">กดการ์ดหนังเพื่อเปิดรายละเอียดเรื่องนั้น</p> : null}
                   </div>
                   {selectedPerson ? (
-                    <button onClick={() => { setSelectedPerson(null); setPersonMovies([]); }} className="rounded-full bg-white/[0.08] px-3 py-1 text-[10px] font-black text-white/68 hover:bg-white/[0.14] md:text-xs">กลับไปนักแสดง</button>
+                    <button onClick={() => { setSelectedPerson(null); setPersonMovies([]); }} className="rounded-full bg-white/[0.08] px-3 py-1 text-[10px] font-black text-white/68 shadow-[0_10px_28px_rgba(0,0,0,0.32)] backdrop-blur-xl hover:bg-white/[0.14] md:text-xs">กลับไปนักแสดง</button>
                   ) : detailLoading ? (
-                    <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-black text-white/38">กำลังโหลด</span>
+                    <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-black text-white/38 backdrop-blur-xl">กำลังโหลด</span>
                   ) : (
-                    <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-black text-white/38">{realCast.length ? 'TMDB' : 'สำรอง'}</span>
+                    <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-black text-white/38 backdrop-blur-xl">{realCast.length ? 'TMDB' : 'สำรอง'}</span>
                   )}
                 </div>
 
@@ -440,14 +445,14 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
                   </div>
                 ) : personLoading ? (
                   <div className="mt-4 grid grid-cols-3 gap-2 md:grid-cols-4 md:gap-3" aria-hidden="true">
-                    {Array.from({ length: 9 }).map((_, index) => <div key={index} className="aspect-[2/3] animate-pulse rounded-[8px] bg-white/[0.055] md:rounded-[10px]" />)}
+                    {Array.from({ length: 9 }).map((_, index) => <div key={index} className="aspect-[2/3] animate-pulse rounded-[12px] bg-white/[0.055] md:rounded-[16px]" />)}
                   </div>
                 ) : personMovies.length ? (
                   <div className="mt-4 grid grid-cols-3 gap-2 md:grid-cols-4 md:gap-3">
                     {personMovies.map((movie, index) => <MovieCard key={`actor-${selectedPerson.id}-${movie.mediaType}-${movie.id}-${index}`} item={movie} grid compact onSelect={(nextItem) => { onSelect(nextItem); setActiveTab('cast'); }} priorityBadge={index < 3 ? 'ผลงาน' : undefined} />)}
                   </div>
                 ) : (
-                  <div className="mt-4 rounded-2xl border border-white/8 bg-black/30 p-4 text-center text-xs font-bold text-white/45 md:text-sm">ยังไม่พบผลงานของนักแสดงคนนี้จาก TMDB</div>
+                  <div className="mt-4 rounded-2xl bg-black/28 p-4 text-center text-xs font-bold text-white/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] backdrop-blur-xl md:text-sm">ยังไม่พบผลงานของนักแสดงคนนี้จาก TMDB</div>
                 )}
               </div>
             )}
@@ -456,7 +461,7 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
               <div>
                 <div className="flex items-center justify-between gap-3">
                   <h3 className="text-base font-black md:text-xl">เกี่ยวกับภาพยนตร์</h3>
-                  {detailLoading ? <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-black text-white/38">กำลังโหลด TMDB</span> : null}
+                  {detailLoading ? <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-black text-white/38 backdrop-blur-xl">กำลังโหลด TMDB</span> : null}
                 </div>
                 <div className="mt-3 grid gap-2 text-[11px] font-bold text-white/62 sm:grid-cols-2 md:mt-4 md:gap-3 md:text-sm">
                   <p>ประเภท: {(displayItem.genres || []).join(', ') || 'ภาพยนตร์'}</p>
@@ -483,7 +488,7 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
             {activeTab === 'spoiler' && (
               <div>
                 <h3 className="text-base font-black md:text-xl">สปอยหนัง</h3>
-                <div className="mt-3 rounded-2xl border border-yellow-300/15 bg-yellow-300/10 p-3 text-xs leading-5 text-yellow-50/75 md:text-sm md:leading-6">มีเนื้อหาสปอย กดดูเพิ่มเติมเพื่ออ่านเนื้อเรื่องแบบเต็มในเวอร์ชันถัดไป ตอนนี้จะแสดงเฉพาะบทสรุปสั้น: {displayItem.overview}</div>
+                <div className="mt-3 rounded-2xl bg-yellow-300/[0.08] p-3 text-xs leading-5 text-yellow-50/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl md:text-sm md:leading-6">มีเนื้อหาสปอย กดดูเพิ่มเติมเพื่ออ่านเนื้อเรื่องแบบเต็มในเวอร์ชันถัดไป ตอนนี้จะแสดงเฉพาะบทสรุปสั้น: {displayItem.overview}</div>
               </div>
             )}
 
@@ -494,19 +499,19 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
                     <p className="text-[10px] font-black uppercase tracking-[0.22em] text-red-100/70 md:text-xs">WATCH READY</p>
                     <h3 className="mt-1 text-lg font-black md:text-2xl">{displayItem.watchUrl ? 'รับชมใน Modal' : 'ยังไม่มีลิงก์รับชม'}</h3>
                   </div>
-                  {displayItem.watchUrl ? <span className="rounded-full bg-[#e50914]/18 px-2.5 py-1 text-[10px] font-black text-red-100 md:text-xs">ไม่เปิดปลายทาง</span> : null}
+                  {displayItem.watchUrl ? <span className="rounded-full bg-[#e50914]/18 px-2.5 py-1 text-[10px] font-black text-red-100 backdrop-blur-xl md:text-xs">ไม่เปิดปลายทาง</span> : null}
                 </div>
                 <div className="mt-3">
                   <InlinePlayer url={displayItem.watchUrl} title={`รับชม ${displayItem.title}`} fallbackImage={displayItem.backdropUrl || displayItem.posterUrl} emptyLabel="ยังไม่มีลิงก์รับชมที่แอดมินวางไว้" />
                 </div>
                 <div className="mt-3 grid gap-2 md:grid-cols-[1fr_auto] md:items-center">
                   <p className="text-[11px] font-semibold leading-5 text-white/48 md:text-xs">{displayItem.watchUrl ? 'ระบบใช้ลิงก์ผลงานส่วนตัวที่บันทึกไว้ และเล่นผ่าน player ภายในหน้าต่างนี้' : 'เมื่อเพิ่มลิงก์ใน Admin แล้ว ปุ่มรับชมจะเล่นใน Modal นี้ทันที'}</p>
-                  <button onClick={reportIssue} className="h-9 rounded-xl border border-white/10 bg-black/35 px-4 text-xs font-black text-white/70 md:h-10">แจ้งลิงก์เสีย</button>
+                  <button onClick={reportIssue} className="h-9 rounded-xl bg-black/35 px-4 text-xs font-black text-white/70 shadow-[0_12px_34px_rgba(0,0,0,0.32)] backdrop-blur-xl md:h-10">แจ้งลิงก์เสีย</button>
                 </div>
-                {reported ? <p className="mt-3 rounded-2xl border border-green-400/20 bg-green-400/10 p-3 text-xs font-bold text-green-100 md:text-sm">รับรายงานแล้ว ทีมแอดมินจะตรวจสอบลิงก์นี้</p> : null}
+                {reported ? <p className="mt-3 rounded-2xl bg-green-400/[0.09] p-3 text-xs font-bold text-green-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl md:text-sm">รับรายงานแล้ว ทีมแอดมินจะตรวจสอบลิงก์นี้</p> : null}
               </div>
             )}
-          </section>
+          </Surface>
         </div>
       </div>
     </div>
