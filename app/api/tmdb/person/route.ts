@@ -31,6 +31,8 @@ type TmdbCreditResponse = {
   cast?: TmdbCredit[];
 };
 
+const minTmdbRating = 6.5;
+const minVoteCount = 80;
 const imageBase = 'https://image.tmdb.org/t/p/original';
 const posterBase = 'https://image.tmdb.org/t/p/w500';
 const profileBase = 'https://image.tmdb.org/t/p/w185';
@@ -71,11 +73,14 @@ function toMovieItem(item: TmdbCredit, index: number): MovieItem | null {
   if (!mediaType) return null;
   if (!item.poster_path && !item.backdrop_path) return null;
 
+  const rating = Number(item.vote_average || 0);
+  const voteCount = Number(item.vote_count || 0);
+  if (rating < minTmdbRating || voteCount < minVoteCount) return null;
+
   const title = item.title || item.name || item.original_title || item.original_name;
   if (!title) return null;
 
   const year = (item.release_date || item.first_air_date || '').slice(0, 4) || 'ไม่ระบุ';
-  const rating = Number(item.vote_average || 0);
   const genres = (item.genre_ids || []).slice(0, 3).map((id) => genreNames[id] || 'ภาพยนตร์');
 
   const base: MovieItem = {
@@ -93,7 +98,7 @@ function toMovieItem(item: TmdbCredit, index: number): MovieItem | null {
     status: 'review',
     isWatchReady: false,
     label: item.character ? item.character : index < 3 ? 'ผลงาน' : undefined,
-    badges: [index < 3 ? 'ผลงาน' : mediaType === 'tv' ? 'Series' : 'Movie', rating >= 8 ? '8+' : undefined, 'HD'].filter(Boolean) as string[],
+    badges: [index < 3 ? 'ผลงาน' : mediaType === 'tv' ? 'Series' : 'Movie', rating >= 8 ? '8+' : '6.5+', 'HD'].filter(Boolean) as string[],
   };
 
   return base;
