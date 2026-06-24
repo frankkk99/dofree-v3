@@ -68,7 +68,7 @@ type TmdbItem = {
 
 type TmdbVideo = { site?: string; key?: string; type?: string; official?: boolean };
 type TmdbCast = { id: number; name: string; character?: string; profile_path?: string | null };
-type TmdbResponse = { results?: TmdbItem[] };
+type TmdbResponse = { results?: TmdbItem[] } | null;
 type WatchLinkRecord = {
   tmdb_id: number;
   media_type: MediaType;
@@ -82,9 +82,9 @@ type WatchLinkRecord = {
 type WatchLinkLookup = Map<string, WatchLinkRecord>;
 
 type SourceDef = {
-  key: string;
-  title: string;
+  slug: string;
   eyebrow: string;
+  title: string;
   description: string;
   path: string;
   mediaType: MediaType;
@@ -100,6 +100,15 @@ const imageBase = 'https://image.tmdb.org/t/p/original';
 const posterBase = 'https://image.tmdb.org/t/p/w500';
 const profileBase = 'https://image.tmdb.org/t/p/w185';
 
+const fallbackImages = [
+  'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1400&q=80',
+  'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?auto=format&fit=crop&w=1400&q=80',
+  'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=1400&q=80',
+  'https://images.unsplash.com/photo-1505686994434-e3cc5abf1330?auto=format&fit=crop&w=1400&q=80',
+  'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?auto=format&fit=crop&w=1400&q=80',
+];
+
+const fallbackTitles = ['เงามรณะ', 'รหัสคืนฝน', 'เมืองหลังเงา', 'ประตูเวลามืด', 'สัญญาณสุดท้าย'];
 const genreNames: Record<number, string> = {
   28: 'แอ็กชัน',
   12: 'ผจญภัย',
@@ -115,23 +124,21 @@ const genreNames: Record<number, string> = {
   80: 'อาชญากรรม',
   9648: 'ลึกลับ',
   10751: 'ครอบครัว',
-  36: 'ประวัติศาสตร์',
-  10752: 'สงคราม',
-  10402: 'เพลง',
 };
-
-const fallbackImages = [
-  'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1400&q=80',
-  'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?auto=format&fit=crop&w=1400&q=80',
-  'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=1400&q=80',
-  'https://images.unsplash.com/photo-1505686994434-e3cc5abf1330?auto=format&fit=crop&w=1400&q=80',
-  'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?auto=format&fit=crop&w=1400&q=80',
-];
-
-const fallbackTitles = ['เงามรณะ', 'รหัสคืนฝน', 'เมืองหลังเงา', 'ประตูเวลามืด', 'สัญญาณสุดท้าย'];
 
 function demoWatchUrl(item: Pick<MovieItem, 'id' | 'mediaType'>) {
   return `/watch-ready?play=${item.mediaType}-${item.id}`;
+}
+
+function buildBadges(item: Pick<MovieItem, 'rating' | 'language' | 'isWatchReady'>, index: number) {
+  const badges: string[] = [];
+  if (item.isWatchReady) badges.push('พร้อมดู');
+  if (item.rating >= 8) badges.push('8+');
+  if (item.rating >= minTmdbRating) badges.push('6.5+');
+  if (index < 4) badges.push('ใหม่');
+  if (item.language === 'th') badges.push('พากย์ไทย');
+  badges.push('HD');
+  return badges.slice(0, 3);
 }
 
 function fallbackItem(index: number, overrides: Partial<MovieItem> = {}): MovieItem {
@@ -154,7 +161,6 @@ function fallbackItem(index: number, overrides: Partial<MovieItem> = {}): MovieI
     watchUrl: demoWatchUrl({ id: 9000 + index, mediaType: 'movie' }),
     label: index % 2 === 0 ? 'ใหม่' : '8+',
   };
-
   return { ...base, badges: buildBadges(base, index), ...overrides };
 }
 
@@ -171,16 +177,29 @@ const fallback: HomePayload = {
   sections: fallbackSections,
 };
 
-function buildBadges(item: { rating: number; language?: string; isWatchReady?: boolean }, index: number) {
-  const badges: string[] = [];
-  if (item.isWatchReady) badges.push('พร้อมดู');
-  if (item.rating >= 8) badges.push('8+');
-  if (item.rating >= minTmdbRating) badges.push('6.5+');
-  if (index < 4) badges.push('ใหม่');
-  if (item.language === 'th') badges.push('พากย์ไทย');
-  badges.push('HD');
-  return badges.slice(0, 3);
-}
+const sourceDefs: SourceDef[] = [
+  { slug: 'top-rated', eyebrow: 'คะแนนสูง', title: 'คะแนน 6.5+ น่าดู', description: 'รวมหนังคะแนนดีสำหรับคนเลือกจากคุณภาพ', path: '/movie/top_rated?language=th-TH', mediaType: 'movie', pages: 8, limit: 160, offset: 0 },
+  { slug: 'popular', eyebrow: 'กำลังนิยม', title: 'ยอดนิยมคะแนนดี', description: 'หนังที่คนค้นหาและคะแนนผ่าน 6.5+', path: '/movie/popular?language=th-TH&region=TH', mediaType: 'movie', pages: 8, limit: 160, offset: 200 },
+  { slug: 'now-playing', eyebrow: 'มาใหม่', title: 'ภาพยนตร์มาใหม่คะแนนดี', description: 'แถวภาพยนตร์ใหม่ที่คะแนนผ่านเกณฑ์', path: '/movie/now_playing?language=th-TH&region=TH', mediaType: 'movie', pages: 5, limit: 100, offset: 400 },
+  { slug: 'series', eyebrow: 'ซีรีส์', title: 'ซีรีส์น่าติดตาม', description: 'ซีรีส์คะแนนดีที่เหมาะกับหน้า TV detail', path: '/tv/popular?language=th-TH', mediaType: 'tv', pages: 6, limit: 120, offset: 540 },
+  { slug: 'thai', eyebrow: 'Local Focus', title: 'หนังไทยคะแนนดี', description: 'หมวดเฉพาะทางสำหรับตลาดไทยและ SEO ภาษาไทย', path: '/discover/movie?language=th-TH&with_original_language=th&sort_by=popularity.desc', mediaType: 'movie', pages: 6, limit: 120, offset: 700, discover: true },
+  { slug: 'action', eyebrow: 'Action', title: 'แอ็กชัน', description: 'หนังแอ็กชันสำหรับคนชอบจังหวะเร็ว', path: '/discover/movie?language=th-TH&with_genres=28&sort_by=popularity.desc', mediaType: 'movie', pages: 5, limit: 100, offset: 860, discover: true },
+  { slug: 'adventure', eyebrow: 'Adventure', title: 'ผจญภัย', description: 'หนังเดินทางและโลกกว้าง', path: '/discover/movie?language=th-TH&with_genres=12&sort_by=popularity.desc', mediaType: 'movie', pages: 5, limit: 100, offset: 980, discover: true },
+  { slug: 'animation', eyebrow: 'Animation', title: 'แอนิเมชัน', description: 'แอนิเมชันคะแนนดีสำหรับทุกวัย', path: '/discover/movie?language=th-TH&with_genres=16&sort_by=popularity.desc', mediaType: 'movie', pages: 5, limit: 100, offset: 1100, discover: true },
+  { slug: 'drama', eyebrow: 'Drama', title: 'ดราม่า', description: 'ดราม่าที่มีอารมณ์และตัวละครชัด', path: '/discover/movie?language=th-TH&with_genres=18&sort_by=popularity.desc', mediaType: 'movie', pages: 5, limit: 100, offset: 1220, discover: true },
+  { slug: 'thriller', eyebrow: 'Thriller', title: 'ระทึกขวัญ', description: 'หนังลุ้นและเข้มข้น', path: '/discover/movie?language=th-TH&with_genres=53&sort_by=popularity.desc', mediaType: 'movie', pages: 5, limit: 100, offset: 1340, discover: true },
+  { slug: 'horror', eyebrow: 'Horror', title: 'สยองขวัญ', description: 'หนังสยองที่เหมาะกับโทนมืดของเว็บ', path: '/discover/movie?language=th-TH&with_genres=27&sort_by=popularity.desc', mediaType: 'movie', pages: 5, limit: 100, offset: 1460, discover: true },
+  { slug: 'comedy', eyebrow: 'Comedy', title: 'คอมเมดี้', description: 'หนังดูง่าย เบรกอารมณ์จากโทนเข้ม', path: '/discover/movie?language=th-TH&with_genres=35&sort_by=popularity.desc', mediaType: 'movie', pages: 5, limit: 100, offset: 1580, discover: true },
+  { slug: 'sci-fi', eyebrow: 'Sci-Fi', title: 'ไซไฟ', description: 'หนังโลกอนาคตและจินตนาการ', path: '/discover/movie?language=th-TH&with_genres=878&sort_by=popularity.desc', mediaType: 'movie', pages: 5, limit: 100, offset: 1700, discover: true },
+  { slug: 'romance', eyebrow: 'Romance', title: 'โรแมนติก', description: 'หนังรักและความสัมพันธ์', path: '/discover/movie?language=th-TH&with_genres=10749&sort_by=popularity.desc', mediaType: 'movie', pages: 5, limit: 100, offset: 1820, discover: true },
+  { slug: 'fantasy', eyebrow: 'Fantasy', title: 'แฟนตาซี', description: 'โลกเหนือจริงและการผจญภัย', path: '/discover/movie?language=th-TH&with_genres=14&sort_by=popularity.desc', mediaType: 'movie', pages: 5, limit: 100, offset: 1940, discover: true },
+  { slug: 'crime', eyebrow: 'Crime', title: 'อาชญากรรม', description: 'หนังอาชญากรรมและการสืบสวน', path: '/discover/movie?language=th-TH&with_genres=80&sort_by=popularity.desc', mediaType: 'movie', pages: 5, limit: 100, offset: 2060, discover: true },
+  { slug: 'mystery', eyebrow: 'Mystery', title: 'ลึกลับ', description: 'หนังปริศนาและความลับ', path: '/discover/movie?language=th-TH&with_genres=9648&sort_by=popularity.desc', mediaType: 'movie', pages: 5, limit: 100, offset: 2180, discover: true },
+  { slug: 'korea', eyebrow: 'Korea', title: 'หนังเกาหลี', description: 'คัดหนังเกาหลีคะแนนดี', path: '/discover/movie?language=th-TH&with_original_language=ko&sort_by=popularity.desc', mediaType: 'movie', pages: 5, limit: 100, offset: 2300, discover: true },
+  { slug: 'japan', eyebrow: 'Japan', title: 'หนังญี่ปุ่น', description: 'คัดหนังญี่ปุ่นคะแนนดี', path: '/discover/movie?language=th-TH&with_original_language=ja&sort_by=popularity.desc', mediaType: 'movie', pages: 5, limit: 100, offset: 2420, discover: true },
+  { slug: 'china', eyebrow: 'China', title: 'หนังจีน', description: 'คัดหนังจีนคะแนนดี', path: '/discover/movie?language=th-TH&with_original_language=zh&sort_by=popularity.desc', mediaType: 'movie', pages: 5, limit: 100, offset: 2540, discover: true },
+  { slug: 'documentary', eyebrow: 'Documentary', title: 'สารคดี', description: 'สารคดีและเรื่องจริง', path: '/discover/movie?language=th-TH&with_genres=99&sort_by=popularity.desc', mediaType: 'movie', pages: 5, limit: 80, offset: 2660, discover: true },
+];
 
 function watchLinkKey(mediaType: MediaType, id: number) {
   return `${mediaType}-${id}`;
@@ -199,15 +218,7 @@ function normalizeDrivePreviewUrl(value?: string | null) {
   return url;
 }
 
-function isQualifiedTmdbItem(item: TmdbItem) {
-  const rating = Number(item.vote_average || 0);
-  const voteCount = Number(item.vote_count || 0);
-  const hasImage = Boolean(item.poster_path || item.backdrop_path);
-  const hasTitle = Boolean(item.title || item.name || item.original_title || item.original_name);
-  return hasImage && hasTitle && !item.adult && rating >= minTmdbRating && voteCount >= minVoteCount;
-}
-
-async function tmdb(path: string) {
+async function tmdb<T = any>(path: string): Promise<T | null> {
   const token = process.env.TMDB_ACCESS_TOKEN;
   if (!token) return null;
 
@@ -217,18 +228,26 @@ async function tmdb(path: string) {
   });
 
   if (!response.ok) return null;
-  return response.json();
+  return response.json() as Promise<T>;
 }
 
 async function tmdbCollection(basePath: string, pages = 3) {
   const joiner = basePath.includes('?') ? '&' : '?';
-  const responses = await Promise.all(Array.from({ length: pages }, (_, index) => tmdb(`${basePath}${joiner}page=${index + 1}`)));
+  const responses = await Promise.all(Array.from({ length: pages }, (_, index) => tmdb<TmdbResponse>(`${basePath}${joiner}page=${index + 1}`)));
   return { results: responses.flatMap((response) => response?.results || []) };
 }
 
 function highRatedPath(path: string) {
   const joiner = path.includes('?') ? '&' : '?';
   return `${path}${joiner}vote_average.gte=${minTmdbRating}&vote_count.gte=${minVoteCount}&include_adult=false`;
+}
+
+function isQualifiedTmdbItem(item: TmdbItem) {
+  const rating = Number(item.vote_average || 0);
+  const voteCount = Number(item.vote_count || 0);
+  const hasImage = Boolean(item.poster_path || item.backdrop_path);
+  const hasTitle = Boolean(item.title || item.name || item.original_title || item.original_name);
+  return hasImage && hasTitle && !item.adult && rating >= minTmdbRating && voteCount >= minVoteCount;
 }
 
 async function fetchActiveWatchLinks(): Promise<WatchLinkLookup> {
@@ -291,6 +310,10 @@ function toMovieItem(item: TmdbItem, mediaType: MediaType, index: number): Movie
   return { ...base, badges: buildBadges(base, index) };
 }
 
+function mapItems(data: TmdbResponse, mediaType: MediaType, offset: number, limit = 80) {
+  return (data?.results || []).filter(isQualifiedTmdbItem).slice(0, limit).map((item, index) => toMovieItem(item, mediaType, index + offset));
+}
+
 function applyWatchLink(item: MovieItem, links: WatchLinkLookup, index: number): MovieItem {
   const link = links.get(watchLinkKey(item.mediaType, item.id));
 
@@ -319,50 +342,21 @@ function applyWatchLinks(items: MovieItem[], links: WatchLinkLookup, offset = 0)
   return items.map((item, index) => applyWatchLink(item, links, index + offset));
 }
 
-function mapItems(data: TmdbResponse | null, mediaType: MediaType, offset: number, limit = 80) {
-  return (data?.results || []).filter(isQualifiedTmdbItem).slice(0, limit).map((item, index) => toMovieItem(item, mediaType, index + offset));
-}
-
 function uniqueItems(items: MovieItem[]) {
   const map = new Map<string, MovieItem>();
   for (const item of items) map.set(`${item.mediaType}-${item.id}`, item);
   return [...map.values()];
 }
 
-const sources: SourceDef[] = [
-  { key: 'top-rated', eyebrow: 'คะแนนสูง', title: 'คะแนน 6.5+ น่าดู', description: 'รวมหนังคะแนนดีสำหรับคนเลือกจากคุณภาพ', path: '/movie/top_rated?language=th-TH', mediaType: 'movie', pages: 8, limit: 160, offset: 0 },
-  { key: 'popular', eyebrow: 'กำลังนิยม', title: 'ยอดนิยมคะแนนดี', description: 'หนังที่คนค้นหาและคะแนนผ่าน 6.5+', path: '/movie/popular?language=th-TH&region=TH', mediaType: 'movie', pages: 8, limit: 160, offset: 200 },
-  { key: 'now-playing', eyebrow: 'มาใหม่', title: 'ภาพยนตร์มาใหม่คะแนนดี', description: 'แถวภาพยนตร์ใหม่ที่คะแนนผ่านเกณฑ์', path: '/movie/now_playing?language=th-TH&region=TH', mediaType: 'movie', pages: 5, limit: 100, offset: 400 },
-  { key: 'upcoming', eyebrow: 'กำลังเข้าใหม่', title: 'เร็ว ๆ นี้', description: 'หนังใหม่ที่เหมาะสำหรับทำแถวรออัปเดต', path: '/movie/upcoming?language=th-TH&region=TH', mediaType: 'movie', pages: 5, limit: 100, offset: 540 },
-  { key: 'series', eyebrow: 'ซีรีส์', title: 'ซีรีส์น่าติดตาม', description: 'ซีรีส์คะแนนดีที่เหมาะกับหน้า TV detail', path: '/tv/popular?language=th-TH', mediaType: 'tv', pages: 6, limit: 120, offset: 680 },
-  { key: 'thai', eyebrow: 'Local Focus', title: 'หนังไทยคะแนนดี', description: 'หมวดเฉพาะทางสำหรับตลาดไทยและ SEO ภาษาไทย', path: '/discover/movie?language=th-TH&with_original_language=th&sort_by=popularity.desc', mediaType: 'movie', pages: 6, limit: 120, offset: 820, discover: true },
-  { key: 'action', eyebrow: 'Action', title: 'แอ็กชัน', description: 'หนังแอ็กชันสำหรับคนชอบจังหวะเร็ว', path: '/discover/movie?language=th-TH&with_genres=28&sort_by=popularity.desc', mediaType: 'movie', pages: 5, limit: 100, offset: 980, discover: true },
-  { key: 'adventure', eyebrow: 'Adventure', title: 'ผจญภัย', description: 'หนังเดินทางและโลกกว้าง', path: '/discover/movie?language=th-TH&with_genres=12&sort_by=popularity.desc', mediaType: 'movie', pages: 5, limit: 100, offset: 1100, discover: true },
-  { key: 'animation', eyebrow: 'Animation', title: 'แอนิเมชัน', description: 'แอนิเมชันคะแนนดีสำหรับทุกวัย', path: '/discover/movie?language=th-TH&with_genres=16&sort_by=popularity.desc', mediaType: 'movie', pages: 5, limit: 100, offset: 1220, discover: true },
-  { key: 'drama', eyebrow: 'Drama', title: 'ดราม่า', description: 'ดราม่าที่มีอารมณ์และตัวละครชัด', path: '/discover/movie?language=th-TH&with_genres=18&sort_by=popularity.desc', mediaType: 'movie', pages: 5, limit: 100, offset: 1340, discover: true },
-  { key: 'thriller', eyebrow: 'Thriller', title: 'ระทึกขวัญ', description: 'หนังลุ้นและเข้มข้น', path: '/discover/movie?language=th-TH&with_genres=53&sort_by=popularity.desc', mediaType: 'movie', pages: 5, limit: 100, offset: 1460, discover: true },
-  { key: 'horror', eyebrow: 'Horror', title: 'สยองขวัญ', description: 'หนังสยองที่เหมาะกับโทนมืดของเว็บ', path: '/discover/movie?language=th-TH&with_genres=27&sort_by=popularity.desc', mediaType: 'movie', pages: 5, limit: 100, offset: 1580, discover: true },
-  { key: 'comedy', eyebrow: 'Comedy', title: 'คอมเมดี้', description: 'หนังดูง่าย เบรกอารมณ์จากโทนเข้ม', path: '/discover/movie?language=th-TH&with_genres=35&sort_by=popularity.desc', mediaType: 'movie', pages: 5, limit: 100, offset: 1700, discover: true },
-  { key: 'sci-fi', eyebrow: 'Sci-Fi', title: 'ไซไฟ', description: 'หนังโลกอนาคตและจินตนาการ', path: '/discover/movie?language=th-TH&with_genres=878&sort_by=popularity.desc', mediaType: 'movie', pages: 5, limit: 100, offset: 1820, discover: true },
-  { key: 'romance', eyebrow: 'Romance', title: 'โรแมนติก', description: 'หนังรักและความสัมพันธ์', path: '/discover/movie?language=th-TH&with_genres=10749&sort_by=popularity.desc', mediaType: 'movie', pages: 5, limit: 100, offset: 1940, discover: true },
-  { key: 'fantasy', eyebrow: 'Fantasy', title: 'แฟนตาซี', description: 'โลกเหนือจริงและการผจญภัย', path: '/discover/movie?language=th-TH&with_genres=14&sort_by=popularity.desc', mediaType: 'movie', pages: 5, limit: 100, offset: 2060, discover: true },
-  { key: 'crime', eyebrow: 'Crime', title: 'อาชญากรรม', description: 'หนังอาชญากรรมและการสืบสวน', path: '/discover/movie?language=th-TH&with_genres=80&sort_by=popularity.desc', mediaType: 'movie', pages: 5, limit: 100, offset: 2180, discover: true },
-  { key: 'mystery', eyebrow: 'Mystery', title: 'ลึกลับ', description: 'หนังปริศนาและความลับ', path: '/discover/movie?language=th-TH&with_genres=9648&sort_by=popularity.desc', mediaType: 'movie', pages: 5, limit: 100, offset: 2300, discover: true },
-  { key: 'korea', eyebrow: 'Korea', title: 'หนังเกาหลี', description: 'คัดหนังเกาหลีคะแนนดี', path: '/discover/movie?language=th-TH&with_original_language=ko&sort_by=popularity.desc', mediaType: 'movie', pages: 5, limit: 100, offset: 2420, discover: true },
-  { key: 'japan', eyebrow: 'Japan', title: 'หนังญี่ปุ่น', description: 'คัดหนังญี่ปุ่นคะแนนดี', path: '/discover/movie?language=th-TH&with_original_language=ja&sort_by=popularity.desc', mediaType: 'movie', pages: 5, limit: 100, offset: 2540, discover: true },
-  { key: 'china', eyebrow: 'China', title: 'หนังจีน', description: 'คัดหนังจีนคะแนนดี', path: '/discover/movie?language=th-TH&with_original_language=zh&sort_by=popularity.desc', mediaType: 'movie', pages: 5, limit: 100, offset: 2660, discover: true },
-  { key: 'documentary', eyebrow: 'Documentary', title: 'สารคดี', description: 'สารคดีและเรื่องจริง', path: '/discover/movie?language=th-TH&with_genres=99&sort_by=popularity.desc', mediaType: 'movie', pages: 5, limit: 80, offset: 2780, discover: true },
-];
-
 export async function getHomePayload(): Promise<HomePayload> {
-  const [watchLinks, ...responses] = await Promise.all([
+  const [watchLinks, responses] = await Promise.all([
     fetchActiveWatchLinks(),
-    ...sources.map((source) => tmdbCollection(source.discover ? highRatedPath(source.path) : source.path, source.pages)),
+    Promise.all(sourceDefs.map((source) => tmdbCollection(source.discover ? highRatedPath(source.path) : source.path, source.pages))),
   ]);
 
-  const sections = sources
+  const sections = sourceDefs
     .map((source, index) => ({
-      slug: source.key,
+      slug: source.slug,
       eyebrow: source.eyebrow,
       title: source.title,
       description: source.description,
@@ -426,11 +420,11 @@ export async function getDetailPayload(mediaType: MediaType, id: string): Promis
   }
 
   const [detail, videosTh, videosEn, credits, recommendations, watchLinks] = await Promise.all([
-    tmdb(`/${mediaType}/${numericId}?language=th-TH`),
-    tmdb(`/${mediaType}/${numericId}/videos?language=th-TH`),
-    tmdb(`/${mediaType}/${numericId}/videos?language=en-US`),
-    tmdb(`/${mediaType}/${numericId}/credits?language=th-TH`),
-    tmdb(`/${mediaType}/${numericId}/recommendations?language=th-TH&page=1`),
+    tmdb<TmdbItem>(`/${mediaType}/${numericId}?language=th-TH`),
+    tmdb<{ results?: TmdbVideo[] }>(`/${mediaType}/${numericId}/videos?language=th-TH`),
+    tmdb<{ results?: TmdbVideo[] }>(`/${mediaType}/${numericId}/videos?language=en-US`),
+    tmdb<{ cast?: TmdbCast[] }>(`/${mediaType}/${numericId}/credits?language=th-TH`),
+    tmdb<TmdbResponse>(`/${mediaType}/${numericId}/recommendations?language=th-TH&page=1`),
     fetchActiveWatchLinks(),
   ]);
 
@@ -442,7 +436,7 @@ export async function getDetailPayload(mediaType: MediaType, id: string): Promis
   const baseItem = toMovieItem(detail, mediaType, 0);
   const trailerUrl = youtubeTrailer(mergeVideos(videosTh, videosEn));
   const item = applyWatchLink({ ...baseItem, trailerUrl }, watchLinks, 0);
-  const cast = (credits?.cast || []).slice(0, 8).map((person: TmdbCast) => ({
+  const cast = (credits?.cast || []).slice(0, 8).map((person) => ({
     id: person.id,
     name: person.name,
     character: person.character,
