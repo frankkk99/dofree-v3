@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAdminToken } from '@/lib/admin-auth';
 import { supabaseRest } from '@/lib/supabase-rest';
 
-type CountRow = { count: number | string };
+type TotalRow = { total: number | string };
 type BucketRow = {
   source_bucket: string | null;
   total: number | string;
@@ -17,19 +17,20 @@ export async function GET(request: Request) {
   if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
 
   try {
-    const [countRows, bucketRows] = await Promise.all([
-      supabaseRest<CountRow[]>('tmdb_catalog?select=count', { mode: 'service' }),
-      supabaseRest<BucketRow[]>(
-        'rpc/tmdb_catalog_bucket_stats',
-        {
-          method: 'POST',
-          mode: 'service',
-          body: {},
-        }
-      ).catch(() => [] as BucketRow[]),
+    const [totalRows, bucketRows] = await Promise.all([
+      supabaseRest<TotalRow[]>('rpc/tmdb_catalog_total_stats', {
+        method: 'POST',
+        mode: 'service',
+        body: {},
+      }),
+      supabaseRest<BucketRow[]>('rpc/tmdb_catalog_bucket_stats', {
+        method: 'POST',
+        mode: 'service',
+        body: {},
+      }),
     ]);
 
-    const total = Number(countRows?.[0]?.count || 0);
+    const total = Number(totalRows?.[0]?.total || 0);
     const buckets = bucketRows.map((row) => ({
       source_bucket: row.source_bucket || 'unknown',
       total: Number(row.total || 0),
