@@ -20,6 +20,13 @@ type AdminMovieLink = {
   status: MovieStatus;
   created_at?: string;
   updated_at?: string;
+  poster_url?: string | null;
+  backdrop_url?: string | null;
+  rating?: number;
+  year?: string;
+  language?: string;
+  runtime?: number | null;
+  genres?: string[];
 };
 
 type LinkReport = {
@@ -36,8 +43,26 @@ type LinkReport = {
   updated_at: string;
 };
 
+type TmdbDetail = {
+  title?: string;
+  name?: string;
+  original_title?: string;
+  original_name?: string;
+  poster_path?: string | null;
+  backdrop_path?: string | null;
+  vote_average?: number;
+  release_date?: string;
+  first_air_date?: string;
+  original_language?: string;
+  runtime?: number;
+  episode_run_time?: number[];
+  genres?: { id: number; name: string }[];
+};
+
 const validMediaTypes = new Set(['movie', 'tv']);
 const validStatuses = new Set(['draft', 'review', 'published', 'broken', 'hidden']);
+const posterBase = 'https://image.tmdb.org/t/p/w500';
+const backdropBase = 'https://image.tmdb.org/t/p/original';
 
 function cleanText(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
@@ -62,6 +87,43 @@ function authError(request: Request) {
   return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
 }
 
+async function fetchTmdbDetail(item: AdminMovieLink): Promise<AdminMovieLink> {
+  const token = process.env.TMDB_ACCESS_TOKEN;
+  if (!token || !item.tmdb_id || !item.media_type) return item;
+
+  try {
+    const response = await fetch(`https://api.themoviedb.org/3/${item.media_type}/${item.tmdb_id}?language=th-TH`, {
+      headers: { Authorization: `Bearer ${token}`, accept: 'application/json' },
+      next: { revalidate: 60 * 60 },
+    });
+
+    if (!response.ok) return item;
+    const data = (await response.json()) as TmdbDetail;
+    const title = data.title || data.name || item.title || data.original_title || data.original_name;
+    const year = (data.release_date || data.first_air_date || '').slice(0, 4) || undefined;
+
+    return {
+      ...item,
+      title: item.title || data.original_title || data.original_name || title || null,
+      title_th: item.title_th || title || item.title || null,
+      poster_url: data.poster_path ? `${posterBase}${data.poster_path}` : null,
+      backdrop_url: data.backdrop_path ? `${backdropBase}${data.backdrop_path}` : null,
+      rating: Number(data.vote_average || 0),
+      year,
+      language: data.original_language || undefined,
+      runtime: data.runtime || data.episode_run_time?.[0] || null,
+      genres: data.genres?.slice(0, 3).map((genre) => genre.name) || [],
+    };
+  } catch {
+    return item;
+  }
+}
+
+async function enrichLinks(items: AdminMovieLink[]) {
+  const enriched = await Promise.all(items.map((item) => fetchTmdbDetail(item)));
+  return enriched.sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0));
+}
+
 export async function GET(request: Request) {
   const errorResponse = authError(request);
   if (errorResponse) return errorResponse;
@@ -69,16 +131,16 @@ export async function GET(request: Request) {
   try {
     const [links, reports] = await Promise.all([
       supabaseRest<AdminMovieLink[]>(
-        'admin_movie_links?select=id,tmdb_id,media_type,title,title_th,watch_url,trailer_url,provider,is_active,notes,section_slug,status,created_at,updated_at&order=updated_at.desc&limit=80',
+        'admin_movie_links?select=id,tmdb_id,media_type,title,title_th,watch_url,trailer_url,provider,is_active,notes,section_slug,status,created_at,updated_at&order=updated_at.desc&limit=100',
         { mode: 'service' }
       ),
       supabaseRest<LinkReport[]>(
-        'link_reports?select=id,tmdb_id,media_type,title,title_th,url,reason,detail,status,created_at,updated_at&order=created_at.desc&limit=50',
+        'link_reports?select=id,tmdb_id,media_type,title,title_th,url,reason,detail,status,created_at,updated_at&order=created_at.desc&limit=60',
         { mode: 'service' }
       ),
     ]);
 
-    return NextResponse.json({ ok: true, links, reports });
+    return NextResponse.json({ ok: true, links: await enrichLinks(links), reports });
   } catch (error) {
     return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : 'Cannot load admin dashboard' }, { status: 500 });
   }
@@ -132,7 +194,7 @@ export async function POST(request: Request) {
       body: [record],
     });
 
-    return NextResponse.json({ ok: true, link: rows[0] });
+    return NextResponse.json({ ok: true, link: rows[0] ? await fetchTmdbDetail(rows[0]) : rows[0] });
   } catch (error) {
     return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : 'Cannot save movie link' }, { status: 500 });
   }
@@ -159,6 +221,16 @@ export async function PATCH(request: Request) {
 
   const watchUrl = normalizeDrivePreviewUrl(body?.watch_url);
   if (watchUrl) patch.watch_url = watchUrl;
+  const trailerUrl = normalizeDrivePreviewUrl(body?.trailer_url);
+  if (trailerUrl) patch.trailer_url = trailerUrl;
+  const title = cleanText(body?.title);
+  if (title !== undefined) patch.title = title;
+  const titleTh = cleanText(body?.title_th);
+  if (titleTh !== undefined) patch.title_th = titleTh;
+  const sectionSlug = cleanText(body?.section_slug);
+  if (sectionSlug !== undefined) patch.section_slug = sectionSlug;
+  const provider = cleanText(body?.provider);
+  if (provider !== undefined) patch.provider = provider;
   const notes = cleanText(body?.notes);
   if (notes !== undefined) patch.notes = notes;
 
@@ -170,7 +242,7 @@ export async function PATCH(request: Request) {
       body: patch,
     });
 
-    return NextResponse.json({ ok: true, link: rows[0] });
+    return NextResponse.json({ ok: true, link: rows[0] ? await fetchTmdbDetail(rows[0]) : rows[0] });
   } catch (error) {
     return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : 'Cannot update movie link' }, { status: 500 });
   }
