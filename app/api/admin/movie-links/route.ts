@@ -6,7 +6,7 @@ type MediaType = 'movie' | 'tv';
 type MovieStatus = 'draft' | 'review' | 'published' | 'broken' | 'hidden';
 
 type AdminMovieLink = {
-  id: string;
+  id?: string;
   tmdb_id: number;
   media_type: MediaType;
   title?: string | null;
@@ -14,7 +14,7 @@ type AdminMovieLink = {
   watch_url?: string | null;
   trailer_url?: string | null;
   provider?: string | null;
-  is_active: boolean;
+  is_active?: boolean;
   notes?: string | null;
   section_slug: string;
   status: MovieStatus;
@@ -44,6 +44,7 @@ type LinkReport = {
 };
 
 type TmdbDetail = {
+  id?: number;
   title?: string;
   name?: string;
   original_title?: string;
@@ -57,12 +58,33 @@ type TmdbDetail = {
   runtime?: number;
   episode_run_time?: number[];
   genres?: { id: number; name: string }[];
+  genre_ids?: number[];
+};
+
+type TmdbListResponse = {
+  results?: TmdbDetail[];
 };
 
 const validMediaTypes = new Set(['movie', 'tv']);
 const validStatuses = new Set(['draft', 'review', 'published', 'broken', 'hidden']);
 const posterBase = 'https://image.tmdb.org/t/p/w500';
 const backdropBase = 'https://image.tmdb.org/t/p/original';
+
+const genreNames: Record<number, string> = {
+  28: 'แอ็กชัน',
+  12: 'ผจญภัย',
+  16: 'แอนิเมชัน',
+  18: 'ดราม่า',
+  27: 'สยองขวัญ',
+  35: 'คอมเมดี้',
+  53: 'ระทึกขวัญ',
+  878: 'ไซไฟ',
+  10749: 'โรแมนติก',
+  99: 'สารคดี',
+  14: 'แฟนตาซี',
+  80: 'อาชญากรรม',
+  9648: 'ลึกลับ',
+};
 
 function cleanText(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
@@ -87,6 +109,87 @@ function authError(request: Request) {
   return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
 }
 
+function linkKey(mediaType: MediaType, tmdbId: number) {
+  return `${mediaType}-${tmdbId}`;
+}
+
+async function tmdb(path: string) {
+  const token = process.env.TMDB_ACCESS_TOKEN;
+  if (!token) return null;
+
+  try {
+    const response = await fetch(`https://api.themoviedb.org/3${path}`, {
+      headers: { Authorization: `Bearer ${token}`, accept: 'application/json' },
+      next: { revalidate: 60 * 60 },
+    });
+
+    if (!response.ok) return null;
+    return (await response.json()) as TmdbListResponse;
+  } catch {
+    return null;
+  }
+}
+
+async function tmdbCollection(basePath: string, pages = 2) {
+  const joiner = basePath.includes('?') ? '&' : '?';
+  const responses = await Promise.all(
+    Array.from({ length: pages }, (_, index) => tmdb(`${basePath}${joiner}page=${index + 1}`))
+  );
+
+  return responses.flatMap((response) => response?.results || []);
+}
+
+function toCatalogItem(item: TmdbDetail, mediaType: MediaType, sectionSlug: string): AdminMovieLink | null {
+  if (!item.id || !item.poster_path) return null;
+
+  const title = item.title || item.name || item.original_title || item.original_name;
+  if (!title) return null;
+
+  const year = (item.release_date || item.first_air_date || '').slice(0, 4) || undefined;
+  const genres = item.genres?.length
+    ? item.genres.slice(0, 3).map((genre) => genre.name)
+    : (item.genre_ids || []).slice(0, 3).map((id) => genreNames[id] || 'ภาพยนตร์');
+
+  return {
+    tmdb_id: item.id,
+    media_type: mediaType,
+    title: item.original_title || item.original_name || title,
+    title_th: title,
+    watch_url: null,
+    trailer_url: null,
+    provider: null,
+    is_active: true,
+    notes: null,
+    section_slug: sectionSlug,
+    status: 'draft',
+    poster_url: `${posterBase}${item.poster_path}`,
+    backdrop_url: item.backdrop_path ? `${backdropBase}${item.backdrop_path}` : null,
+    rating: Number(item.vote_average || 0),
+    year,
+    language: item.original_language || undefined,
+    runtime: item.runtime || item.episode_run_time?.[0] || null,
+    genres,
+  };
+}
+
+async function fetchCatalogCandidates() {
+  const collections = await Promise.all([
+    tmdbCollection('/movie/popular?language=th-TH&region=TH', 3).then((items) => items.map((item) => toCatalogItem(item, 'movie', 'popular'))),
+    tmdbCollection('/movie/top_rated?language=th-TH', 3).then((items) => items.map((item) => toCatalogItem(item, 'movie', 'top-rated'))),
+    tmdbCollection('/movie/now_playing?language=th-TH&region=TH', 2).then((items) => items.map((item) => toCatalogItem(item, 'movie', 'now-playing'))),
+    tmdbCollection('/movie/upcoming?language=th-TH&region=TH', 2).then((items) => items.map((item) => toCatalogItem(item, 'movie', 'upcoming'))),
+    tmdbCollection('/discover/movie?language=th-TH&with_original_language=th&sort_by=popularity.desc', 2).then((items) => items.map((item) => toCatalogItem(item, 'movie', 'thai'))),
+    tmdbCollection('/tv/popular?language=th-TH', 2).then((items) => items.map((item) => toCatalogItem(item, 'tv', 'series'))),
+  ]);
+
+  const unique = new Map<string, AdminMovieLink>();
+  for (const item of collections.flat().filter(Boolean) as AdminMovieLink[]) {
+    unique.set(linkKey(item.media_type, item.tmdb_id), item);
+  }
+
+  return [...unique.values()];
+}
+
 async function fetchTmdbDetail(item: AdminMovieLink): Promise<AdminMovieLink> {
   const token = process.env.TMDB_ACCESS_TOKEN;
   if (!token || !item.tmdb_id || !item.media_type) return item;
@@ -100,28 +203,64 @@ async function fetchTmdbDetail(item: AdminMovieLink): Promise<AdminMovieLink> {
     if (!response.ok) return item;
     const data = (await response.json()) as TmdbDetail;
     const title = data.title || data.name || item.title || data.original_title || data.original_name;
-    const year = (data.release_date || data.first_air_date || '').slice(0, 4) || undefined;
+    const year = (data.release_date || data.first_air_date || '').slice(0, 4) || item.year;
 
     return {
       ...item,
       title: item.title || data.original_title || data.original_name || title || null,
       title_th: item.title_th || title || item.title || null,
-      poster_url: data.poster_path ? `${posterBase}${data.poster_path}` : null,
-      backdrop_url: data.backdrop_path ? `${backdropBase}${data.backdrop_path}` : null,
-      rating: Number(data.vote_average || 0),
+      poster_url: item.poster_url || (data.poster_path ? `${posterBase}${data.poster_path}` : null),
+      backdrop_url: item.backdrop_url || (data.backdrop_path ? `${backdropBase}${data.backdrop_path}` : null),
+      rating: item.rating || Number(data.vote_average || 0),
       year,
-      language: data.original_language || undefined,
-      runtime: data.runtime || data.episode_run_time?.[0] || null,
-      genres: data.genres?.slice(0, 3).map((genre) => genre.name) || [],
+      language: item.language || data.original_language || undefined,
+      runtime: item.runtime || data.runtime || data.episode_run_time?.[0] || null,
+      genres: item.genres?.length ? item.genres : data.genres?.slice(0, 3).map((genre) => genre.name) || [],
     };
   } catch {
     return item;
   }
 }
 
-async function enrichLinks(items: AdminMovieLink[]) {
-  const enriched = await Promise.all(items.map((item) => fetchTmdbDetail(item)));
-  return enriched.sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0));
+function mergeSavedIntoCandidate(candidate: AdminMovieLink, saved?: AdminMovieLink): AdminMovieLink {
+  if (!saved) return candidate;
+
+  return {
+    ...candidate,
+    ...saved,
+    title: saved.title || candidate.title,
+    title_th: saved.title_th || candidate.title_th,
+    poster_url: candidate.poster_url || saved.poster_url || null,
+    backdrop_url: candidate.backdrop_url || saved.backdrop_url || null,
+    rating: candidate.rating || saved.rating || 0,
+    year: candidate.year || saved.year,
+    language: candidate.language || saved.language,
+    runtime: candidate.runtime || saved.runtime || null,
+    genres: candidate.genres?.length ? candidate.genres : saved.genres || [],
+    section_slug: saved.section_slug || candidate.section_slug,
+    status: saved.status || candidate.status,
+  };
+}
+
+async function buildAdminLinks(savedLinks: AdminMovieLink[]) {
+  const [catalogCandidates, enrichedSavedLinks] = await Promise.all([
+    fetchCatalogCandidates(),
+    Promise.all(savedLinks.map((item) => fetchTmdbDetail(item))),
+  ]);
+
+  const savedMap = new Map(enrichedSavedLinks.map((item) => [linkKey(item.media_type, item.tmdb_id), item]));
+  const merged = new Map<string, AdminMovieLink>();
+
+  for (const candidate of catalogCandidates) {
+    merged.set(linkKey(candidate.media_type, candidate.tmdb_id), mergeSavedIntoCandidate(candidate, savedMap.get(linkKey(candidate.media_type, candidate.tmdb_id))));
+  }
+
+  for (const saved of enrichedSavedLinks) {
+    const key = linkKey(saved.media_type, saved.tmdb_id);
+    if (!merged.has(key)) merged.set(key, saved);
+  }
+
+  return [...merged.values()].sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0));
 }
 
 export async function GET(request: Request) {
@@ -129,18 +268,19 @@ export async function GET(request: Request) {
   if (errorResponse) return errorResponse;
 
   try {
-    const [links, reports] = await Promise.all([
+    const [savedLinks, reports] = await Promise.all([
       supabaseRest<AdminMovieLink[]>(
-        'admin_movie_links?select=id,tmdb_id,media_type,title,title_th,watch_url,trailer_url,provider,is_active,notes,section_slug,status,created_at,updated_at&order=updated_at.desc&limit=100',
+        'admin_movie_links?select=id,tmdb_id,media_type,title,title_th,watch_url,trailer_url,provider,is_active,notes,section_slug,status,created_at,updated_at&order=updated_at.desc&limit=300',
         { mode: 'service' }
       ),
       supabaseRest<LinkReport[]>(
-        'link_reports?select=id,tmdb_id,media_type,title,title_th,url,reason,detail,status,created_at,updated_at&order=created_at.desc&limit=60',
+        'link_reports?select=id,tmdb_id,media_type,title,title_th,url,reason,detail,status,created_at,updated_at&order=created_at.desc&limit=100',
         { mode: 'service' }
       ),
     ]);
 
-    return NextResponse.json({ ok: true, links: await enrichLinks(links), reports });
+    const links = await buildAdminLinks(savedLinks);
+    return NextResponse.json({ ok: true, links, reports });
   } catch (error) {
     return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : 'Cannot load admin dashboard' }, { status: 500 });
   }
