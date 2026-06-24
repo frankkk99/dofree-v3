@@ -266,7 +266,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
   }
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#030303] text-white">
+    <main className="min-h-screen overflow-x-hidden bg-[#030303] text-white">
       <header className="fixed inset-x-0 top-0 z-50 border-b border-white/[0.07] bg-black/88 backdrop-blur-2xl">
         <nav className="mx-auto flex h-[58px] max-w-[1920px] items-center px-4 md:h-[76px] md:px-7 xl:h-[88px]">
           <a href="/" className="flex items-center gap-1.5 text-[24px] font-black tracking-[-0.08em] text-[#e50914] md:text-[34px] xl:text-[38px]">
@@ -304,15 +304,16 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
         </div>
       </section>
 
-      <section className="relative z-20 mx-auto -mt-5 max-w-[1920px] px-4 md:-mt-7 md:px-7">
-        <div className="mx-auto max-w-[760px] rounded-[20px] bg-black/28 p-1.5 shadow-[0_22px_85px_rgba(0,0,0,0.72)] backdrop-blur-2xl md:max-w-[980px] md:rounded-[26px] md:p-2.5">
-          <div className="rounded-[17px] bg-white/[0.055] p-1.5 backdrop-blur-xl md:rounded-[22px] md:p-2.5">
-            <form onSubmit={onSubmit} className="flex h-8 items-center gap-1.5 rounded-[12px] bg-white/[0.105] px-2.5 text-white md:h-11 md:rounded-[16px] md:px-3.5">
+      <section className="sticky top-[58px] z-40 mx-auto -mt-5 max-w-[1920px] px-4 pb-2 md:top-[76px] md:-mt-7 md:px-7 xl:top-[88px]">
+        <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-full bg-[linear-gradient(180deg,rgba(3,3,3,0.92),rgba(3,3,3,0.72)_68%,rgba(3,3,3,0))] backdrop-blur-sm" />
+        <div className="mx-auto max-w-[760px] rounded-[20px] bg-black/42 p-1.5 shadow-[0_22px_85px_rgba(0,0,0,0.72)] backdrop-blur-2xl md:max-w-[980px] md:rounded-[26px] md:p-2.5">
+          <div className="rounded-[17px] bg-white/[0.065] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.045)] backdrop-blur-xl md:rounded-[22px] md:p-2.5">
+            <form onSubmit={onSubmit} className="flex h-8 items-center gap-1.5 rounded-[12px] bg-white/[0.105] px-2.5 text-white shadow-[0_10px_34px_rgba(0,0,0,0.35)] md:h-11 md:rounded-[16px] md:px-3.5">
               <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหา" className="min-w-0 flex-1 bg-transparent text-[11px] font-bold text-white outline-none placeholder:text-white/50 md:text-[14px]" />
               {query ? <button type="button" onClick={() => setQuery('')} className="grid h-5 w-5 place-items-center rounded-full bg-black/28 text-[10px] text-white/80">×</button> : null}
               <button type="submit" className="rounded-full bg-white/[0.12] px-2 py-1 text-[9px] font-black text-white/72 md:px-3 md:text-[11px]">ค้นหา</button>
             </form>
-            <div className="mt-2 flex max-h-[138px] flex-wrap gap-1.5 overflow-y-auto pr-1 md:mt-2.5 md:max-h-none md:gap-2 md:overflow-visible md:pr-0">
+            <div className="mt-2 flex max-h-[138px] flex-wrap gap-1.5 overflow-y-auto pr-1 md:mt-2.5 md:max-h-[96px] md:gap-2 md:overflow-y-auto md:pr-1 xl:max-h-[112px]">
               {categoryChips.map((chip) => {
                 const active = activeCategory === chip;
                 return (
@@ -326,7 +327,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
         </div>
       </section>
 
-      <section id="sections" className="mx-auto max-w-[1920px] bg-black px-4 py-6 md:px-7 md:py-8">
+      <section id="sections" className="mx-auto max-w-[1920px] scroll-mt-[220px] bg-black px-4 py-6 md:scroll-mt-[240px] md:px-7 md:py-8 xl:scroll-mt-[260px]">
         {filterMode ? (
           <div>
             <div className="mb-4 flex items-end justify-between gap-3">
