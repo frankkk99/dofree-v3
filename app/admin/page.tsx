@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { AdminCmsDashboard } from '@/components/admin-cms-dashboard';
+import { AdminCmsDashboardClean } from '@/components/admin-cms-dashboard-clean';
 
 export const metadata: Metadata = {
   title: 'Admin CMS Dashboard',
@@ -11,5 +11,5 @@ export const metadata: Metadata = {
 };
 
 export default function AdminPage() {
-  return <AdminCmsDashboard />;
+  return <AdminCmsDashboardClean />;
 }
