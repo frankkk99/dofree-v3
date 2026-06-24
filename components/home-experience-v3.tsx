@@ -48,19 +48,66 @@ function ctaLabel(item: MovieItem) {
   return 'รายละเอียด';
 }
 
+function itemSearchText(item: MovieItem) {
+  return [
+    item.title,
+    item.titleEn,
+    item.year,
+    item.language,
+    item.mediaType,
+    item.status,
+    item.label,
+    ...(item.genres || []),
+    ...(item.badges || []),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+}
+
 function matchQuery(item: MovieItem, query: string) {
   const keyword = query.trim().toLowerCase();
   if (!keyword) return true;
-  return [item.title, item.titleEn, item.year, item.language, item.mediaType, ...(item.genres || [])]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase()
-    .includes(keyword);
+  return itemSearchText(item).includes(keyword);
 }
 
 function matchCategory(item: MovieItem, category: string | null) {
   if (!category || category === 'ทั้งหมด') return true;
-  return (item.genres || []).some((genre) => genre.includes(category) || category.includes(genre));
+
+  const genres = (item.genres || []).join(' ').toLowerCase();
+  const badges = (item.badges || []).join(' ').toLowerCase();
+  const status = (item.status || '').toLowerCase();
+  const label = (item.label || '').toLowerCase();
+  const language = (item.language || '').toLowerCase();
+  const year = Number(item.year);
+  const currentYear = new Date().getFullYear();
+
+  switch (category) {
+    case 'หนังไทย':
+      return language === 'th' || genres.includes('ไทย');
+    case 'หนังฝรั่ง':
+      return language === 'en' || language === 'us';
+    case 'พากย์ไทย':
+      return language === 'th' || badges.includes('พากย์ไทย') || label.includes('พากย์ไทย');
+    case 'ซับไทย':
+      return badges.includes('ซับไทย') || label.includes('ซับไทย') || (language !== 'th' && Boolean(language));
+    case 'พร้อมดู':
+      return Boolean(item.isWatchReady || item.watchUrl || status === 'published');
+    case 'คะแนนสูง':
+      return item.rating >= 8;
+    case 'หนังใหม่':
+      return badges.includes('ใหม่') || label.includes('ใหม่') || year >= currentYear - 1;
+    case 'HD':
+      return badges.includes('hd') || label.includes('hd');
+    case 'ZOOM':
+      return badges.includes('zoom') || label.includes('zoom') || status === 'review';
+    case 'ภาพยนตร์':
+      return item.mediaType === 'movie';
+    case 'ซีรีส์':
+      return item.mediaType === 'tv';
+    default:
+      return (item.genres || []).some((genre) => genre.includes(category) || category.includes(genre));
+  }
 }
 
 function useLazyMount(initiallyMounted = false, rootMargin = '640px') {
@@ -258,18 +305,18 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
       </section>
 
       <section className="relative z-20 mx-auto -mt-5 max-w-[1920px] px-4 md:-mt-7 md:px-7">
-        <div className="mx-auto max-w-[760px] rounded-[20px] bg-black/28 p-1.5 shadow-[0_22px_85px_rgba(0,0,0,0.72)] backdrop-blur-2xl md:max-w-[920px] md:rounded-[26px] md:p-2.5">
+        <div className="mx-auto max-w-[760px] rounded-[20px] bg-black/28 p-1.5 shadow-[0_22px_85px_rgba(0,0,0,0.72)] backdrop-blur-2xl md:max-w-[980px] md:rounded-[26px] md:p-2.5">
           <div className="rounded-[17px] bg-white/[0.055] p-1.5 backdrop-blur-xl md:rounded-[22px] md:p-2.5">
             <form onSubmit={onSubmit} className="flex h-8 items-center gap-1.5 rounded-[12px] bg-white/[0.105] px-2.5 text-white md:h-11 md:rounded-[16px] md:px-3.5">
               <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหา" className="min-w-0 flex-1 bg-transparent text-[11px] font-bold text-white outline-none placeholder:text-white/50 md:text-[14px]" />
               {query ? <button type="button" onClick={() => setQuery('')} className="grid h-5 w-5 place-items-center rounded-full bg-black/28 text-[10px] text-white/80">×</button> : null}
               <button type="submit" className="rounded-full bg-white/[0.12] px-2 py-1 text-[9px] font-black text-white/72 md:px-3 md:text-[11px]">ค้นหา</button>
             </form>
-            <div className="mt-1.5 flex max-h-[74px] flex-wrap gap-1 overflow-hidden md:mt-2 md:max-h-[92px] md:gap-1.5">
+            <div className="mt-2 flex max-h-[138px] flex-wrap gap-1.5 overflow-y-auto pr-1 md:mt-2.5 md:max-h-none md:gap-2 md:overflow-visible md:pr-0">
               {categoryChips.map((chip) => {
                 const active = activeCategory === chip;
                 return (
-                  <button key={chip} type="button" onClick={() => chooseCategory(chip)} className={`inline-flex h-[21px] items-center rounded-full border px-2 text-[9px] font-black leading-none transition md:h-7 md:px-3 md:text-[11px] ${active ? 'border-[#e50914]/90 bg-[#e50914] text-white shadow-glow' : 'border-white/18 bg-white/[0.055] text-white/72 hover:border-white/30 hover:bg-white/[0.11] hover:text-white'}`}>
+                  <button key={chip} type="button" onClick={() => chooseCategory(chip)} className={`inline-flex h-[22px] items-center rounded-full px-2.5 text-[9px] font-black leading-none transition md:h-7 md:px-3 md:text-[11px] ${active ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.075] text-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] hover:bg-white/[0.13] hover:text-white'}`}>
                     {chip}
                   </button>
                 );
