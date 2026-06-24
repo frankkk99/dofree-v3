@@ -32,6 +32,11 @@ type DetailResponse = {
   source?: 'tmdb' | 'fallback';
 };
 
+type PersonCreditsResponse = {
+  person?: CastPerson;
+  items?: MovieItem[];
+};
+
 function fallbackCast(item: MovieItem): CastPerson[] {
   const roles = item.mediaType === 'tv'
     ? ['นักแสดงนำซีรีส์', 'ตัวละครหลัก', 'นักแสดงสมทบ', 'แขกรับเชิญ', 'ตัวละครรอง', 'บทพิเศษ', 'นักแสดงรับเชิญ', 'บทสำคัญ', 'นักแสดงหลัก']
@@ -142,6 +147,33 @@ function InlinePlayer({ url, title, fallbackImage, emptyLabel }: { url?: string;
   );
 }
 
+function ActorCard({ person, onSelect, selected }: { person: CastPerson; onSelect: (person: CastPerson) => void; selected: boolean }) {
+  const canOpen = Boolean(person.id);
+
+  return (
+    <button
+      type="button"
+      onClick={() => canOpen && onSelect(person)}
+      disabled={!canOpen}
+      className={`group relative aspect-[2/3] min-w-0 overflow-hidden rounded-[8px] border bg-[#111] text-left shadow-[0_16px_44px_rgba(0,0,0,0.62)] transition duration-300 md:rounded-[10px] ${selected ? 'border-[#e50914] shadow-glow' : 'border-white/[0.07] hover:-translate-y-1 hover:border-[#e50914]/80'} ${canOpen ? '' : 'cursor-not-allowed opacity-60'}`}
+      aria-label={`ดูผลงานของ ${person.name}`}
+    >
+      {person.profileUrl ? (
+        <img src={person.profileUrl} alt={person.name} loading="lazy" decoding="async" sizes="(max-width: 768px) 30vw, 140px" className="absolute inset-0 h-full w-full object-cover object-center transition duration-700 group-hover:scale-110" />
+      ) : (
+        <div className="absolute inset-0 grid place-items-center bg-[radial-gradient(circle_at_50%_24%,#8a111b,#111_62%)] text-4xl font-black text-white/78 md:text-5xl">{person.initial || personInitial(person.name)}</div>
+      )}
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.06)_0%,rgba(0,0,0,0.06)_44%,rgba(0,0,0,0.92)_100%)]" />
+      <div className="absolute left-1.5 top-1.5 rounded bg-[#e50914] px-1.5 py-0.5 text-[7px] font-black uppercase tracking-[0.12em] text-white md:left-2.5 md:top-2.5 md:px-2 md:py-1 md:text-[9px]">ACTOR</div>
+      <div className="absolute inset-x-0 bottom-0 p-2 md:p-3">
+        <h4 className="line-clamp-2 text-[10px] font-black leading-tight text-white drop-shadow md:text-sm">{person.name}</h4>
+        <p className="mt-1 line-clamp-2 text-[8px] font-bold leading-3 text-white/52 md:text-[10px] md:leading-4">{person.character || person.role || 'นักแสดง'}</p>
+        {canOpen ? <p className="mt-1 text-[7px] font-black text-[#e50914] md:text-[9px]">กดดูผลงาน</p> : null}
+      </div>
+    </button>
+  );
+}
+
 export function SearchWindow({ query, setQuery, items, onClose, onSelect }: {
   query: string;
   setQuery: (value: string) => void;
@@ -227,6 +259,9 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
   const [realCast, setRealCast] = useState<CastPerson[]>([]);
   const [detailRecommendations, setDetailRecommendations] = useState<MovieItem[]>(recommendations);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [selectedPerson, setSelectedPerson] = useState<CastPerson | null>(null);
+  const [personMovies, setPersonMovies] = useState<MovieItem[]>([]);
+  const [personLoading, setPersonLoading] = useState(false);
   const recLoadRef = useRef<HTMLDivElement | null>(null);
   const displayItem = detailItem;
   const cast = realCast.length ? realCast : fallbackCast(displayItem);
@@ -243,6 +278,9 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
     setDetailItem(item);
     setRealCast([]);
     setDetailRecommendations(recommendations);
+    setSelectedPerson(null);
+    setPersonMovies([]);
+    setPersonLoading(false);
     setDetailLoading(true);
 
     async function loadDetail() {
@@ -290,6 +328,25 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
     observer.observe(node);
     return () => observer.disconnect();
   }, [activeTab, detailRecommendations.length, visibleRecCount]);
+
+  async function loadPersonMovies(person: CastPerson) {
+    if (!person.id) return;
+    setSelectedPerson(person);
+    setPersonMovies([]);
+    setPersonLoading(true);
+
+    try {
+      const response = await fetch(`/api/tmdb/person?id=${person.id}`, { cache: 'no-store' });
+      if (!response.ok) return;
+      const payload = (await response.json()) as PersonCreditsResponse;
+      setPersonMovies((payload.items || []).slice(0, 36));
+      if (payload.person) setSelectedPerson({ ...person, ...payload.person });
+    } catch {
+      setPersonMovies([]);
+    } finally {
+      setPersonLoading(false);
+    }
+  }
 
   async function reportIssue() {
     setReported(true);
@@ -365,24 +422,36 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
             {activeTab === 'cast' && (
               <div>
                 <div className="flex items-center justify-between gap-3">
-                  <h3 className="text-base font-black md:text-xl">นักแสดงหลัก</h3>
-                  {detailLoading ? <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-black text-white/38">กำลังโหลด</span> : <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-black text-white/38">{realCast.length ? 'TMDB' : 'สำรอง'}</span>}
+                  <div>
+                    <h3 className="text-base font-black md:text-xl">{selectedPerson ? `ผลงานของ ${selectedPerson.name}` : 'นักแสดงหลัก'}</h3>
+                    {selectedPerson ? <p className="mt-1 text-[10px] font-bold text-white/42 md:text-xs">กดการ์ดหนังเพื่อเปิดรายละเอียดเรื่องนั้น</p> : null}
+                  </div>
+                  {selectedPerson ? (
+                    <button onClick={() => { setSelectedPerson(null); setPersonMovies([]); }} className="rounded-full bg-white/[0.08] px-3 py-1 text-[10px] font-black text-white/68 hover:bg-white/[0.14] md:text-xs">กลับไปนักแสดง</button>
+                  ) : detailLoading ? (
+                    <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-black text-white/38">กำลังโหลด</span>
+                  ) : (
+                    <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-black text-white/38">{realCast.length ? 'TMDB' : 'สำรอง'}</span>
+                  )}
                 </div>
-                <div className="mt-3 grid grid-cols-3 gap-2 md:gap-3">
-                  {cast.map((person, index) => (
-                    <div key={`${person.id || person.name}-${index}`} className="min-w-0 rounded-2xl border border-white/10 bg-black/34 p-2 text-center md:p-3">
-                      <div className="mx-auto aspect-square w-full max-w-[84px] overflow-hidden rounded-xl bg-[radial-gradient(circle,#6b1118,#171717)] md:max-w-[108px] md:rounded-2xl">
-                        {person.profileUrl ? (
-                          <img src={person.profileUrl} alt={person.name} loading="lazy" decoding="async" sizes="(max-width: 768px) 30vw, 108px" className="h-full w-full object-cover" />
-                        ) : (
-                          <div className="grid h-full w-full place-items-center text-lg font-black text-white md:text-2xl">{person.initial || personInitial(person.name)}</div>
-                        )}
-                      </div>
-                      <p className="mt-2 line-clamp-1 text-[11px] font-black text-white md:text-sm">{person.name}</p>
-                      <p className="mt-1 line-clamp-2 text-[9px] leading-3 text-white/45 md:text-[11px] md:leading-4">{person.character || person.role || 'นักแสดง'}</p>
-                    </div>
-                  ))}
-                </div>
+
+                {!selectedPerson ? (
+                  <div className="mt-3 grid grid-cols-3 gap-2 md:grid-cols-4 md:gap-3">
+                    {cast.map((person, index) => (
+                      <ActorCard key={`${person.id || person.name}-${index}`} person={person} selected={false} onSelect={loadPersonMovies} />
+                    ))}
+                  </div>
+                ) : personLoading ? (
+                  <div className="mt-4 grid grid-cols-3 gap-2 md:grid-cols-4 md:gap-3" aria-hidden="true">
+                    {Array.from({ length: 9 }).map((_, index) => <div key={index} className="aspect-[2/3] animate-pulse rounded-[8px] bg-white/[0.055] md:rounded-[10px]" />)}
+                  </div>
+                ) : personMovies.length ? (
+                  <div className="mt-4 grid grid-cols-3 gap-2 md:grid-cols-4 md:gap-3">
+                    {personMovies.map((movie, index) => <MovieCard key={`actor-${selectedPerson.id}-${movie.mediaType}-${movie.id}-${index}`} item={movie} grid compact onSelect={(nextItem) => { onSelect(nextItem); setActiveTab('detail'); }} priorityBadge={index < 3 ? 'ผลงาน' : undefined} />)}
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-2xl border border-white/8 bg-black/30 p-4 text-center text-xs font-bold text-white/45 md:text-sm">ยังไม่พบผลงานของนักแสดงคนนี้จาก TMDB</div>
+                )}
               </div>
             )}
 
