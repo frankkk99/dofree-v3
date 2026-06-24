@@ -8,6 +8,7 @@ type MovieCardProps = {
   onSelect?: (item: MovieItem) => void;
   compact?: boolean;
   grid?: boolean;
+  priority?: boolean;
 };
 
 function statusBadge(item: MovieItem, priorityBadge?: string) {
@@ -17,7 +18,7 @@ function statusBadge(item: MovieItem, priorityBadge?: string) {
   return item.label;
 }
 
-export function MovieCard({ item, priorityBadge, onSelect, compact = false, grid = false }: MovieCardProps) {
+export function MovieCard({ item, priorityBadge, onSelect, compact = false, grid = false, priority = false }: MovieCardProps) {
   const badge = statusBadge(item, priorityBadge);
   const href = `/${item.mediaType}/${item.id}`;
   const badges = item.badges?.length ? item.badges : [badge, item.isWatchReady ? 'HD' : undefined].filter(Boolean) as string[];
@@ -32,8 +33,9 @@ export function MovieCard({ item, priorityBadge, onSelect, compact = false, grid
       <img
         src={item.posterUrl}
         alt={item.title}
-        loading="lazy"
+        loading={priority ? 'eager' : 'lazy'}
         decoding="async"
+        fetchPriority={priority ? 'high' : 'low'}
         sizes={grid ? '(max-width: 640px) 25vw, (max-width: 1024px) 16vw, 12vw' : compact ? '(max-width: 640px) 104px, 170px' : '(max-width: 640px) 116px, 196px'}
         className="absolute inset-0 h-full w-full object-cover object-center transition duration-700 group-hover:scale-110"
       />
@@ -54,7 +56,7 @@ export function MovieCard({ item, priorityBadge, onSelect, compact = false, grid
         <div className="mb-1 flex items-center gap-1 text-[7px] font-black uppercase tracking-[0.1em] text-white/38 md:mb-2 md:gap-2 md:text-[10px] md:tracking-[0.16em]">
           <span>{item.mediaType === 'tv' ? 'Series' : 'Movie'}</span>
           <span>•</span>
-          <span>{item.status === 'published' ? 'Ready' : item.status || 'Preview'}</span>
+          <span>{item.watchUrl ? 'Ready' : item.status || 'Preview'}</span>
         </div>
         <h3 className="line-clamp-2 text-[9px] font-black leading-tight text-white drop-shadow sm:text-[11px] md:text-[15px]">{item.title}</h3>
         <div className="mt-1 flex items-center gap-1 text-[8px] font-bold text-white/58 md:mt-2 md:gap-2 md:text-[11px]">
@@ -68,14 +70,14 @@ export function MovieCard({ item, priorityBadge, onSelect, compact = false, grid
 
   if (onSelect) {
     return (
-      <button type="button" className={cardClass} onClick={() => onSelect(item)} aria-label={`เปิดรายละเอียด ${item.title}`}>
+      <button type="button" className={cardClass} onClick={() => onSelect(item)} aria-label={`เปิดรายละเอียด ${item.title}`} style={{ contentVisibility: 'auto', containIntrinsicSize: grid ? '260px 180px' : '300px 196px' }}>
         {content}
       </button>
     );
   }
 
   return (
-    <a className={cardClass} href={href} aria-label={`ดูรายละเอียด ${item.title}`}>
+    <a className={cardClass} href={href} aria-label={`ดูรายละเอียด ${item.title}`} style={{ contentVisibility: 'auto', containIntrinsicSize: grid ? '260px 180px' : '300px 196px' }}>
       {content}
     </a>
   );
