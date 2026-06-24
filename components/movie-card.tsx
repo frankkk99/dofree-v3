@@ -11,6 +11,16 @@ type MovieCardProps = {
   priority?: boolean;
 };
 
+const thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+
+function releaseMonthYear(item: MovieItem) {
+  const value = item.releaseDate;
+  if (!value) return item.year;
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return item.year;
+  return `${thaiMonths[date.getMonth()]} ${date.getFullYear()}`;
+}
+
 function statusBadge(item: MovieItem, priorityBadge?: string) {
   if (priorityBadge) return priorityBadge;
   if (item.isWatchReady) return 'พร้อมดู';
@@ -21,6 +31,7 @@ function statusBadge(item: MovieItem, priorityBadge?: string) {
 export function MovieCard({ item, priorityBadge, onSelect, compact = false, grid = false, priority = false }: MovieCardProps) {
   const badge = statusBadge(item, priorityBadge);
   const href = `/${item.mediaType}/${item.id}`;
+  const releaseLabel = releaseMonthYear(item);
   const badges = item.badges?.length ? item.badges : [badge, item.isWatchReady ? 'HD' : undefined].filter(Boolean) as string[];
   const sizeClass = grid
     ? 'aspect-[2/3] h-auto w-full min-w-0'
@@ -62,7 +73,7 @@ export function MovieCard({ item, priorityBadge, onSelect, compact = false, grid
         <div className="mt-1 flex items-center gap-1 text-[8px] font-bold text-white/58 md:mt-2 md:gap-2 md:text-[11px]">
           <span className="text-[#f4c46b]">★ {item.rating.toFixed(1)}</span>
           <span>•</span>
-          <span>{item.year}</span>
+          <span>{releaseLabel}</span>
         </div>
       </div>
     </>
