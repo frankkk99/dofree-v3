@@ -23,9 +23,7 @@ type TmdbItem = {
   adult?: boolean;
 };
 
-type TmdbResponse = {
-  results?: TmdbItem[];
-};
+type TmdbResponse = { results?: TmdbItem[] };
 
 type SourceDef = {
   slug: string;
@@ -47,6 +45,8 @@ export const maxDuration = 60;
 
 const minRating = 6.5;
 const minVoteCount = 80;
+const defaultPagesPerRun = 20;
+const maxPagesPerRun = 40;
 const imageBase = 'https://image.tmdb.org/t/p/original';
 const posterBase = 'https://image.tmdb.org/t/p/w500';
 
@@ -98,9 +98,7 @@ function addHighRatedQuery(path: string) {
 }
 
 function tasks() {
-  return sourceDefs.flatMap((source, sourceIndex) =>
-    Array.from({ length: source.pages }, (_, pageIndex) => ({ source, sourceIndex, page: pageIndex + 1 }))
-  );
+  return sourceDefs.flatMap((source) => Array.from({ length: source.pages }, (_, pageIndex) => ({ source, page: pageIndex + 1 })));
 }
 
 async function tmdb<T>(path: string): Promise<T | null> {
@@ -159,8 +157,8 @@ function rowFromItem(item: TmdbItem, source: SourceDef) {
 async function upsertRows(rows: ReturnType<typeof rowFromItem>[]) {
   if (!rows.length) return 0;
   let total = 0;
-  for (let index = 0; index < rows.length; index += 300) {
-    const chunk = rows.slice(index, index + 300);
+  for (let index = 0; index < rows.length; index += 200) {
+    const chunk = rows.slice(index, index + 200);
     await supabaseRest('tmdb_catalog?on_conflict=tmdb_id,media_type', {
       method: 'POST',
       mode: 'service',
@@ -172,16 +170,30 @@ async function upsertRows(rows: ReturnType<typeof rowFromItem>[]) {
   return total;
 }
 
+async function readBody(request: Request): Promise<SyncBody> {
+  const text = await request.text().catch(() => '');
+  if (!text.trim()) return {};
+  try {
+    return JSON.parse(text) as SyncBody;
+  } catch {
+    return {};
+  }
+}
+
 export async function POST(request: Request) {
   const auth = requireAdminToken(request);
   if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
 
-  const body = (await request.json().catch(() => ({}))) as SyncBody;
+  const body = await readBody(request);
   const allTasks = tasks();
   const cursor = Math.max(0, Number(body.cursor || 0));
-  const pagesPerRun = Math.min(Math.max(Number(body.pagesPerRun || 80), 1), 120);
+  const pagesPerRun = Math.min(Math.max(Number(body.pagesPerRun || defaultPagesPerRun), 1), maxPagesPerRun);
   const targetLimit = Math.min(Math.max(Number(body.targetLimit || 10000), 100), 10000);
   const selectedTasks = allTasks.slice(cursor, cursor + pagesPerRun);
+
+  if (!selectedTasks.length) {
+    return NextResponse.json({ ok: true, upserted: 0, skipped: 0, cursor, nextCursor: cursor, totalTasks: allTasks.length, done: true });
+  }
 
   const run = await supabaseRest<{ id: number }[]>('tmdb_catalog_sync_runs?select=id', {
     method: 'POST',
@@ -197,10 +209,15 @@ export async function POST(request: Request) {
   try {
     const collected = new Map<string, ReturnType<typeof rowFromItem>>();
 
-    for (const task of selectedTasks) {
-      const basePath = task.source.discover ? addHighRatedQuery(task.source.path) : task.source.path;
-      const joiner = basePath.includes('?') ? '&' : '?';
-      const data = await tmdb<TmdbResponse>(`${basePath}${joiner}page=${task.page}`);
+    const results = await Promise.all(
+      selectedTasks.map(async (task) => {
+        const basePath = task.source.discover ? addHighRatedQuery(task.source.path) : task.source.path;
+        const joiner = basePath.includes('?') ? '&' : '?';
+        return { task, data: await tmdb<TmdbResponse>(`${basePath}${joiner}page=${task.page}`) };
+      })
+    );
+
+    for (const { task, data } of results) {
       for (const item of data?.results || []) {
         if (!qualified(item)) {
           skipped += 1;
@@ -213,13 +230,14 @@ export async function POST(request: Request) {
 
     const rows = [...collected.values()].sort((a, b) => b.sort_score - a.sort_score).slice(0, targetLimit);
     upserted = await upsertRows(rows);
+    const done = cursor + selectedTasks.length >= allTasks.length;
 
     if (runId) {
       await supabaseRest(`tmdb_catalog_sync_runs?id=eq.${runId}`, {
         method: 'PATCH',
         mode: 'service',
         body: {
-          status: cursor + pagesPerRun >= allTasks.length ? 'success' : 'partial',
+          status: done ? 'success' : 'partial',
           inserted_count: upserted,
           updated_count: upserted,
           skipped_count: skipped,
@@ -234,10 +252,11 @@ export async function POST(request: Request) {
       upserted,
       skipped,
       cursor,
+      pagesPerRun,
       nextCursor: cursor + selectedTasks.length,
       totalTasks: allTasks.length,
-      done: cursor + selectedTasks.length >= allTasks.length,
-      message: 'Run again with nextCursor until done. Each run safely syncs one batch.',
+      done,
+      message: 'Batch synced. Run again with nextCursor until done.',
     });
   } catch (error) {
     if (runId) {
