@@ -49,5 +49,9 @@ export async function supabaseRest<T>(path: string, options: SupabaseRestOptions
   }
 
   if (response.status === 204) return null as T;
-  return response.json() as Promise<T>;
+
+  const text = await response.text();
+  if (!text.trim()) return null as T;
+
+  return JSON.parse(text) as T;
 }
