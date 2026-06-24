@@ -27,27 +27,48 @@ function fallbackRecentlyAdded(home: HomePayload) {
 function RealtimeAddedCarousel({ items }: { items: MovieItem[] }) {
   const railRef = useRef<HTMLDivElement | null>(null);
   const resumeTimerRef = useRef<number | null>(null);
+  const frameRef = useRef<number | null>(null);
+  const lastFrameRef = useRef<number | null>(null);
   const [paused, setPaused] = useState(false);
   const doubled = useMemo(() => [...items, ...items], [items]);
 
   useEffect(() => {
     const rail = railRef.current;
-    if (!rail || paused || items.length < 4) return;
+    if (!rail || items.length < 4) return;
 
-    const timer = window.setInterval(() => {
-      const nextLeft = rail.scrollLeft + 210;
-      const half = rail.scrollWidth / 2;
-      if (nextLeft >= half) rail.scrollTo({ left: 0, behavior: 'auto' });
-      else rail.scrollTo({ left: nextLeft, behavior: 'smooth' });
-    }, 2600);
+    const pixelsPerSecond = 18;
 
-    return () => window.clearInterval(timer);
+    function tick(now: number) {
+      if (!rail) return;
+      const last = lastFrameRef.current ?? now;
+      const delta = Math.min(now - last, 64);
+      lastFrameRef.current = now;
+
+      if (!paused) {
+        rail.scrollLeft += (pixelsPerSecond * delta) / 1000;
+        const half = rail.scrollWidth / 2;
+        if (half > 0 && rail.scrollLeft >= half) rail.scrollLeft -= half;
+      }
+
+      frameRef.current = window.requestAnimationFrame(tick);
+    }
+
+    frameRef.current = window.requestAnimationFrame(tick);
+
+    return () => {
+      if (frameRef.current) window.cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+      lastFrameRef.current = null;
+    };
   }, [items.length, paused]);
 
   function pauseThenResume() {
     setPaused(true);
     if (resumeTimerRef.current) window.clearTimeout(resumeTimerRef.current);
-    resumeTimerRef.current = window.setTimeout(() => setPaused(false), 2000);
+    resumeTimerRef.current = window.setTimeout(() => {
+      lastFrameRef.current = null;
+      setPaused(false);
+    }, 2000);
   }
 
   if (!items.length) return null;
@@ -58,9 +79,9 @@ function RealtimeAddedCarousel({ items }: { items: MovieItem[] }) {
         <div>
           <p className="text-[9px] font-black uppercase tracking-[0.28em] text-[#e50914]/80">Release Window</p>
           <h2 className="mt-1 text-[20px] font-black tracking-[-0.04em] md:text-[30px]">หนังเข้าใหม่ / กำลังจะเข้า</h2>
-          <p className="mt-1 text-[11px] font-semibold text-white/42">ช่วงย้อนหลัง 2 เดือนถึงหนังที่กำลังจะเข้าฉาย • อัปเดตจาก Supabase</p>
+          <p className="mt-1 text-[11px] font-semibold text-white/42">ช่วงย้อนหลัง 2 เดือนถึงหนังที่กำลังจะเข้าฉาย • ไหลช้าแบบต่อเนื่อง</p>
         </div>
-        <span className="rounded-full bg-white/[0.07] px-3 py-1.5 text-[10px] font-black text-white/52">Auto loop</span>
+        <span className="rounded-full bg-white/[0.07] px-3 py-1.5 text-[10px] font-black text-white/52">Slow loop</span>
       </div>
 
       <div
@@ -69,7 +90,7 @@ function RealtimeAddedCarousel({ items }: { items: MovieItem[] }) {
         onPointerUp={pauseThenResume}
         onTouchEnd={pauseThenResume}
         onWheel={pauseThenResume}
-        className="movie-rail flex gap-2.5 overflow-x-auto pb-3 sm:gap-3 md:gap-5 md:pb-4"
+        className="movie-rail flex gap-2.5 overflow-x-auto scroll-smooth pb-3 sm:gap-3 md:gap-5 md:pb-4"
       >
         {doubled.map((item, index) => (
           <MovieCard
