@@ -7,6 +7,16 @@ import type { HomePayload, MovieItem, MovieSection } from '@/lib/tmdb';
 import { MovieCard } from '@/components/movie-card';
 import { DetailWindow } from '@/components/window-system';
 
+const thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+
+function releaseMonthYear(item: MovieItem) {
+  const value = item.releaseDate;
+  if (!value) return item.year;
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return item.year;
+  return `${thaiMonths[date.getMonth()]} ${date.getFullYear()}`;
+}
+
 function uniqueMovies(items: MovieItem[]) {
   const map = new Map<string, MovieItem>();
   for (const item of items) map.set(`${item.mediaType}-${item.id}`, item);
@@ -53,6 +63,7 @@ function itemSearchText(item: MovieItem) {
     item.title,
     item.titleEn,
     item.year,
+    item.releaseDate,
     item.language,
     item.mediaType,
     item.status,
@@ -250,6 +261,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
   const filterLoadRef = useRef<HTMLDivElement | null>(null);
 
   const hero = heroItems[heroIndex] || home.hero;
+  const heroReleaseLabel = releaseMonthYear(hero);
   const filterMode = Boolean(query.trim()) || Boolean(activeCategory);
 
   const filteredItems = useMemo(
@@ -394,6 +406,12 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
             <h1 className="hero-title max-w-[92vw] text-[42px] font-black leading-[0.88] tracking-[-0.085em] text-white md:whitespace-nowrap md:text-[92px] lg:text-[112px] xl:text-[120px]">
               {shortTitle(hero)}
             </h1>
+
+            <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-black text-white/64 md:mt-5 md:text-sm">
+              <span className="rounded-full bg-white/[0.10] px-3 py-1.5">เข้าฉาย {heroReleaseLabel}</span>
+              <span className="rounded-full bg-white/[0.10] px-3 py-1.5">★ {hero.rating.toFixed(1)}</span>
+              <span className="rounded-full bg-white/[0.10] px-3 py-1.5">{hero.mediaType === 'tv' ? 'Series' : 'Movie'}</span>
+            </div>
 
             <h2 className="mt-3 max-w-[92vw] text-[16px] font-black tracking-[-0.04em] text-white md:mt-6 md:text-[28px]">
               เมื่อความลับในอดีต... กลับมาทวงคืนทุกสิ่ง
