@@ -13,6 +13,31 @@ function uniqueMovies(items: MovieItem[]) {
   return [...map.values()];
 }
 
+function seededMovieScore(item: MovieItem, seed: number, scope: string, index: number) {
+  const source = `${scope}:${seed}:${item.mediaType}:${item.id}:${index}`;
+  let hash = 2166136261;
+  for (let i = 0; i < source.length; i += 1) {
+    hash ^= source.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function shuffleMovies(items: MovieItem[], seed: number, scope: string) {
+  if (!items.length) return items;
+  return [...items]
+    .map((item, index) => ({ item, score: seededMovieScore(item, seed || 1, scope, index) }))
+    .sort((a, b) => a.score - b.score)
+    .map(({ item }) => item);
+}
+
+function shuffleSections(sections: MovieSection[], seed: number) {
+  return sections.map((section, index) => ({
+    ...section,
+    items: shuffleMovies(section.items, seed + index + 11, section.slug),
+  }));
+}
+
 function shortTitle(item: MovieItem) {
   return item.title.length > 14 ? item.title.slice(0, 13) : item.title;
 }
@@ -88,6 +113,10 @@ function LazyMovieRail({ section, sectionIndex, onSelect }: { section: MovieSect
     if (mounted) setVisibleCount((count) => Math.max(count, 24));
   }, [mounted]);
 
+  useEffect(() => {
+    setVisibleCount(initiallyMounted ? 30 : 18);
+  }, [initiallyMounted, section.items]);
+
   const visibleItems = mounted ? section.items.slice(0, visibleCount) : [];
   const hasMore = mounted && visibleCount < section.items.length;
 
@@ -112,8 +141,16 @@ function LazyMovieRail({ section, sectionIndex, onSelect }: { section: MovieSect
 }
 
 export function HomeExperienceV3({ home }: { home: HomePayload }) {
-  const heroItems = useMemo(() => (home.heroItems?.length ? home.heroItems : [home.hero]), [home]);
-  const allItems = useMemo(() => uniqueMovies([...heroItems, ...home.sections.flatMap((section) => section.items)]), [heroItems, home.sections]);
+  const [shuffleSeed, setShuffleSeed] = useState(1);
+  const randomizedSections = useMemo(() => shuffleSections(home.sections, shuffleSeed), [home.sections, shuffleSeed]);
+  const heroItems = useMemo(() => {
+    const candidates = uniqueMovies([
+      ...(home.heroItems?.length ? home.heroItems : [home.hero]),
+      ...randomizedSections.flatMap((section) => section.items.slice(0, 18)),
+    ]);
+    return shuffleMovies(candidates.length ? candidates : [home.hero], shuffleSeed + 101, 'hero').slice(0, 36);
+  }, [home.hero, home.heroItems, randomizedSections, shuffleSeed]);
+  const allItems = useMemo(() => uniqueMovies([...heroItems, ...randomizedSections.flatMap((section) => section.items)]), [heroItems, randomizedSections]);
   const [heroIndex, setHeroIndex] = useState(0);
   const [selected, setSelected] = useState<MovieItem | null>(null);
   const [query, setQuery] = useState('');
@@ -130,6 +167,14 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
   const recommendations = selected
     ? allItems.filter((movie) => `${movie.mediaType}-${movie.id}` !== `${selected.mediaType}-${selected.id}`).slice(0, 24)
     : allItems.slice(0, 24);
+
+  useEffect(() => {
+    setShuffleSeed(Date.now() + Math.floor(Math.random() * 1000000));
+  }, []);
+
+  useEffect(() => {
+    setHeroIndex(0);
+  }, [shuffleSeed]);
 
   useEffect(() => {
     setVisibleFilterCount(32);
@@ -200,7 +245,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
 
         <div className="relative z-10 mx-auto flex min-h-[442px] max-w-[1920px] flex-col justify-end px-4 pb-9 md:min-h-[509px] md:justify-center md:px-7 md:pb-0">
           <div className="max-w-[680px] md:ml-[6vw] xl:ml-[10vw]">
-            <p className="mb-3 text-[13px] font-black text-[#e50914] md:mb-5 md:text-[22px]">{hero.status === 'published' ? 'ภาพยนตร์พร้อมรับชม' : 'ภาพยนตร์มาใหม่'}</p>
+            <p className="mb-3 text-[13px] font-black text-[#e50914] md:mb-5 md:text-[22px]">{hero.status === 'published' ? 'ภาพยนตร์พร้อมรับชม' : 'ภาพยนตร์สุ่มแนะนำ'}</p>
             <h1 className="hero-title max-w-[92vw] text-[42px] font-black leading-[0.88] tracking-[-0.085em] text-white md:whitespace-nowrap md:text-[92px] lg:text-[112px] xl:text-[120px]">{shortTitle(hero)}</h1>
             <h2 className="mt-3 max-w-[92vw] text-[16px] font-black tracking-[-0.04em] text-white md:mt-6 md:text-[28px]">เมื่อความลับในอดีต... กลับมาทวงคืนทุกสิ่ง</h2>
             <p className="mt-2 line-clamp-3 max-w-[92vw] text-[12px] leading-5 text-white/56 md:mt-3 md:max-w-[620px] md:text-[18px] md:leading-7">{hero.overview}</p>
@@ -258,7 +303,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
           </div>
         ) : (
           <div className="space-y-8 md:space-y-12">
-            {home.sections.map((section, sectionIndex) => (
+            {randomizedSections.map((section, sectionIndex) => (
               <div key={section.slug} className="relative">
                 <div className="mb-3 flex items-center justify-between md:mb-6">
                   <div>
