@@ -102,44 +102,6 @@ const emptyForm: EditorForm = {
   runtime: '',
 };
 
-const fallbackMissing: AdminMovieLink[] = Array.from({ length: 12 }, (_, index) => ({
-  id: `fallback-missing-${index}`,
-  tmdb_id: 91000 + index,
-  media_type: index % 5 === 0 ? 'tv' : 'movie',
-  title: `Waiting Movie ${index + 1}`,
-  title_th: `หนังรอใส่ลิงก์ ${index + 1}`,
-  watch_url: null,
-  trailer_url: null,
-  provider: null,
-  is_active: true,
-  notes: 'ตัวอย่าง layout เมื่อยังไม่ได้โหลดข้อมูลจริง',
-  section_slug: index % 3 === 0 ? 'thai' : 'watch-ready',
-  status: index % 2 === 0 ? 'draft' : 'review',
-  rating: 8.8 - index * 0.12,
-  year: String(2026 - (index % 4)),
-  language: index % 3 === 0 ? 'th' : 'en',
-  genres: index % 3 === 0 ? ['ดราม่า', 'ไทย'] : ['แอ็กชัน', 'ระทึกขวัญ'],
-}));
-
-const fallbackBroken: AdminMovieLink[] = Array.from({ length: 8 }, (_, index) => ({
-  id: `fallback-broken-${index}`,
-  tmdb_id: 92000 + index,
-  media_type: 'movie',
-  title: `Broken Link ${index + 1}`,
-  title_th: `หนังลิงก์เสีย ${index + 1}`,
-  watch_url: 'https://drive.google.com/file/d/example/preview',
-  trailer_url: null,
-  provider: 'google-drive',
-  is_active: true,
-  notes: 'ตัวอย่างรายการที่ถูกแจ้งลิงก์เสีย',
-  section_slug: 'watch-ready',
-  status: 'broken',
-  rating: 8.5 - index * 0.1,
-  year: String(2026 - (index % 3)),
-  language: 'en',
-  genres: ['ดราม่า', 'ระทึกขวัญ'],
-}));
-
 const filterButtons: { id: AdminFilter; label: string }[] = [
   { id: 'all', label: 'ทั้งหมด' },
   { id: 'missing', label: 'ยังไม่มีลิงก์' },
@@ -180,7 +142,11 @@ function formatDate(value?: string) {
 }
 
 function movieTitle(item: AdminMovieLink) {
-  return item.title_th || item.title || `TMDB ${item.tmdb_id}`;
+  return item.title_th || item.title || '';
+}
+
+function hasDisplayData(item: AdminMovieLink) {
+  return Boolean(item.poster_url && movieTitle(item).trim() && item.tmdb_id);
 }
 
 function itemScore(item: AdminMovieLink) {
@@ -202,7 +168,7 @@ function itemBadges(item: AdminMovieLink, tone: AdminCard['tone']) {
 
 function itemToForm(item: AdminMovieLink): EditorForm {
   return {
-    id: item.id?.startsWith('fallback-') ? '' : item.id,
+    id: item.id || '',
     tmdb_id: item.tmdb_id ? String(item.tmdb_id) : '',
     media_type: item.media_type || 'movie',
     title: item.title || '',
@@ -256,6 +222,29 @@ function toCard(item: AdminMovieLink, tone: AdminCard['tone'], report?: LinkRepo
   };
 }
 
+function cardText(card: AdminCard) {
+  const item = card.item;
+  return [
+    movieTitle(item),
+    item.title,
+    item.title_th,
+    item.tmdb_id,
+    item.media_type,
+    item.status,
+    item.section_slug,
+    item.language,
+    item.year,
+    item.provider,
+    item.notes,
+    item.genres?.join(' '),
+    card.report?.reason,
+    card.report?.detail,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+}
+
 function sortCards(cards: AdminCard[], sortMode: AdminSort) {
   return [...cards].sort((a, b) => {
     if (sortMode === 'updated') {
@@ -281,10 +270,18 @@ function matchesFilter(card: AdminCard, activeFilter: AdminFilter) {
   return true;
 }
 
+function matchesSearch(card: AdminCard, query: string) {
+  const keyword = query.trim().toLowerCase();
+  if (!keyword) return true;
+  return cardText(card).includes(keyword);
+}
+
 function AdminPosterCard({ card, onOpen }: { card: AdminCard; onOpen: (card: AdminCard) => void }) {
   const item = card.item;
   const badges = itemBadges(item, card.tone);
   const rating = itemScore(item);
+
+  if (!hasDisplayData(item)) return null;
 
   return (
     <button
@@ -293,16 +290,7 @@ function AdminPosterCard({ card, onOpen }: { card: AdminCard; onOpen: (card: Adm
       className="group relative aspect-[2/3] min-w-0 overflow-hidden rounded-[10px] bg-[#111] text-left shadow-[0_16px_44px_rgba(0,0,0,0.62)] transition duration-300 hover:-translate-y-1 hover:shadow-glow md:rounded-[12px] md:shadow-[0_24px_70px_rgba(0,0,0,0.65)]"
       aria-label={`แก้ไข ${movieTitle(item)}`}
     >
-      {item.poster_url ? (
-        <img src={item.poster_url} alt={movieTitle(item)} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover object-center transition duration-700 group-hover:scale-110" />
-      ) : (
-        <div className="absolute inset-0 grid place-items-center bg-[radial-gradient(circle_at_50%_24%,#8a111b,#111_62%)] p-3 text-center">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/44">TMDB</p>
-            <p className="mt-2 text-2xl font-black tracking-[-0.08em] text-white md:text-3xl">{item.tmdb_id || '-'}</p>
-          </div>
-        </div>
-      )}
+      <img src={item.poster_url || ''} alt={movieTitle(item)} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover object-center transition duration-700 group-hover:scale-110" />
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.08)_0%,rgba(0,0,0,0.0)_38%,rgba(0,0,0,0.94)_100%)]" />
       <div className="absolute inset-0 opacity-0 transition group-hover:opacity-100 bg-[radial-gradient(circle_at_50%_35%,rgba(229,9,20,0.2),transparent_16rem)]" />
 
@@ -342,10 +330,7 @@ function AdminControls({ activeFilter, setActiveFilter, sortMode, setSortMode }:
   return (
     <div className="rounded-[24px] bg-white/[0.035] p-3 shadow-[0_18px_60px_rgba(0,0,0,0.45)] ring-1 ring-white/[0.055] backdrop-blur-2xl md:p-4">
       <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#e50914]">Admin Filter</p>
-          <p className="mt-1 text-xs font-semibold text-white/42">เริ่มต้นเรียงจากคะแนนสูงสุด แล้วกรองต่อได้ทันที</p>
-        </div>
+        <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#e50914]">Admin Filter</p>
         <div className="flex gap-2">
           <button type="button" onClick={() => setSortMode('rating')} className={`h-8 rounded-full px-3 text-[10px] font-black ${sortMode === 'rating' ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.07] text-white/58'}`}>คะแนนสูงสุด</button>
           <button type="button" onClick={() => setSortMode('updated')} className={`h-8 rounded-full px-3 text-[10px] font-black ${sortMode === 'updated' ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.07] text-white/58'}`}>อัปเดตล่าสุด</button>
@@ -362,10 +347,9 @@ function AdminControls({ activeFilter, setActiveFilter, sortMode, setSortMode }:
   );
 }
 
-function MovieGridSection({ title, eyebrow, description, cards, visibleCount, onMore, onOpen }: {
+function MovieGridSection({ title, eyebrow, cards, visibleCount, onMore, onOpen }: {
   title: string;
   eyebrow: string;
-  description: string;
   cards: AdminCard[];
   visibleCount: number;
   onMore: () => void;
@@ -374,34 +358,51 @@ function MovieGridSection({ title, eyebrow, description, cards, visibleCount, on
   const visibleCards = cards.slice(0, visibleCount);
   return (
     <section className="rounded-[30px] bg-white/[0.026] p-4 shadow-[0_26px_90px_rgba(0,0,0,0.48)] backdrop-blur-2xl md:p-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div className="flex items-end justify-between gap-4">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#e50914]">{eyebrow}</p>
-          <h2 className="mt-1 text-2xl font-black tracking-[-0.06em] md:text-4xl">{title}</h2>
-          <p className="mt-2 max-w-2xl text-xs font-semibold leading-5 text-white/42 md:text-sm md:leading-6">{description}</p>
+          <h2 className="mt-1 text-2xl font-black tracking-[-0.06em] md:text-4xl">
+            {title} <span className="text-[#e50914]">{cards.length}</span>
+          </h2>
         </div>
         <StatusPill active>{cards.length} รายการ</StatusPill>
       </div>
 
-      <div className="mt-5 grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 md:gap-4 xl:gap-5">
+      <div className="mt-5 grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 md:gap-4 xl:gap-5">
         {visibleCards.map((card) => <AdminPosterCard key={card.key} card={card} onOpen={onOpen} />)}
       </div>
 
       {!visibleCards.length ? (
         <div className="mt-5 rounded-[24px] bg-black/24 p-8 text-center shadow-inner">
-          <p className="text-sm font-black text-white/58">ยังไม่มีรายการในเงื่อนไขนี้</p>
-          <p className="mt-1 text-xs font-bold text-white/34">ลองเปลี่ยนปุ่มกรองหรือรีเฟรชข้อมูล</p>
+          <p className="text-sm font-black text-white/58">ยังไม่มีรายการ</p>
         </div>
       ) : null}
 
       {visibleCount < cards.length ? (
         <div className="mt-5 text-center">
           <button type="button" onClick={onMore} className="h-11 rounded-2xl bg-white/[0.08] px-6 text-xs font-black text-white/70 shadow-[0_14px_40px_rgba(0,0,0,0.42)] transition hover:bg-white/[0.12] hover:text-white">
-            ดูเพิ่มเติมอีก {Math.min(12, cards.length - visibleCount)} รายการ
+            ดูเพิ่มเติมอีก {Math.min(9, cards.length - visibleCount)} รายการ
           </button>
         </div>
       ) : null}
     </section>
+  );
+}
+
+function FloatingSearch({ value, onChange, resultCount }: { value: string; onChange: (value: string) => void; resultCount: number }) {
+  return (
+    <div className="fixed inset-x-0 bottom-4 z-50 px-4 pointer-events-none">
+      <div className="pointer-events-auto mx-auto flex max-w-[620px] items-center gap-2 rounded-full bg-black/54 p-2 shadow-[0_24px_90px_rgba(0,0,0,0.78)] ring-1 ring-white/[0.08] backdrop-blur-2xl">
+        <input
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder="ค้นหาหนังทั้งหมด"
+          className="min-w-0 flex-1 bg-transparent px-4 text-sm font-black text-white outline-none placeholder:text-white/35"
+        />
+        {value ? <span className="hidden rounded-full bg-white/[0.08] px-3 py-2 text-[10px] font-black text-white/58 sm:inline-flex">{resultCount} ผลลัพธ์</span> : null}
+        {value ? <button type="button" onClick={() => onChange('')} className="grid h-9 w-9 place-items-center rounded-full bg-white/[0.08] text-lg font-black text-white/70">×</button> : null}
+      </div>
+    </div>
   );
 }
 
@@ -437,14 +438,12 @@ function EditorModal({ form, setForm, saving, onClose, onSubmit, report }: {
             <div className="min-w-0 flex-1 pt-1 md:pr-14">
               <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#e50914]">Admin Movie Editor</p>
               <h2 className="mt-2 text-3xl font-black leading-[0.95] tracking-[-0.07em] md:text-6xl">{previewItem.title_th || previewItem.title || 'เพิ่ม / แก้ไขหนัง'}</h2>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <StatusPill active>{previewItem.status}</StatusPill>
+              <div className="mt-3 flex flex-wrap gap-2">
                 <StatusPill>{previewItem.media_type === 'tv' ? 'Series' : 'Movie'}</StatusPill>
                 <StatusPill>★ {itemScore(previewItem).toFixed(1)}</StatusPill>
                 <StatusPill>{itemYear(previewItem)}</StatusPill>
                 <StatusPill>{previewItem.section_slug}</StatusPill>
               </div>
-              <p className="mt-4 line-clamp-3 max-w-2xl text-sm font-semibold leading-6 text-white/52">{previewItem.notes || 'ใส่ลิงก์รับชม แก้ชื่อไทย เปลี่ยนสถานะ หรือย้ายหมวด แล้วกดบันทึกด้านล่างใน modal นี้'}</p>
             </div>
           </div>
         </section>
@@ -485,6 +484,10 @@ function EditorModal({ form, setForm, saving, onClose, onSubmit, report }: {
             <FieldLabel>ลิงก์ตัวอย่าง / Trailer URL</FieldLabel>
             <input value={form.trailer_url} onChange={(event) => setForm({ ...form, trailer_url: event.target.value })} placeholder="YouTube / Drive / mp4" className={inputClass()} />
           </label>
+          <label className="block md:col-span-2">
+            <FieldLabel>Poster URL</FieldLabel>
+            <input value={form.poster_url} onChange={(event) => setForm({ ...form, poster_url: event.target.value })} placeholder="https://image.tmdb.org/..." className={inputClass()} />
+          </label>
           <label className="block">
             <FieldLabel>หมวดแนะนำ</FieldLabel>
             <select value={form.section_slug} onChange={(event) => setForm({ ...form, section_slug: event.target.value })} className={inputClass()}>
@@ -508,16 +511,13 @@ function EditorModal({ form, setForm, saving, onClose, onSubmit, report }: {
           </label>
           <label className="block md:col-span-2">
             <FieldLabel>หมายเหตุ</FieldLabel>
-            <textarea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} placeholder="เช่น พากย์ไทย / ซับไทย / ไฟล์ส่วนตัว / แก้จาก report" className={textAreaClass()} />
+            <textarea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} placeholder="หมายเหตุ" className={textAreaClass()} />
           </label>
         </section>
 
-        <div className="sticky bottom-0 flex flex-col gap-3 bg-[#050505]/86 p-4 shadow-[0_-24px_80px_rgba(0,0,0,0.82)] backdrop-blur-2xl md:flex-row md:items-center md:justify-between md:px-6">
-          <p className="text-xs font-bold text-white/38">กดบันทึกแล้วระบบจะอัปเดต Supabase และรีโหลดรายการในหน้าแอดมิน</p>
-          <div className="flex gap-2">
-            <button type="button" onClick={onClose} className="h-11 rounded-2xl bg-white/[0.08] px-5 text-xs font-black text-white/62 hover:bg-white/[0.12] hover:text-white">ยกเลิก</button>
-            <button type="submit" disabled={saving} className="h-11 rounded-2xl bg-[#e50914] px-7 text-xs font-black text-white shadow-glow disabled:opacity-50">{saving ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}</button>
-          </div>
+        <div className="sticky bottom-0 flex justify-end gap-2 bg-[#050505]/86 p-4 shadow-[0_-24px_80px_rgba(0,0,0,0.82)] backdrop-blur-2xl md:px-6">
+          <button type="button" onClick={onClose} className="h-11 rounded-2xl bg-white/[0.08] px-5 text-xs font-black text-white/62 hover:bg-white/[0.12] hover:text-white">ยกเลิก</button>
+          <button type="submit" disabled={saving} className="h-11 rounded-2xl bg-[#e50914] px-7 text-xs font-black text-white shadow-glow disabled:opacity-50">{saving ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}</button>
         </div>
       </form>
     </div>
@@ -532,13 +532,15 @@ export function AdminCmsDashboard() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [missingVisible, setMissingVisible] = useState(12);
-  const [brokenVisible, setBrokenVisible] = useState(12);
+  const [missingVisible, setMissingVisible] = useState(9);
+  const [brokenVisible, setBrokenVisible] = useState(9);
+  const [searchVisible, setSearchVisible] = useState(9);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorForm, setEditorForm] = useState<EditorForm>(emptyForm);
   const [activeReport, setActiveReport] = useState<LinkReport | undefined>();
   const [activeFilter, setActiveFilter] = useState<AdminFilter>('all');
   const [sortMode, setSortMode] = useState<AdminSort>('rating');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const savedToken = window.localStorage.getItem('dofree_admin_token') || '';
@@ -547,6 +549,10 @@ export function AdminCmsDashboard() {
       void loadDashboard(savedToken);
     }
   }, []);
+
+  useEffect(() => {
+    setSearchVisible(9);
+  }, [searchQuery]);
 
   async function loadDashboard(token = adminToken) {
     if (!token.trim()) {
@@ -622,76 +628,71 @@ export function AdminCmsDashboard() {
     }
   }
 
-  const stats = useMemo(() => {
-    const ready = links.filter((item) => item.is_active && item.status === 'published' && item.watch_url).length;
-    const missing = links.filter((item) => !item.watch_url).length;
-    const review = links.filter((item) => item.status === 'review' || item.status === 'draft').length;
-    const broken = links.filter((item) => item.status === 'broken').length + reports.filter((report) => report.status === 'pending').length;
-
-    return [
-      { label: 'ทั้งหมด', value: links.length ? String(links.length) : '1,240', helper: links.length ? 'รายการจริง' : 'ตัวอย่าง', tone: 'bg-[#e50914]' },
-      { label: 'พร้อมดู', value: links.length ? String(ready) : '86', helper: 'มีลิงก์', tone: 'bg-[#f4c46b]' },
-      { label: 'ยังไม่มี', value: links.length ? String(missing) : '12', helper: `${review} รอตรวจ`, tone: 'bg-white/18' },
-      { label: 'ลิงก์เสีย', value: links.length || reports.length ? String(broken) : '14', helper: 'Report', tone: 'bg-red-500' },
-    ];
-  }, [links, reports]);
-
-  const baseMissingCards = useMemo(() => {
-    const source = links.length ? links.filter((item) => !item.watch_url || item.status === 'draft' || item.status === 'review') : fallbackMissing;
-    return source.map((item) => toCard(item, 'missing'));
-  }, [links]);
-
-  const baseBrokenCards = useMemo(() => {
-    const cards: AdminCard[] = [];
-    const brokenLinks = links.length ? links.filter((item) => item.status === 'broken') : fallbackBroken;
-    cards.push(...brokenLinks.map((item) => toCard(item, 'broken')));
+  const allCards = useMemo(() => {
+    const cards = links.map((item) => {
+      const tone: AdminCard['tone'] = item.status === 'broken' ? 'broken' : !item.watch_url || item.status === 'draft' || item.status === 'review' ? 'missing' : 'ready';
+      return toCard(item, tone);
+    });
 
     for (const report of reports) {
       const matched = links.find((item) => item.tmdb_id === report.tmdb_id && item.media_type === report.media_type);
-      const item = matched || {
-        id: '',
-        tmdb_id: report.tmdb_id || 0,
-        media_type: report.media_type,
-        title: report.title || null,
-        title_th: report.title_th || report.title || null,
-        watch_url: report.url || null,
-        trailer_url: null,
-        provider: 'report',
-        is_active: true,
-        notes: report.detail || report.reason,
-        section_slug: 'watch-ready',
-        status: 'broken' as MovieStatus,
-        created_at: report.created_at,
-        updated_at: report.updated_at,
-        rating: 0,
-        year: report.created_at?.slice(0, 4),
-        genres: [],
-      };
-      cards.push(toCard(item, 'broken', report));
+      if (!matched) continue;
+      cards.push(toCard(matched, 'broken', report));
     }
 
     return cards;
   }, [links, reports]);
 
-  const missingCards = useMemo(() => sortCards(baseMissingCards.filter((card) => matchesFilter(card, activeFilter)), sortMode), [activeFilter, baseMissingCards, sortMode]);
-  const brokenCards = useMemo(() => sortCards(baseBrokenCards.filter((card) => matchesFilter(card, activeFilter)), sortMode), [activeFilter, baseBrokenCards, sortMode]);
+  const displayCards = useMemo(() => allCards.filter((card) => hasDisplayData(card.item)), [allCards]);
+  const incompleteCount = allCards.length - displayCards.length;
+
+  const stats = useMemo(() => {
+    const ready = links.filter((item) => item.is_active && item.status === 'published' && item.watch_url && hasDisplayData(item)).length;
+    const missing = links.filter((item) => !item.watch_url && hasDisplayData(item)).length;
+    const broken = displayCards.filter((card) => card.tone === 'broken' || card.item.status === 'broken').length;
+
+    return [
+      { label: 'ทั้งหมด', value: String(displayCards.length), helper: 'แสดงผล', tone: 'bg-[#e50914]' },
+      { label: 'พร้อมดู', value: String(ready), helper: 'มีลิงก์', tone: 'bg-[#f4c46b]' },
+      { label: 'ยังไม่มี', value: String(missing), helper: 'รอลิงก์', tone: 'bg-white/18' },
+      { label: 'ข้อมูลไม่ครบ', value: String(incompleteCount), helper: 'ซ่อนอยู่', tone: 'bg-red-500' },
+      { label: 'ลิงก์เสีย', value: String(broken), helper: 'Report', tone: 'bg-red-500' },
+    ];
+  }, [displayCards, incompleteCount, links]);
+
+  const missingCards = useMemo(() => {
+    return sortCards(
+      displayCards.filter((card) => card.tone === 'missing' && matchesFilter(card, activeFilter)),
+      sortMode
+    );
+  }, [activeFilter, displayCards, sortMode]);
+
+  const brokenCards = useMemo(() => {
+    return sortCards(
+      displayCards.filter((card) => (card.tone === 'broken' || card.item.status === 'broken') && matchesFilter(card, activeFilter)),
+      sortMode
+    );
+  }, [activeFilter, displayCards, sortMode]);
+
+  const searchCards = useMemo(() => {
+    return sortCards(displayCards.filter((card) => matchesSearch(card, searchQuery)), sortMode);
+  }, [displayCards, searchQuery, sortMode]);
+
+  const isSearching = Boolean(searchQuery.trim());
 
   return (
-    <main className="min-h-screen bg-[#030303] text-white">
+    <main className="min-h-screen bg-[#030303] pb-28 text-white">
       <section className="relative overflow-hidden px-4 py-8 md:px-8 md:py-10">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(229,9,20,0.24),transparent_30rem),radial-gradient(circle_at_82%_10%,rgba(244,196,107,0.12),transparent_24rem),linear-gradient(180deg,#050000,#030303)]" />
         <div className="relative z-10 mx-auto max-w-[1600px]">
           <a href="/" className="text-xs font-black text-red-200/70 hover:text-red-100">← กลับหน้าแรก</a>
           <p className="mt-7 text-[10px] font-black uppercase tracking-[0.34em] text-[#e50914] md:text-xs">DOFree Admin CMS</p>
           <h1 className="mt-3 max-w-4xl text-[42px] font-black leading-[0.9] tracking-[-0.08em] md:text-[76px]">จัดการหนังและลิงก์รับชม</h1>
-          <p className="mt-4 max-w-2xl text-sm font-semibold leading-7 text-white/56 md:text-lg md:leading-8">
-            โฟกัสงานจริงของแอดมิน: ใช้การ์ดแบบเดียวกับหน้าบ้าน แต่กดเข้าไปแก้ลิงก์ สถานะ และข้อมูลเผยแพร่ได้ทันที
-          </p>
         </div>
       </section>
 
       <section className="mx-auto max-w-[1600px] space-y-6 px-4 pb-12 md:px-8">
-        <div className="grid grid-cols-4 gap-2 overflow-hidden rounded-[22px] bg-white/[0.035] p-2 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur-2xl">
+        <div className="grid grid-cols-5 gap-2 overflow-hidden rounded-[22px] bg-white/[0.035] p-2 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur-2xl">
           {stats.map((item) => (
             <article key={item.label} className="min-w-0 rounded-[16px] bg-black/24 p-2.5 md:p-3">
               <div className={`h-1 rounded-full ${item.tone}`} />
@@ -703,34 +704,42 @@ export function AdminCmsDashboard() {
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] bg-white/[0.035] p-3 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur-2xl md:p-4">
-          <div>
-            <p className="text-xs font-black text-white/72">เพิ่มรายการใหม่แบบเร็ว</p>
-            <p className="mt-1 text-[11px] font-semibold text-white/36">กดแล้วกรอก TMDB ID และลิงก์ใน modal เดียว</p>
-          </div>
+          <p className="text-xs font-black text-white/72">เพิ่มรายการใหม่</p>
           <button type="button" onClick={() => openEditor()} className="h-11 rounded-2xl bg-[#e50914] px-5 text-xs font-black text-white shadow-glow">+ เพิ่มหนัง</button>
         </div>
 
         <AdminControls activeFilter={activeFilter} setActiveFilter={setActiveFilter} sortMode={sortMode} setSortMode={setSortMode} />
 
-        <MovieGridSection
-          eyebrow="Need Watch Link"
-          title="หนังที่ยังไม่มีลิงก์หนัง"
-          description="การ์ดใช้สไตล์เดียวกับหน้าบ้าน เรียงจากคะแนนมากสุดก่อนเสมอ แล้วค่อยกรองด้วยปุ่มด้านบน"
-          cards={missingCards}
-          visibleCount={missingVisible}
-          onMore={() => setMissingVisible((count) => count + 12)}
-          onOpen={(card) => openEditor(card.item, card.report)}
-        />
+        {isSearching ? (
+          <MovieGridSection
+            eyebrow="Search Results"
+            title="ผลค้นหา"
+            cards={searchCards}
+            visibleCount={searchVisible}
+            onMore={() => setSearchVisible((count) => count + 9)}
+            onOpen={(card) => openEditor(card.item, card.report)}
+          />
+        ) : (
+          <>
+            <MovieGridSection
+              eyebrow="Need Watch Link"
+              title="หนังที่ยังไม่มีลิงก์หนัง"
+              cards={missingCards}
+              visibleCount={missingVisible}
+              onMore={() => setMissingVisible((count) => count + 9)}
+              onOpen={(card) => openEditor(card.item, card.report)}
+            />
 
-        <MovieGridSection
-          eyebrow="Broken Reports"
-          title="หนังที่ถูกแจ้งว่าลิงก์เสีย"
-          description="รวมรายการสถานะ Broken และ report จากผู้ใช้ คลิกการ์ดเพื่อเปลี่ยนลิงก์ใหม่หรือแก้สถานะกลับเป็น Published"
-          cards={brokenCards}
-          visibleCount={brokenVisible}
-          onMore={() => setBrokenVisible((count) => count + 12)}
-          onOpen={(card) => openEditor(card.item, card.report)}
-        />
+            <MovieGridSection
+              eyebrow="Broken Reports"
+              title="หนังที่ถูกแจ้งว่าลิงก์เสีย"
+              cards={brokenCards}
+              visibleCount={brokenVisible}
+              onMore={() => setBrokenVisible((count) => count + 9)}
+              onOpen={(card) => openEditor(card.item, card.report)}
+            />
+          </>
+        )}
 
         <section className="rounded-[28px] bg-white/[0.035] p-4 shadow-[0_24px_90px_rgba(0,0,0,0.72)] backdrop-blur-2xl md:p-5">
           <p className="text-[10px] font-black uppercase tracking-[0.28em] text-white/38">Admin Access</p>
@@ -751,6 +760,8 @@ export function AdminCmsDashboard() {
           {error ? <p className="mt-3 rounded-xl bg-red-500/10 px-3 py-2 text-xs font-bold text-red-100">{error}</p> : null}
         </section>
       </section>
+
+      <FloatingSearch value={searchQuery} onChange={setSearchQuery} resultCount={searchCards.length} />
 
       {editorOpen ? (
         <EditorModal
