@@ -65,6 +65,22 @@ type TmdbListResponse = {
   results?: TmdbDetail[];
 };
 
+type TmdbCatalogRow = {
+  tmdb_id: number;
+  media_type: MediaType;
+  title: string;
+  title_en?: string | null;
+  poster_url?: string | null;
+  backdrop_url?: string | null;
+  rating?: number | string | null;
+  release_year?: string | null;
+  language?: string | null;
+  runtime?: number | null;
+  genres?: string[] | null;
+  source_bucket?: string | null;
+  updated_at?: string;
+};
+
 const validMediaTypes = new Set(['movie', 'tv']);
 const validStatuses = new Set(['draft', 'review', 'published', 'broken', 'hidden']);
 const posterBase = 'https://image.tmdb.org/t/p/w500';
@@ -138,10 +154,7 @@ async function tmdb(path: string) {
 
 async function tmdbCollection(basePath: string, pages = 2) {
   const joiner = basePath.includes('?') ? '&' : '?';
-  const responses = await Promise.all(
-    Array.from({ length: pages }, (_, index) => tmdb(`${basePath}${joiner}page=${index + 1}`))
-  );
-
+  const responses = await Promise.all(Array.from({ length: pages }, (_, index) => tmdb(`${basePath}${joiner}page=${index + 1}`)));
   return responses.flatMap((response) => response?.results || []);
 }
 
@@ -157,6 +170,7 @@ function toCatalogItem(item: TmdbDetail, mediaType: MediaType, sectionSlug: stri
     : (item.genre_ids || []).slice(0, 3).map((id) => genreNames[id] || 'ภาพยนตร์');
 
   return {
+    id: '',
     tmdb_id: item.id,
     media_type: mediaType,
     title: item.original_title || item.original_name || title,
@@ -178,7 +192,32 @@ function toCatalogItem(item: TmdbDetail, mediaType: MediaType, sectionSlug: stri
   };
 }
 
-async function fetchCatalogCandidates() {
+function catalogRowToAdminLink(row: TmdbCatalogRow): AdminMovieLink {
+  return {
+    id: '',
+    tmdb_id: row.tmdb_id,
+    media_type: row.media_type,
+    title: row.title_en || row.title || null,
+    title_th: row.title || row.title_en || null,
+    watch_url: null,
+    trailer_url: null,
+    provider: null,
+    is_active: true,
+    notes: null,
+    section_slug: row.source_bucket || 'top-rated',
+    status: 'draft',
+    poster_url: row.poster_url || null,
+    backdrop_url: row.backdrop_url || null,
+    rating: Number(row.rating || 0),
+    year: row.release_year || undefined,
+    language: row.language || undefined,
+    runtime: row.runtime || null,
+    genres: row.genres || [],
+    updated_at: row.updated_at,
+  };
+}
+
+async function fetchTmdbFallbackCandidates() {
   const collections = await Promise.all([
     tmdbCollection('/movie/popular?language=th-TH&region=TH', 3).then((items) => items.map((item) => toCatalogItem(item, 'movie', 'popular'))),
     tmdbCollection('/movie/top_rated?language=th-TH', 3).then((items) => items.map((item) => toCatalogItem(item, 'movie', 'top-rated'))),
@@ -196,7 +235,31 @@ async function fetchCatalogCandidates() {
   return [...unique.values()];
 }
 
+async function fetchCatalogCandidates() {
+  try {
+    const rows = await supabaseRest<TmdbCatalogRow[]>(
+      'tmdb_catalog?select=tmdb_id,media_type,title,title_en,poster_url,backdrop_url,rating,release_year,language,runtime,genres,source_bucket,updated_at&is_active=eq.true&order=sort_score.desc&limit=10000',
+      { mode: 'service' }
+    );
+
+    const unique = new Map<string, AdminMovieLink>();
+    for (const row of rows) {
+      if (!row.tmdb_id || !row.media_type || !row.poster_url) continue;
+      const item = catalogRowToAdminLink(row);
+      unique.set(linkKey(item.media_type, item.tmdb_id), item);
+    }
+
+    if (unique.size) return [...unique.values()];
+  } catch {
+    // If the catalog table is not synced yet, keep the old live TMDB fallback so admin still works.
+  }
+
+  return fetchTmdbFallbackCandidates();
+}
+
 async function fetchTmdbDetail(item: AdminMovieLink): Promise<AdminMovieLink> {
+  if (item.poster_url && item.title_th && item.rating) return item;
+
   const token = process.env.TMDB_ACCESS_TOKEN;
   if (!token || !item.tmdb_id || !item.media_type) return item;
 
@@ -244,7 +307,7 @@ function mergeSavedIntoCandidate(candidate: AdminMovieLink, saved?: AdminMovieLi
     runtime: candidate.runtime || saved.runtime || null,
     genres: candidate.genres?.length ? candidate.genres : saved.genres || [],
     section_slug: saved.section_slug || candidate.section_slug,
-    status: saved.watch_url ? playableStatus(saved.status || candidate.status, saved.watch_url) : (saved.status || candidate.status),
+    status: saved.watch_url ? playableStatus(saved.status || candidate.status, saved.watch_url) : saved.status || candidate.status,
   };
 }
 
@@ -276,7 +339,7 @@ export async function GET(request: Request) {
   try {
     const [savedLinks, reports] = await Promise.all([
       supabaseRest<AdminMovieLink[]>(
-        'admin_movie_links?select=id,tmdb_id,media_type,title,title_th,watch_url,trailer_url,provider,is_active,notes,section_slug,status,created_at,updated_at&order=updated_at.desc&limit=300',
+        'admin_movie_links?select=id,tmdb_id,media_type,title,title_th,watch_url,trailer_url,provider,is_active,notes,section_slug,status,created_at,updated_at&order=updated_at.desc&limit=2000',
         { mode: 'service' }
       ),
       supabaseRest<LinkReport[]>(
@@ -296,7 +359,7 @@ export async function POST(request: Request) {
   const errorResponse = authError(request);
   if (errorResponse) return errorResponse;
 
-  const body = await request.json().catch(() => null) as Record<string, unknown> | null;
+  const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   const tmdbId = Number(body?.tmdb_id);
   const mediaType = cleanText(body?.media_type) as MediaType | undefined;
   const requestedStatus = (cleanText(body?.status) || 'published') as MovieStatus;
@@ -351,7 +414,7 @@ export async function PATCH(request: Request) {
   const errorResponse = authError(request);
   if (errorResponse) return errorResponse;
 
-  const body = await request.json().catch(() => null) as Record<string, unknown> | null;
+  const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   const id = cleanText(body?.id);
 
   if (!id) {
