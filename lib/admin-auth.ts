@@ -1,5 +1,9 @@
+function normalizeAdminToken(value?: string | null) {
+  return value?.trim().replace(/^DOFREE_ADMIN_TOKEN\s*=\s*/i, '').trim();
+}
+
 export function requireAdminToken(request: Request) {
-  const configuredToken = process.env.DOFREE_ADMIN_TOKEN?.trim();
+  const configuredToken = normalizeAdminToken(process.env.DOFREE_ADMIN_TOKEN);
 
   if (!configuredToken) {
     return {
@@ -11,7 +15,7 @@ export function requireAdminToken(request: Request) {
 
   const bearerToken = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim();
   const headerToken = request.headers.get('x-admin-token')?.trim();
-  const suppliedToken = headerToken || bearerToken;
+  const suppliedToken = normalizeAdminToken(headerToken || bearerToken);
 
   if (suppliedToken !== configuredToken) {
     return {
