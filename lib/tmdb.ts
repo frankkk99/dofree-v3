@@ -125,8 +125,8 @@ function demoWatchUrl(item: Pick<MovieItem, 'id' | 'mediaType'>) {
   return `/watch-ready?play=${item.mediaType}-${item.id}`;
 }
 
-function demoTrailerUrl(title: string) {
-  return `https://www.youtube.com/results?search_query=${encodeURIComponent(`${title} trailer`)}`;
+function demoTrailerUrl(_title: string) {
+  return undefined;
 }
 
 function deriveStatus(rating: number, index: number): MovieStatus {
@@ -275,8 +275,8 @@ function fallbackItem(index: number, overrides: Partial<MovieItem> = {}): MovieI
     language: index % 3 === 0 ? 'th' : 'en',
     status: 'published',
     isWatchReady: true,
-    watchUrl: `/watch-ready?play=fallback-${index}`,
-    trailerUrl: demoTrailerUrl(fallbackTitles[index % fallbackTitles.length]),
+    watchUrl: demoWatchUrl({ id: 9000 + index, mediaType: 'movie' }),
+    trailerUrl: undefined,
     label: index % 2 === 0 ? 'ใหม่' : '8+',
   };
   return { ...base, badges: buildBadges(base, index), ...overrides };
@@ -484,9 +484,31 @@ export async function getHomePayload(): Promise<HomePayload> {
   };
 }
 
-function youtubeTrailer(videos: TmdbVideo[] = [], fallbackTitle: string) {
-  const video = videos.find((item) => item.site === 'YouTube' && (item.type === 'Trailer' || item.official)) || videos.find((item) => item.site === 'YouTube');
-  return video?.key ? `https://www.youtube.com/watch?v=${video.key}` : demoTrailerUrl(fallbackTitle);
+function youtubeTrailer(videos: TmdbVideo[] = []) {
+  const youtubeVideos = videos.filter((item) => item.site === 'YouTube' && item.key);
+  const video =
+    youtubeVideos.find((item) => item.type === 'Trailer' && item.official) ||
+    youtubeVideos.find((item) => item.type === 'Trailer') ||
+    youtubeVideos.find((item) => item.type === 'Teaser') ||
+    youtubeVideos.find((item) => item.type === 'Clip') ||
+    youtubeVideos[0];
+
+  return video?.key ? `https://www.youtube.com/watch?v=${video.key}` : undefined;
+}
+
+function mergeVideos(...groups: Array<{ results?: TmdbVideo[] } | null | undefined>) {
+  const seen = new Set<string>();
+  const videos: TmdbVideo[] = [];
+
+  for (const group of groups) {
+    for (const video of group?.results || []) {
+      if (!video.key || seen.has(video.key)) continue;
+      seen.add(video.key);
+      videos.push(video);
+    }
+  }
+
+  return videos;
 }
 
 export async function getDetailPayload(mediaType: MediaType, id: string): Promise<DetailPayload> {
@@ -496,9 +518,10 @@ export async function getDetailPayload(mediaType: MediaType, id: string): Promis
     return { item, cast: [], trailerUrl: item.trailerUrl, recommendations: fallbackSections[0].items, source: 'fallback' };
   }
 
-  const [detail, videos, credits, recommendations, watchLinks] = await Promise.all([
+  const [detail, videosTh, videosEn, credits, recommendations, watchLinks] = await Promise.all([
     tmdb(`/${mediaType}/${numericId}?language=th-TH`),
     tmdb(`/${mediaType}/${numericId}/videos?language=th-TH`),
+    tmdb(`/${mediaType}/${numericId}/videos?language=en-US`),
     tmdb(`/${mediaType}/${numericId}/credits?language=th-TH`),
     tmdb(`/${mediaType}/${numericId}/recommendations?language=th-TH&page=1`),
     fetchActiveWatchLinks(),
@@ -510,7 +533,7 @@ export async function getDetailPayload(mediaType: MediaType, id: string): Promis
   }
 
   const baseItem = toMovieItem(detail, mediaType, 0);
-  const trailerUrl = youtubeTrailer(videos?.results, baseItem.title);
+  const trailerUrl = youtubeTrailer(mergeVideos(videosTh, videosEn));
   const item = applyWatchLink({ ...baseItem, trailerUrl }, watchLinks, 0);
   const cast = (credits?.cast || []).slice(0, 8).map((person: TmdbCast) => ({
     id: person.id,
