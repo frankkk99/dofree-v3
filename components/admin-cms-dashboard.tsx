@@ -5,6 +5,8 @@ import type { FormEvent, ReactNode } from 'react';
 
 type MediaType = 'movie' | 'tv';
 type MovieStatus = 'draft' | 'review' | 'published' | 'broken' | 'hidden';
+type AdminFilter = 'all' | 'missing' | 'broken' | 'movie' | 'series' | 'thai' | 'hd' | 'zoom' | 'top-rated' | 'ready' | 'draft-review';
+type AdminSort = 'rating' | 'updated';
 
 type AdminMovieLink = {
   id: string;
@@ -21,6 +23,13 @@ type AdminMovieLink = {
   status: MovieStatus;
   created_at?: string;
   updated_at?: string;
+  poster_url?: string | null;
+  backdrop_url?: string | null;
+  rating?: number;
+  year?: string;
+  language?: string;
+  runtime?: number | null;
+  genres?: string[];
 };
 
 type LinkReport = {
@@ -56,13 +65,17 @@ type EditorForm = {
   status: MovieStatus;
   provider: string;
   notes: string;
+  poster_url: string;
+  backdrop_url: string;
+  rating: string;
+  year: string;
+  language: string;
+  genres: string[];
+  runtime: string;
 };
 
 type AdminCard = {
   key: string;
-  title: string;
-  subtitle: string;
-  badge: string;
   tone: 'missing' | 'broken' | 'ready' | 'draft';
   item: AdminMovieLink;
   report?: LinkReport;
@@ -80,6 +93,13 @@ const emptyForm: EditorForm = {
   status: 'draft',
   provider: 'google-drive',
   notes: '',
+  poster_url: '',
+  backdrop_url: '',
+  rating: '',
+  year: '',
+  language: '',
+  genres: [],
+  runtime: '',
 };
 
 const fallbackMissing: AdminMovieLink[] = Array.from({ length: 12 }, (_, index) => ({
@@ -95,6 +115,10 @@ const fallbackMissing: AdminMovieLink[] = Array.from({ length: 12 }, (_, index) 
   notes: 'ตัวอย่าง layout เมื่อยังไม่ได้โหลดข้อมูลจริง',
   section_slug: index % 3 === 0 ? 'thai' : 'watch-ready',
   status: index % 2 === 0 ? 'draft' : 'review',
+  rating: 8.8 - index * 0.12,
+  year: String(2026 - (index % 4)),
+  language: index % 3 === 0 ? 'th' : 'en',
+  genres: index % 3 === 0 ? ['ดราม่า', 'ไทย'] : ['แอ็กชัน', 'ระทึกขวัญ'],
 }));
 
 const fallbackBroken: AdminMovieLink[] = Array.from({ length: 8 }, (_, index) => ({
@@ -110,7 +134,25 @@ const fallbackBroken: AdminMovieLink[] = Array.from({ length: 8 }, (_, index) =>
   notes: 'ตัวอย่างรายการที่ถูกแจ้งลิงก์เสีย',
   section_slug: 'watch-ready',
   status: 'broken',
+  rating: 8.5 - index * 0.1,
+  year: String(2026 - (index % 3)),
+  language: 'en',
+  genres: ['ดราม่า', 'ระทึกขวัญ'],
 }));
+
+const filterButtons: { id: AdminFilter; label: string }[] = [
+  { id: 'all', label: 'ทั้งหมด' },
+  { id: 'missing', label: 'ยังไม่มีลิงก์' },
+  { id: 'broken', label: 'ลิงก์เสีย' },
+  { id: 'draft-review', label: 'รอตรวจ' },
+  { id: 'movie', label: 'ภาพยนตร์' },
+  { id: 'series', label: 'ซีรีส์' },
+  { id: 'thai', label: 'หนังไทย' },
+  { id: 'top-rated', label: 'คะแนนสูง' },
+  { id: 'hd', label: 'HD' },
+  { id: 'zoom', label: 'ZOOM' },
+  { id: 'ready', label: 'พร้อมดู' },
+];
 
 function StatusPill({ children, active = false }: { children: ReactNode; active?: boolean }) {
   return (
@@ -141,6 +183,23 @@ function movieTitle(item: AdminMovieLink) {
   return item.title_th || item.title || `TMDB ${item.tmdb_id}`;
 }
 
+function itemScore(item: AdminMovieLink) {
+  return Number(item.rating || 0);
+}
+
+function itemYear(item: AdminMovieLink) {
+  return item.year || item.created_at?.slice(0, 4) || '2026';
+}
+
+function itemBadges(item: AdminMovieLink, tone: AdminCard['tone']) {
+  const badges = [tone === 'broken' ? 'ลิงก์เสีย' : !item.watch_url ? 'ยังไม่มีลิงก์' : 'พร้อมดู'];
+  if (item.rating && item.rating >= 8) badges.push('8+');
+  if (item.status === 'review') badges.push('ZOOM');
+  if (item.watch_url) badges.push('HD');
+  if (item.language === 'th') badges.push('พากย์ไทย');
+  return badges.slice(0, 3);
+}
+
 function itemToForm(item: AdminMovieLink): EditorForm {
   return {
     id: item.id?.startsWith('fallback-') ? '' : item.id,
@@ -154,6 +213,13 @@ function itemToForm(item: AdminMovieLink): EditorForm {
     status: item.status || 'draft',
     provider: item.provider || 'google-drive',
     notes: item.notes || '',
+    poster_url: item.poster_url || '',
+    backdrop_url: item.backdrop_url || '',
+    rating: item.rating ? String(item.rating) : '',
+    year: item.year || '',
+    language: item.language || '',
+    genres: item.genres || [],
+    runtime: item.runtime ? String(item.runtime) : '',
   };
 }
 
@@ -171,69 +237,128 @@ function formToItem(form: EditorForm): AdminMovieLink {
     notes: form.notes || null,
     section_slug: form.section_slug || 'watch-ready',
     status: form.status,
+    poster_url: form.poster_url || null,
+    backdrop_url: form.backdrop_url || null,
+    rating: Number(form.rating || 0),
+    year: form.year || undefined,
+    language: form.language || undefined,
+    runtime: Number(form.runtime || 0) || null,
+    genres: form.genres,
   };
 }
 
-function toMissingCard(item: AdminMovieLink): AdminCard {
+function toCard(item: AdminMovieLink, tone: AdminCard['tone'], report?: LinkReport): AdminCard {
   return {
-    key: `missing-${item.id || item.tmdb_id}`,
-    title: movieTitle(item),
-    subtitle: `${item.media_type === 'tv' ? 'Series' : 'Movie'} • ID ${item.tmdb_id} • ${item.status}`,
-    badge: 'ยังไม่มีลิงก์',
-    tone: 'missing',
-    item,
-  };
-}
-
-function toBrokenCard(item: AdminMovieLink, report?: LinkReport): AdminCard {
-  return {
-    key: `broken-${item.id || item.tmdb_id}-${report?.id || ''}`,
-    title: movieTitle(item),
-    subtitle: report ? `${report.reason} • ${formatDate(report.created_at)}` : `${item.media_type === 'tv' ? 'Series' : 'Movie'} • ID ${item.tmdb_id}`,
-    badge: report ? 'ถูกแจ้งเสีย' : 'Broken',
-    tone: 'broken',
+    key: `${tone}-${item.id || item.tmdb_id}-${report?.id || ''}`,
+    tone,
     item,
     report,
   };
 }
 
-function MovieCard({ card, onOpen }: { card: AdminCard; onOpen: (card: AdminCard) => void }) {
-  const toneClass = card.tone === 'broken'
-    ? 'from-red-500/24 via-red-500/8 to-white/[0.035]'
-    : card.tone === 'missing'
-      ? 'from-[#f4c46b]/22 via-[#f4c46b]/7 to-white/[0.035]'
-      : 'from-[#e50914]/22 via-[#e50914]/8 to-white/[0.035]';
+function sortCards(cards: AdminCard[], sortMode: AdminSort) {
+  return [...cards].sort((a, b) => {
+    if (sortMode === 'updated') {
+      return new Date(b.item.updated_at || b.item.created_at || 0).getTime() - new Date(a.item.updated_at || a.item.created_at || 0).getTime();
+    }
+    return itemScore(b.item) - itemScore(a.item);
+  });
+}
+
+function matchesFilter(card: AdminCard, activeFilter: AdminFilter) {
+  const item = card.item;
+  if (activeFilter === 'all') return true;
+  if (activeFilter === 'missing') return !item.watch_url || item.status === 'draft' || item.status === 'review';
+  if (activeFilter === 'broken') return card.tone === 'broken' || item.status === 'broken';
+  if (activeFilter === 'draft-review') return item.status === 'draft' || item.status === 'review';
+  if (activeFilter === 'movie') return item.media_type === 'movie';
+  if (activeFilter === 'series') return item.media_type === 'tv';
+  if (activeFilter === 'thai') return item.language === 'th' || item.section_slug === 'thai' || Boolean(item.genres?.some((genre) => genre.includes('ไทย')));
+  if (activeFilter === 'top-rated') return itemScore(item) >= 8;
+  if (activeFilter === 'hd') return Boolean(item.watch_url) || item.status === 'published';
+  if (activeFilter === 'zoom') return item.status === 'review' || item.notes?.toLowerCase().includes('zoom');
+  if (activeFilter === 'ready') return Boolean(item.watch_url) && item.status === 'published';
+  return true;
+}
+
+function AdminPosterCard({ card, onOpen }: { card: AdminCard; onOpen: (card: AdminCard) => void }) {
+  const item = card.item;
+  const badges = itemBadges(item, card.tone);
+  const rating = itemScore(item);
 
   return (
     <button
       type="button"
       onClick={() => onOpen(card)}
-      className="group relative min-h-[172px] overflow-hidden rounded-[24px] bg-white/[0.045] p-3 text-left shadow-[0_18px_55px_rgba(0,0,0,0.55)] ring-1 ring-white/[0.055] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:bg-white/[0.075] hover:shadow-[0_28px_80px_rgba(0,0,0,0.72)]"
+      className="group relative aspect-[2/3] min-w-0 overflow-hidden rounded-[10px] bg-[#111] text-left shadow-[0_16px_44px_rgba(0,0,0,0.62)] transition duration-300 hover:-translate-y-1 hover:shadow-glow md:rounded-[12px] md:shadow-[0_24px_70px_rgba(0,0,0,0.65)]"
+      aria-label={`แก้ไข ${movieTitle(item)}`}
     >
-      <div className={`absolute inset-0 bg-gradient-to-br ${toneClass}`} />
-      <div className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-white/[0.06] blur-2xl" />
-      <div className="relative z-10 flex gap-3">
-        <div className="grid h-[116px] w-[78px] shrink-0 place-items-center overflow-hidden rounded-[16px] bg-[radial-gradient(circle_at_45%_20%,rgba(229,9,20,0.58),rgba(20,20,20,0.95)_68%)] shadow-[0_18px_45px_rgba(0,0,0,0.65)]">
-          <div className="text-center">
-            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/48">TMDB</p>
-            <p className="mt-1 text-lg font-black tracking-[-0.06em] text-white">{card.item.tmdb_id || '-'}</p>
+      {item.poster_url ? (
+        <img src={item.poster_url} alt={movieTitle(item)} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover object-center transition duration-700 group-hover:scale-110" />
+      ) : (
+        <div className="absolute inset-0 grid place-items-center bg-[radial-gradient(circle_at_50%_24%,#8a111b,#111_62%)] p-3 text-center">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/44">TMDB</p>
+            <p className="mt-2 text-2xl font-black tracking-[-0.08em] text-white md:text-3xl">{item.tmdb_id || '-'}</p>
           </div>
         </div>
-        <div className="min-w-0 flex-1 pt-1">
-          <span className={`inline-flex rounded-full px-2.5 py-1 text-[9px] font-black ${card.tone === 'broken' ? 'bg-red-500/18 text-red-100' : 'bg-[#f4c46b]/16 text-[#f4c46b]'}`}>{card.badge}</span>
-          <h3 className="mt-3 line-clamp-2 text-[15px] font-black leading-tight tracking-[-0.04em] text-white md:text-base">{card.title}</h3>
-          <p className="mt-2 line-clamp-2 text-[10px] font-bold leading-4 text-white/42">{card.subtitle}</p>
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            <span className="rounded-full bg-black/30 px-2 py-1 text-[9px] font-black text-white/58">{card.item.section_slug || 'watch-ready'}</span>
-            <span className="rounded-full bg-black/30 px-2 py-1 text-[9px] font-black text-white/58">{card.item.media_type === 'tv' ? 'Series' : 'Movie'}</span>
-          </div>
-        </div>
+      )}
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.08)_0%,rgba(0,0,0,0.0)_38%,rgba(0,0,0,0.94)_100%)]" />
+      <div className="absolute inset-0 opacity-0 transition group-hover:opacity-100 bg-[radial-gradient(circle_at_50%_35%,rgba(229,9,20,0.2),transparent_16rem)]" />
+
+      <div className="absolute left-1.5 top-1.5 flex flex-wrap gap-1 pr-1 md:left-3 md:top-3 md:gap-1.5 md:pr-2">
+        {badges.slice(0, 2).map((name) => (
+          <span key={name} className={`${name === 'ลิงก์เสีย' ? 'bg-red-600 text-white' : name === 'ยังไม่มีลิงก์' ? 'bg-[#f4c46b] text-black' : 'bg-[#e50914] text-white'} rounded px-1.5 py-0.5 text-[7px] font-black shadow-lg backdrop-blur-md md:rounded-md md:px-2 md:py-1 md:text-[10px]`}>
+            {name}
+          </span>
+        ))}
       </div>
-      <div className="absolute inset-x-3 bottom-3 z-10 flex items-center justify-between">
-        <span className="text-[9px] font-black uppercase tracking-[0.16em] text-white/32">คลิกเพื่อแก้ไข</span>
-        <span className="grid h-8 w-8 place-items-center rounded-full bg-white/[0.08] text-sm font-black text-white/60 transition group-hover:bg-[#e50914] group-hover:text-white">›</span>
+
+      <div className="absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-full bg-black/48 text-[10px] font-black text-white/72 opacity-0 shadow-xl backdrop-blur-xl transition group-hover:opacity-100 md:right-3 md:top-3 md:h-8 md:w-8 md:text-xs">แก้</div>
+
+      <div className="absolute inset-x-0 bottom-0 p-2 md:p-3.5">
+        <div className="mb-1 flex items-center gap-1 text-[7px] font-black uppercase tracking-[0.1em] text-white/38 md:mb-2 md:gap-2 md:text-[10px] md:tracking-[0.16em]">
+          <span>{item.media_type === 'tv' ? 'Series' : 'Movie'}</span>
+          <span>•</span>
+          <span>{item.status}</span>
+        </div>
+        <h3 className="line-clamp-2 text-[9px] font-black leading-tight text-white drop-shadow sm:text-[11px] md:text-[15px]">{movieTitle(item)}</h3>
+        <div className="mt-1 flex items-center gap-1 text-[8px] font-bold text-white/58 md:mt-2 md:gap-2 md:text-[11px]">
+          <span className="text-[#f4c46b]">★ {rating.toFixed(1)}</span>
+          <span>•</span>
+          <span>{itemYear(item)}</span>
+        </div>
       </div>
     </button>
+  );
+}
+
+function AdminControls({ activeFilter, setActiveFilter, sortMode, setSortMode }: {
+  activeFilter: AdminFilter;
+  setActiveFilter: (filter: AdminFilter) => void;
+  sortMode: AdminSort;
+  setSortMode: (sort: AdminSort) => void;
+}) {
+  return (
+    <div className="rounded-[24px] bg-white/[0.035] p-3 shadow-[0_18px_60px_rgba(0,0,0,0.45)] ring-1 ring-white/[0.055] backdrop-blur-2xl md:p-4">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#e50914]">Admin Filter</p>
+          <p className="mt-1 text-xs font-semibold text-white/42">เริ่มต้นเรียงจากคะแนนสูงสุด แล้วกรองต่อได้ทันที</p>
+        </div>
+        <div className="flex gap-2">
+          <button type="button" onClick={() => setSortMode('rating')} className={`h-8 rounded-full px-3 text-[10px] font-black ${sortMode === 'rating' ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.07] text-white/58'}`}>คะแนนสูงสุด</button>
+          <button type="button" onClick={() => setSortMode('updated')} className={`h-8 rounded-full px-3 text-[10px] font-black ${sortMode === 'updated' ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.07] text-white/58'}`}>อัปเดตล่าสุด</button>
+        </div>
+      </div>
+      <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1 md:flex-wrap md:overflow-visible md:pb-0">
+        {filterButtons.map((button) => (
+          <button key={button.id} type="button" onClick={() => setActiveFilter(button.id)} className={`h-8 shrink-0 rounded-full px-3 text-[10px] font-black transition ${activeFilter === button.id ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.07] text-white/58 hover:bg-white/[0.11] hover:text-white'}`}>
+            {button.label}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -248,7 +373,7 @@ function MovieGridSection({ title, eyebrow, description, cards, visibleCount, on
 }) {
   const visibleCards = cards.slice(0, visibleCount);
   return (
-    <section className="rounded-[30px] bg-white/[0.035] p-4 shadow-[0_26px_90px_rgba(0,0,0,0.52)] ring-1 ring-white/[0.055] backdrop-blur-2xl md:p-6">
+    <section className="rounded-[30px] bg-white/[0.026] p-4 shadow-[0_26px_90px_rgba(0,0,0,0.48)] backdrop-blur-2xl md:p-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#e50914]">{eyebrow}</p>
@@ -258,14 +383,14 @@ function MovieGridSection({ title, eyebrow, description, cards, visibleCount, on
         <StatusPill active>{cards.length} รายการ</StatusPill>
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-        {visibleCards.map((card) => <MovieCard key={card.key} card={card} onOpen={onOpen} />)}
+      <div className="mt-5 grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 md:gap-4 xl:gap-5">
+        {visibleCards.map((card) => <AdminPosterCard key={card.key} card={card} onOpen={onOpen} />)}
       </div>
 
       {!visibleCards.length ? (
         <div className="mt-5 rounded-[24px] bg-black/24 p-8 text-center shadow-inner">
-          <p className="text-sm font-black text-white/58">ยังไม่มีรายการในหมวดนี้</p>
-          <p className="mt-1 text-xs font-bold text-white/34">ลองกดรีเฟรชหรือเพิ่มรายการใหม่</p>
+          <p className="text-sm font-black text-white/58">ยังไม่มีรายการในเงื่อนไขนี้</p>
+          <p className="mt-1 text-xs font-bold text-white/34">ลองเปลี่ยนปุ่มกรองหรือรีเฟรชข้อมูล</p>
         </div>
       ) : null}
 
@@ -291,19 +416,23 @@ function EditorModal({ form, setForm, saving, onClose, onSubmit, report }: {
   const previewItem = formToItem(form);
   return (
     <div className="fixed inset-0 z-[110] overflow-y-auto bg-black/72 px-3 py-6 text-white backdrop-blur-2xl md:px-6" role="dialog" aria-modal="true">
-      <form onSubmit={onSubmit} className="mx-auto max-w-[1040px] overflow-hidden rounded-[34px] bg-[#050505]/92 shadow-[0_44px_160px_rgba(0,0,0,0.9)] ring-1 ring-white/[0.075] backdrop-blur-2xl">
+      <form onSubmit={onSubmit} className="mx-auto max-w-[1040px] overflow-hidden rounded-[34px] bg-[#050505]/92 shadow-[0_44px_160px_rgba(0,0,0,0.9)] backdrop-blur-2xl">
         <section className="relative overflow-hidden p-4 md:p-6">
-          <div className="absolute inset-0 bg-cover bg-center opacity-16" style={{ backgroundImage: 'linear-gradient(135deg, rgba(229,9,20,.55), rgba(244,196,107,.18), rgba(0,0,0,.95))' }} />
+          {previewItem.backdrop_url ? <div className="absolute inset-0 bg-cover bg-center opacity-24" style={{ backgroundImage: `url(${previewItem.backdrop_url})` }} /> : null}
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_14%,rgba(229,9,20,0.32),transparent_24rem),linear-gradient(180deg,rgba(0,0,0,0.18),#050505)]" />
           <button type="button" onClick={onClose} className="absolute right-4 top-4 z-20 grid h-11 w-11 place-items-center rounded-full bg-black/42 text-2xl font-black text-white/70 shadow-[0_14px_50px_rgba(0,0,0,0.72)] backdrop-blur-xl hover:bg-white/10 hover:text-white">×</button>
 
           <div className="relative z-10 flex flex-col gap-5 md:flex-row">
-            <div className="grid h-[190px] w-[128px] shrink-0 place-items-center overflow-hidden rounded-[22px] bg-[radial-gradient(circle_at_45%_20%,rgba(229,9,20,0.7),rgba(18,18,18,0.95)_68%)] shadow-[0_28px_80px_rgba(0,0,0,0.72)]">
-              <div className="text-center">
-                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/42">TMDB</p>
-                <p className="mt-2 text-3xl font-black tracking-[-0.08em] text-white">{previewItem.tmdb_id || '-'}</p>
-                <p className="mt-2 text-[10px] font-black uppercase text-[#e50914]">{previewItem.media_type}</p>
-              </div>
+            <div className="relative h-[190px] w-[128px] shrink-0 overflow-hidden rounded-[22px] bg-[radial-gradient(circle_at_45%_20%,rgba(229,9,20,0.7),rgba(18,18,18,0.95)_68%)] shadow-[0_28px_80px_rgba(0,0,0,0.72)]">
+              {previewItem.poster_url ? <img src={previewItem.poster_url} alt={movieTitle(previewItem)} className="absolute inset-0 h-full w-full object-cover" /> : null}
+              {!previewItem.poster_url ? (
+                <div className="absolute inset-0 grid place-items-center text-center">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/42">TMDB</p>
+                    <p className="mt-2 text-3xl font-black tracking-[-0.08em] text-white">{previewItem.tmdb_id || '-'}</p>
+                  </div>
+                </div>
+              ) : null}
             </div>
             <div className="min-w-0 flex-1 pt-1 md:pr-14">
               <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#e50914]">Admin Movie Editor</p>
@@ -311,6 +440,8 @@ function EditorModal({ form, setForm, saving, onClose, onSubmit, report }: {
               <div className="mt-4 flex flex-wrap gap-2">
                 <StatusPill active>{previewItem.status}</StatusPill>
                 <StatusPill>{previewItem.media_type === 'tv' ? 'Series' : 'Movie'}</StatusPill>
+                <StatusPill>★ {itemScore(previewItem).toFixed(1)}</StatusPill>
+                <StatusPill>{itemYear(previewItem)}</StatusPill>
                 <StatusPill>{previewItem.section_slug}</StatusPill>
               </div>
               <p className="mt-4 line-clamp-3 max-w-2xl text-sm font-semibold leading-6 text-white/52">{previewItem.notes || 'ใส่ลิงก์รับชม แก้ชื่อไทย เปลี่ยนสถานะ หรือย้ายหมวด แล้วกดบันทึกด้านล่างใน modal นี้'}</p>
@@ -406,6 +537,8 @@ export function AdminCmsDashboard() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorForm, setEditorForm] = useState<EditorForm>(emptyForm);
   const [activeReport, setActiveReport] = useState<LinkReport | undefined>();
+  const [activeFilter, setActiveFilter] = useState<AdminFilter>('all');
+  const [sortMode, setSortMode] = useState<AdminSort>('rating');
 
   useEffect(() => {
     const savedToken = window.localStorage.getItem('dofree_admin_token') || '';
@@ -496,22 +629,22 @@ export function AdminCmsDashboard() {
     const broken = links.filter((item) => item.status === 'broken').length + reports.filter((report) => report.status === 'pending').length;
 
     return [
-      { label: 'ทั้งหมด', value: links.length ? String(links.length) : '1,240', helper: links.length ? 'ในระบบจริง' : 'ตัวอย่าง', tone: 'from-[#e50914] to-[#7a050b]' },
-      { label: 'พร้อมดู', value: links.length ? String(ready) : '86', helper: 'มี watch_url', tone: 'from-[#f4c46b] to-[#8b5d12]' },
-      { label: 'ยังไม่มีลิงก์', value: links.length ? String(missing) : '12', helper: `${review} รอตรวจ`, tone: 'from-white/20 to-white/5' },
-      { label: 'ลิงก์เสีย', value: links.length || reports.length ? String(broken) : '14', helper: 'Report + Broken', tone: 'from-[#ef4444] to-[#4c0508]' },
+      { label: 'ทั้งหมด', value: links.length ? String(links.length) : '1,240', helper: links.length ? 'รายการจริง' : 'ตัวอย่าง', tone: 'bg-[#e50914]' },
+      { label: 'พร้อมดู', value: links.length ? String(ready) : '86', helper: 'มีลิงก์', tone: 'bg-[#f4c46b]' },
+      { label: 'ยังไม่มี', value: links.length ? String(missing) : '12', helper: `${review} รอตรวจ`, tone: 'bg-white/18' },
+      { label: 'ลิงก์เสีย', value: links.length || reports.length ? String(broken) : '14', helper: 'Report', tone: 'bg-red-500' },
     ];
   }, [links, reports]);
 
-  const missingCards = useMemo(() => {
+  const baseMissingCards = useMemo(() => {
     const source = links.length ? links.filter((item) => !item.watch_url || item.status === 'draft' || item.status === 'review') : fallbackMissing;
-    return source.map(toMissingCard);
+    return source.map((item) => toCard(item, 'missing'));
   }, [links]);
 
-  const brokenCards = useMemo(() => {
+  const baseBrokenCards = useMemo(() => {
     const cards: AdminCard[] = [];
     const brokenLinks = links.length ? links.filter((item) => item.status === 'broken') : fallbackBroken;
-    cards.push(...brokenLinks.map((item) => toBrokenCard(item)));
+    cards.push(...brokenLinks.map((item) => toCard(item, 'broken')));
 
     for (const report of reports) {
       const matched = links.find((item) => item.tmdb_id === report.tmdb_id && item.media_type === report.media_type);
@@ -530,59 +663,46 @@ export function AdminCmsDashboard() {
         status: 'broken' as MovieStatus,
         created_at: report.created_at,
         updated_at: report.updated_at,
+        rating: 0,
+        year: report.created_at?.slice(0, 4),
+        genres: [],
       };
-      cards.push(toBrokenCard(item, report));
+      cards.push(toCard(item, 'broken', report));
     }
 
     return cards;
   }, [links, reports]);
+
+  const missingCards = useMemo(() => sortCards(baseMissingCards.filter((card) => matchesFilter(card, activeFilter)), sortMode), [activeFilter, baseMissingCards, sortMode]);
+  const brokenCards = useMemo(() => sortCards(baseBrokenCards.filter((card) => matchesFilter(card, activeFilter)), sortMode), [activeFilter, baseBrokenCards, sortMode]);
 
   return (
     <main className="min-h-screen bg-[#030303] text-white">
       <section className="relative overflow-hidden px-4 py-8 md:px-8 md:py-10">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(229,9,20,0.24),transparent_30rem),radial-gradient(circle_at_82%_10%,rgba(244,196,107,0.12),transparent_24rem),linear-gradient(180deg,#050000,#030303)]" />
         <div className="relative z-10 mx-auto max-w-[1600px]">
-          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-            <div>
-              <a href="/" className="text-xs font-black text-red-200/70 hover:text-red-100">← กลับหน้าแรก</a>
-              <p className="mt-7 text-[10px] font-black uppercase tracking-[0.34em] text-[#e50914] md:text-xs">DOFree Admin CMS</p>
-              <h1 className="mt-3 max-w-4xl text-[42px] font-black leading-[0.9] tracking-[-0.08em] md:text-[76px]">จัดการหนังและลิงก์รับชม</h1>
-              <p className="mt-4 max-w-2xl text-sm font-semibold leading-7 text-white/56 md:text-lg md:leading-8">
-                โฟกัสงานจริงของแอดมิน: ดูเรื่องที่ยังไม่มีลิงก์, แก้เรื่องที่ถูกแจ้งว่าเสีย และเปิด modal เพื่อใส่ข้อมูลให้ครบก่อนเผยแพร่
-              </p>
-            </div>
-            <div className="rounded-[24px] bg-white/[0.045] p-4 shadow-[0_24px_90px_rgba(0,0,0,0.72)] ring-1 ring-white/[0.06] backdrop-blur-2xl md:w-[380px]">
-              <p className="text-[10px] font-black uppercase tracking-[0.28em] text-white/38">Admin Access</p>
-              <input value={adminToken} onChange={(event) => setAdminToken(event.target.value)} type="password" placeholder="DOFREE_ADMIN_TOKEN" className={inputClass()} />
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <button type="button" onClick={saveToken} disabled={loading} className="h-10 rounded-xl bg-[#e50914] text-xs font-black text-white shadow-glow disabled:opacity-45">{loading ? 'กำลังโหลด' : 'เชื่อมข้อมูล'}</button>
-                <button type="button" onClick={() => loadDashboard()} disabled={loading} className="h-10 rounded-xl bg-white/[0.08] text-xs font-black text-white/70 disabled:opacity-45">รีเฟรช</button>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <StatusPill active={Boolean(links.length)}>Supabase</StatusPill>
-                <StatusPill active={Boolean(adminToken)}>Token</StatusPill>
-                <StatusPill>TMDB Ready</StatusPill>
-              </div>
-              {message ? <p className="mt-3 rounded-xl bg-green-400/10 px-3 py-2 text-xs font-bold text-green-100">{message}</p> : null}
-              {error ? <p className="mt-3 rounded-xl bg-red-500/10 px-3 py-2 text-xs font-bold text-red-100">{error}</p> : null}
-            </div>
-          </div>
+          <a href="/" className="text-xs font-black text-red-200/70 hover:text-red-100">← กลับหน้าแรก</a>
+          <p className="mt-7 text-[10px] font-black uppercase tracking-[0.34em] text-[#e50914] md:text-xs">DOFree Admin CMS</p>
+          <h1 className="mt-3 max-w-4xl text-[42px] font-black leading-[0.9] tracking-[-0.08em] md:text-[76px]">จัดการหนังและลิงก์รับชม</h1>
+          <p className="mt-4 max-w-2xl text-sm font-semibold leading-7 text-white/56 md:text-lg md:leading-8">
+            โฟกัสงานจริงของแอดมิน: ใช้การ์ดแบบเดียวกับหน้าบ้าน แต่กดเข้าไปแก้ลิงก์ สถานะ และข้อมูลเผยแพร่ได้ทันที
+          </p>
         </div>
       </section>
 
       <section className="mx-auto max-w-[1600px] space-y-6 px-4 pb-12 md:px-8">
-        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-4 gap-2 overflow-hidden rounded-[22px] bg-white/[0.035] p-2 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur-2xl">
           {stats.map((item) => (
-            <article key={item.label} className="overflow-hidden rounded-[18px] bg-white/[0.045] p-3 shadow-[0_14px_45px_rgba(0,0,0,0.45)] ring-1 ring-white/[0.055] md:p-4">
-              <div className={`h-1 rounded-full bg-gradient-to-r ${item.tone}`} />
-              <p className="mt-3 text-[10px] font-black text-white/42">{item.label}</p>
-              <h2 className="mt-1 text-2xl font-black tracking-[-0.06em] md:text-3xl">{item.value}</h2>
-              <p className="mt-1 text-[10px] font-semibold text-white/42 md:text-xs">{item.helper}</p>
+            <article key={item.label} className="min-w-0 rounded-[16px] bg-black/24 p-2.5 md:p-3">
+              <div className={`h-1 rounded-full ${item.tone}`} />
+              <p className="mt-2 truncate text-[8px] font-black text-white/42 md:text-[10px]">{item.label}</p>
+              <h2 className="mt-0.5 truncate text-lg font-black tracking-[-0.06em] md:text-3xl">{item.value}</h2>
+              <p className="truncate text-[8px] font-semibold text-white/38 md:text-[10px]">{item.helper}</p>
             </article>
           ))}
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] bg-white/[0.035] p-3 shadow-[0_18px_60px_rgba(0,0,0,0.45)] ring-1 ring-white/[0.055] backdrop-blur-2xl md:p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] bg-white/[0.035] p-3 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur-2xl md:p-4">
           <div>
             <p className="text-xs font-black text-white/72">เพิ่มรายการใหม่แบบเร็ว</p>
             <p className="mt-1 text-[11px] font-semibold text-white/36">กดแล้วกรอก TMDB ID และลิงก์ใน modal เดียว</p>
@@ -590,10 +710,12 @@ export function AdminCmsDashboard() {
           <button type="button" onClick={() => openEditor()} className="h-11 rounded-2xl bg-[#e50914] px-5 text-xs font-black text-white shadow-glow">+ เพิ่มหนัง</button>
         </div>
 
+        <AdminControls activeFilter={activeFilter} setActiveFilter={setActiveFilter} sortMode={sortMode} setSortMode={setSortMode} />
+
         <MovieGridSection
           eyebrow="Need Watch Link"
           title="หนังที่ยังไม่มีลิงก์หนัง"
-          description="เรียง 4 การ์ดต่อแถวบนจอใหญ่ แสดง 3 แถวแรกก่อน ถ้ามีเยอะให้กดดูเพิ่มเติม แล้วคลิกการ์ดเพื่อใส่ลิงก์และเปลี่ยนสถานะเป็นพร้อมดู"
+          description="การ์ดใช้สไตล์เดียวกับหน้าบ้าน เรียงจากคะแนนมากสุดก่อนเสมอ แล้วค่อยกรองด้วยปุ่มด้านบน"
           cards={missingCards}
           visibleCount={missingVisible}
           onMore={() => setMissingVisible((count) => count + 12)}
@@ -609,6 +731,25 @@ export function AdminCmsDashboard() {
           onMore={() => setBrokenVisible((count) => count + 12)}
           onOpen={(card) => openEditor(card.item, card.report)}
         />
+
+        <section className="rounded-[28px] bg-white/[0.035] p-4 shadow-[0_24px_90px_rgba(0,0,0,0.72)] backdrop-blur-2xl md:p-5">
+          <p className="text-[10px] font-black uppercase tracking-[0.28em] text-white/38">Admin Access</p>
+          <div className="mt-3 grid gap-2 md:grid-cols-[1fr_auto_auto] md:items-end">
+            <label className="block">
+              <FieldLabel>DOFREE_ADMIN_TOKEN</FieldLabel>
+              <input value={adminToken} onChange={(event) => setAdminToken(event.target.value)} type="password" placeholder="ใส่ token เพื่อโหลดข้อมูลจริง" className={inputClass()} />
+            </label>
+            <button type="button" onClick={saveToken} disabled={loading} className="h-11 rounded-2xl bg-[#e50914] px-6 text-xs font-black text-white shadow-glow disabled:opacity-45">{loading ? 'กำลังโหลด' : 'เชื่อมข้อมูล'}</button>
+            <button type="button" onClick={() => loadDashboard()} disabled={loading} className="h-11 rounded-2xl bg-white/[0.08] px-6 text-xs font-black text-white/70 disabled:opacity-45">รีเฟรช</button>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <StatusPill active={Boolean(links.length)}>Supabase</StatusPill>
+            <StatusPill active={Boolean(adminToken)}>Token</StatusPill>
+            <StatusPill>TMDB Ready</StatusPill>
+          </div>
+          {message ? <p className="mt-3 rounded-xl bg-green-400/10 px-3 py-2 text-xs font-bold text-green-100">{message}</p> : null}
+          {error ? <p className="mt-3 rounded-xl bg-red-500/10 px-3 py-2 text-xs font-bold text-red-100">{error}</p> : null}
+        </section>
       </section>
 
       {editorOpen ? (
