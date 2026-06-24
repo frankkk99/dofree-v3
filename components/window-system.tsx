@@ -118,7 +118,6 @@ function InlinePlayer({ url, title, fallbackImage, emptyLabel }: { url?: string;
         <div className="relative z-10 px-6">
           <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-white/[0.1] text-xl font-black text-white/58 shadow-[0_18px_50px_rgba(0,0,0,0.72)] backdrop-blur-xl md:h-16 md:w-16 md:text-2xl">▶</div>
           <p className="mt-3 text-xs font-black text-white/72 md:text-sm">{emptyLabel}</p>
-          <p className="mt-1 text-[10px] font-semibold text-white/38 md:text-xs">ระบบจะแสดง player ที่ฝังได้ใน Modal เท่านั้น</p>
         </div>
       </div>
     );
@@ -183,6 +182,21 @@ function StatusBadge({ children, active = false }: { children: ReactNode; active
     <span className={`rounded-full px-2 py-0.5 text-[9px] font-black shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md md:text-[11px] ${active ? 'bg-[#e50914]/22 text-red-100' : 'bg-white/[0.105] text-white/78'}`}>
       {children}
     </span>
+  );
+}
+
+function WatchCta({ hasLink, onClick }: { hasLink: boolean; onClick: () => void }) {
+  return (
+    <div className="mt-5">
+      <button
+        type="button"
+        onClick={hasLink ? onClick : undefined}
+        disabled={!hasLink}
+        className={`watch-pulse-btn flex h-12 w-full items-center justify-center rounded-2xl text-sm font-black shadow-[0_18px_60px_rgba(0,0,0,0.48)] backdrop-blur-xl transition md:h-14 md:text-base ${hasLink ? 'bg-[#e50914] text-white shadow-[0_18px_60px_rgba(229,9,20,0.42)] hover:scale-[1.01]' : 'cursor-not-allowed bg-white/[0.075] text-white/38'}`}
+      >
+        {hasLink ? '▶ รับชมเรื่องนี้' : 'ยังไม่มีลิงก์รับชม'}
+      </button>
+    </div>
   );
 }
 
@@ -394,7 +408,7 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
                 <StatusBadge>★ {displayItem.rating.toFixed(1)}</StatusBadge>
                 <StatusBadge>{displayItem.year}</StatusBadge>
                 <StatusBadge>{displayItem.language === 'th' ? 'TH' : (displayItem.language || 'EN')}</StatusBadge>
-                <StatusBadge active>{displayItem.status === 'published' ? 'HD' : 'ZOOM'}</StatusBadge>
+                <StatusBadge active>{displayItem.watchUrl ? 'HD' : 'ZOOM'}</StatusBadge>
               </div>
               <p className={`${expanded ? '' : 'line-clamp-3'} mt-2 text-[11px] font-medium leading-4 text-white/58 md:text-[13px] md:leading-5`}>{displayItem.overview}</p>
               <button onClick={() => setExpanded((value) => !value)} className="mt-1 text-[10px] font-black text-red-200/80 hover:text-red-100 md:text-xs">{expanded ? 'ย่อ' : 'ดูเพิ่มเติม'}</button>
@@ -438,11 +452,14 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
                 </div>
 
                 {!selectedPerson ? (
-                  <div className="mt-3 grid grid-cols-3 gap-2 md:grid-cols-4 md:gap-3">
-                    {cast.map((person, index) => (
-                      <ActorCard key={`${person.id || person.name}-${index}`} person={person} selected={false} onSelect={loadPersonMovies} />
-                    ))}
-                  </div>
+                  <>
+                    <div className="mt-3 grid grid-cols-3 gap-2 md:grid-cols-4 md:gap-3">
+                      {cast.map((person, index) => (
+                        <ActorCard key={`${person.id || person.name}-${index}`} person={person} selected={false} onSelect={loadPersonMovies} />
+                      ))}
+                    </div>
+                    <WatchCta hasLink={Boolean(displayItem.watchUrl)} onClick={() => setActiveTab('watch')} />
+                  </>
                 ) : personLoading ? (
                   <div className="mt-4 grid grid-cols-3 gap-2 md:grid-cols-4 md:gap-3" aria-hidden="true">
                     {Array.from({ length: 9 }).map((_, index) => <div key={index} className="aspect-[2/3] animate-pulse rounded-[12px] bg-white/[0.055] md:rounded-[16px]" />)}
@@ -468,7 +485,7 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
                   <p>ความยาว: {displayItem.runtime ? `${displayItem.runtime} นาที` : 'ยังไม่มีข้อมูล'}</p>
                   <p>วันฉาย: {displayItem.year}</p>
                   <p>ภาษา: {displayItem.language === 'th' ? 'ไทย' : displayItem.language || 'ไม่ระบุ'}</p>
-                  <p>สถานะ: {displayItem.status === 'published' ? 'พร้อมรับชม' : displayItem.status || 'preview'}</p>
+                  <p>สถานะ: {displayItem.watchUrl ? 'พร้อมรับชม' : displayItem.status || 'preview'}</p>
                   <p>คะแนน: {displayItem.rating.toFixed(1)} / 10</p>
                 </div>
                 <p className="mt-4 text-xs leading-5 text-white/58 md:text-sm md:leading-6">{displayItem.overview}</p>
@@ -488,7 +505,7 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
             {activeTab === 'spoiler' && (
               <div>
                 <h3 className="text-base font-black md:text-xl">สปอยหนัง</h3>
-                <div className="mt-3 rounded-2xl bg-yellow-300/[0.08] p-3 text-xs leading-5 text-yellow-50/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl md:text-sm md:leading-6">มีเนื้อหาสปอย กดดูเพิ่มเติมเพื่ออ่านเนื้อเรื่องแบบเต็มในเวอร์ชันถัดไป ตอนนี้จะแสดงเฉพาะบทสรุปสั้น: {displayItem.overview}</div>
+                <div className="mt-3 rounded-2xl bg-yellow-300/[0.08] p-3 text-xs leading-5 text-yellow-50/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl md:text-sm md:leading-6">{displayItem.overview}</div>
               </div>
             )}
 
@@ -497,15 +514,13 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-[0.22em] text-red-100/70 md:text-xs">WATCH READY</p>
-                    <h3 className="mt-1 text-lg font-black md:text-2xl">{displayItem.watchUrl ? 'รับชมใน Modal' : 'ยังไม่มีลิงก์รับชม'}</h3>
+                    <h3 className="mt-1 text-lg font-black md:text-2xl">{displayItem.watchUrl ? 'รับชม' : 'ยังไม่มีลิงก์รับชม'}</h3>
                   </div>
-                  {displayItem.watchUrl ? <span className="rounded-full bg-[#e50914]/18 px-2.5 py-1 text-[10px] font-black text-red-100 backdrop-blur-xl md:text-xs">ไม่เปิดปลายทาง</span> : null}
                 </div>
                 <div className="mt-3">
-                  <InlinePlayer url={displayItem.watchUrl} title={`รับชม ${displayItem.title}`} fallbackImage={displayItem.backdropUrl || displayItem.posterUrl} emptyLabel="ยังไม่มีลิงก์รับชมที่แอดมินวางไว้" />
+                  <InlinePlayer url={displayItem.watchUrl} title={`รับชม ${displayItem.title}`} fallbackImage={displayItem.backdropUrl || displayItem.posterUrl} emptyLabel="ยังไม่มีลิงก์รับชม" />
                 </div>
-                <div className="mt-3 grid gap-2 md:grid-cols-[1fr_auto] md:items-center">
-                  <p className="text-[11px] font-semibold leading-5 text-white/48 md:text-xs">{displayItem.watchUrl ? 'ระบบใช้ลิงก์ผลงานส่วนตัวที่บันทึกไว้ และเล่นผ่าน player ภายในหน้าต่างนี้' : 'เมื่อเพิ่มลิงก์ใน Admin แล้ว ปุ่มรับชมจะเล่นใน Modal นี้ทันที'}</p>
+                <div className="mt-3 flex justify-end">
                   <button onClick={reportIssue} className="h-9 rounded-xl bg-black/35 px-4 text-xs font-black text-white/70 shadow-[0_12px_34px_rgba(0,0,0,0.32)] backdrop-blur-xl md:h-10">แจ้งลิงก์เสีย</button>
                 </div>
                 {reported ? <p className="mt-3 rounded-2xl bg-green-400/[0.09] p-3 text-xs font-bold text-green-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl md:text-sm">รับรายงานแล้ว ทีมแอดมินจะตรวจสอบลิงก์นี้</p> : null}
