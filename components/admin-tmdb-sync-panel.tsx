@@ -32,10 +32,27 @@ function buttonClass(active = true) {
   }`;
 }
 
+function cleanAdminToken(value: string) {
+  return value.trim().replace(/^DOFREE_ADMIN_TOKEN\s*=\s*/i, '').trim();
+}
+
+async function readJsonResponse<T>(response: Response): Promise<T> {
+  const text = await response.text();
+  if (!text.trim()) {
+    throw new Error(`เซิร์ฟเวอร์ตอบกลับว่างเปล่า อาจเกิด timeout จาก Vercel หรือ request หนักเกินไป ลองลด Pages / Run เหลือ 10–20`);
+  }
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(text.slice(0, 260) || 'อ่านผลลัพธ์จากเซิร์ฟเวอร์ไม่ได้');
+  }
+}
+
 export function AdminTmdbSyncPanel() {
   const [adminToken, setAdminToken] = useState('');
   const [cursor, setCursor] = useState(0);
-  const [pagesPerRun, setPagesPerRun] = useState(80);
+  const [pagesPerRun, setPagesPerRun] = useState(20);
   const [targetLimit, setTargetLimit] = useState(10000);
   const [running, setRunning] = useState(false);
   const [autoRun, setAutoRun] = useState(false);
@@ -57,46 +74,55 @@ export function AdminTmdbSyncPanel() {
   }, []);
 
   async function loadStats(token = adminToken) {
-    if (!token.trim()) return;
+    const cleanToken = cleanAdminToken(token);
+    if (!cleanToken) {
+      setError('ใส่เฉพาะค่า Admin Token หลังเครื่องหมาย =');
+      return;
+    }
 
     try {
       const response = await fetch('/api/admin/tmdb-catalog-stats', {
-        headers: { 'x-admin-token': token.trim() },
+        headers: { 'x-admin-token': cleanToken },
         cache: 'no-store',
       });
-      const payload = (await response.json()) as StatsResponse;
+      const payload = await readJsonResponse<StatsResponse>(response);
       if (!response.ok || !payload.ok) throw new Error(payload.error || 'โหลดสถิติไม่สำเร็จ');
       setStats(payload);
+      setError(null);
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : 'โหลดสถิติไม่สำเร็จ');
     }
   }
 
   async function syncOnce(nextCursor = cursor) {
-    if (!adminToken.trim()) {
-      setError('ใส่ Admin Token ก่อน Sync');
+    const cleanToken = cleanAdminToken(adminToken);
+    if (!cleanToken) {
+      setError('ใส่เฉพาะค่า Admin Token หลังเครื่องหมาย = เช่น dofree_admin_xxx ไม่ต้องใส่ DOFREE_ADMIN_TOKEN=');
       return null;
     }
 
-    window.localStorage.setItem('dofree_admin_token', adminToken.trim());
+    window.localStorage.setItem('dofree_admin_token', cleanToken);
+    setAdminToken(cleanToken);
     setRunning(true);
     setError(null);
 
     try {
+      const safePagesPerRun = Math.min(Math.max(Number(pagesPerRun || 20), 1), 40);
       const response = await fetch('/api/admin/tmdb-catalog-sync', {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          'x-admin-token': adminToken.trim(),
+          'x-admin-token': cleanToken,
         },
-        body: JSON.stringify({ cursor: nextCursor, pagesPerRun, targetLimit }),
+        body: JSON.stringify({ cursor: nextCursor, pagesPerRun: safePagesPerRun, targetLimit }),
       });
-      const payload = (await response.json()) as SyncResponse;
+      const payload = await readJsonResponse<SyncResponse>(response);
       if (!response.ok || !payload.ok) throw new Error(payload.error || 'Sync ไม่สำเร็จ');
 
+      setPagesPerRun(safePagesPerRun);
       setCursor(payload.nextCursor || nextCursor);
       setLog((items) => [payload, ...items].slice(0, 20));
-      await loadStats(adminToken.trim());
+      await loadStats(cleanToken);
       return payload;
     } catch (nextError) {
       const message = nextError instanceof Error ? nextError.message : 'Sync ไม่สำเร็จ';
@@ -118,7 +144,7 @@ export function AdminTmdbSyncPanel() {
         setAutoRun(false);
         return;
       }
-      current = payload.nextCursor || current + pagesPerRun;
+      current = payload.nextCursor || current + Math.min(Math.max(Number(pagesPerRun || 20), 1), 40);
       await new Promise((resolve) => window.setTimeout(resolve, 900));
     }
 
@@ -138,7 +164,7 @@ export function AdminTmdbSyncPanel() {
           <p className="text-[10px] font-black uppercase tracking-[0.34em] text-[#e50914]">DOFree Admin</p>
           <h1 className="mt-2 text-3xl font-black tracking-[-0.07em] md:text-6xl">Sync TMDB Catalog</h1>
           <p className="mt-3 max-w-3xl text-sm font-semibold leading-6 text-white/56 md:text-base">
-            ดึง metadata หนังเข้า Supabase ประมาณ 10,000 เรื่อง โดยเก็บเฉพาะข้อมูลและ URL รูป ไม่เก็บไฟล์ภาพหรือวิดีโอ เพื่อลดพื้นที่และใช้ Bunny สำหรับวิดีโอจริง
+            ดึง metadata หนังเข้า Supabase โดยเก็บเฉพาะข้อมูลและ URL รูป ไม่เก็บไฟล์ภาพหรือวิดีโอ เริ่มรอบละ 20 หน้าเพื่อกัน Vercel timeout
           </p>
         </section>
 
@@ -149,7 +175,8 @@ export function AdminTmdbSyncPanel() {
               <input
                 value={adminToken}
                 onChange={(event) => setAdminToken(event.target.value)}
-                placeholder="DOFREE_ADMIN_TOKEN"
+                onBlur={() => setAdminToken((value) => cleanAdminToken(value))}
+                placeholder="ใส่เฉพาะ token ไม่ต้องใส่ DOFREE_ADMIN_TOKEN="
                 className="mt-2 h-11 w-full rounded-2xl bg-white/[0.075] px-4 text-sm font-bold text-white outline-none ring-1 ring-white/[0.06] placeholder:text-white/28 focus:ring-[#e50914]/70"
               />
             </label>
@@ -167,7 +194,7 @@ export function AdminTmdbSyncPanel() {
               <input
                 type="number"
                 value={pagesPerRun}
-                onChange={(event) => setPagesPerRun(Number(event.target.value || 80))}
+                onChange={(event) => setPagesPerRun(Number(event.target.value || 20))}
                 className="mt-2 h-11 w-full rounded-2xl bg-white/[0.075] px-4 text-sm font-bold text-white outline-none ring-1 ring-white/[0.06] focus:ring-[#e50914]/70"
               />
             </label>
@@ -180,6 +207,10 @@ export function AdminTmdbSyncPanel() {
                 className="mt-2 h-11 w-full rounded-2xl bg-white/[0.075] px-4 text-sm font-bold text-white outline-none ring-1 ring-white/[0.06] focus:ring-[#e50914]/70"
               />
             </label>
+          </div>
+
+          <div className="mt-4 rounded-2xl bg-[#f4c46b]/10 p-3 text-xs font-bold leading-5 text-[#f4c46b]">
+            แนะนำ: ใช้ Pages / Run = 20 ก่อน ถ้ายัง timeout ให้ลดเหลือ 10 ถ้าผ่านค่อยเพิ่มเป็น 30–40
           </div>
 
           <div className="mt-5 flex flex-wrap gap-2">
@@ -209,7 +240,6 @@ export function AdminTmdbSyncPanel() {
             <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]">Catalog Stats</p>
             <h2 className="mt-2 text-4xl font-black tracking-[-0.07em]">{stats?.total ?? 0}</h2>
             <p className="text-sm font-bold text-white/44">เรื่องใน tmdb_catalog</p>
-
             <div className="mt-5 space-y-2">
               {(stats?.buckets || []).slice(0, 12).map((bucket) => (
                 <div key={bucket.source_bucket} className="flex items-center justify-between rounded-2xl bg-white/[0.055] px-3 py-2 text-xs font-bold text-white/64">
@@ -240,9 +270,9 @@ export function AdminTmdbSyncPanel() {
         <section className={cardClass()}>
           <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]">คำแนะนำ</p>
           <div className="mt-3 grid gap-3 text-sm font-semibold leading-6 text-white/58 md:grid-cols-3">
-            <p>1. เริ่ม Sync รอบละ 80 หน้า ถ้า Vercel timeout ให้ลดเป็น 40–50</p>
-            <p>2. เมื่อจำนวนเกิน 5,000 เรื่อง ให้เปิดหน้า Admin ปกติแล้วเริ่มใส่ Bunny Link เฉพาะเรื่องที่ต้องการเผยแพร่</p>
-            <p>3. หลังครบ 10,000 เรื่อง ขั้นต่อไปควรเปลี่ยนหน้าเว็บหลักให้อ่านจาก Supabase catalog เพื่อโหลดเร็วกว่า TMDB สด</p>
+            <p>1. ใส่เฉพาะ token หลังเครื่องหมาย = ไม่ต้องใส่ชื่อ DOFREE_ADMIN_TOKEN</p>
+            <p>2. Sync ให้ได้ 3,000–5,000 เรื่องก่อน แล้วเปิด /admin ตรวจว่าหน้าโหลดไหว</p>
+            <p>3. ขั้นถัดไปควรเปลี่ยนหน้าเว็บหลักให้อ่านจาก tmdb_catalog แทน TMDB สด</p>
           </div>
         </section>
       </div>
