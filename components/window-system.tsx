@@ -254,6 +254,7 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
   const [reported, setReported] = useState(false);
   const [activeTab, setActiveTab] = useState<ModalTab>('detail');
   const [expanded, setExpanded] = useState(false);
+  const [inlineTrailerOpen, setInlineTrailerOpen] = useState(false);
   const [visibleRecCount, setVisibleRecCount] = useState(8);
   const [detailItem, setDetailItem] = useState<MovieItem>(item);
   const [realCast, setRealCast] = useState<CastPerson[]>([]);
@@ -266,6 +267,7 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
   const displayItem = detailItem;
   const cast = realCast.length ? realCast : fallbackCast(displayItem);
   const visibleRecommendations = detailRecommendations.slice(0, visibleRecCount);
+  const canPlayTrailer = Boolean(playerUrl(displayItem.trailerUrl));
 
   useEffect(() => {
     let cancelled = false;
@@ -273,6 +275,7 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
 
     setActiveTab('detail');
     setExpanded(false);
+    setInlineTrailerOpen(false);
     setReported(false);
     setVisibleRecCount(8);
     setDetailItem(item);
@@ -367,9 +370,19 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
           <div className="absolute inset-0 bg-cover bg-center opacity-25" style={{ backgroundImage: `url(${displayItem.backdropUrl || displayItem.posterUrl})` }} />
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,5,5,0.6),#050505_100%)] md:bg-[linear-gradient(90deg,#050505_0%,rgba(5,5,5,0.9)_38%,rgba(5,5,5,0.56)_100%)]" />
           <button onClick={onClose} className="absolute right-3 top-3 z-20 grid h-8 w-8 place-items-center rounded-full border border-white/10 bg-black/70 text-lg font-black text-white/80 hover:bg-white/10 md:right-4 md:top-4 md:h-10 md:w-10 md:text-2xl" aria-label="ปิดรายละเอียด">×</button>
-          <div className="relative z-10 grid grid-cols-[92px_1fr] gap-3 p-3.5 pt-5 md:grid-cols-[120px_1fr] md:gap-4 md:p-5">
-            <div className="overflow-hidden rounded-xl border border-white/10 bg-black shadow-[0_20px_55px_rgba(0,0,0,0.75)] md:rounded-2xl">
-              <img src={displayItem.posterUrl} alt={displayItem.title} loading="lazy" decoding="async" sizes="(max-width: 768px) 92px, 120px" className="h-[138px] w-full object-cover md:h-[180px]" />
+          <div className="relative z-10 grid grid-cols-[92px_1fr] gap-3 p-3.5 pt-5 md:grid-cols-[120px_1fr] md:gap-4 md:p-5 md:pb-4">
+            <div className="min-w-0">
+              <div className="overflow-hidden rounded-xl border border-white/10 bg-black shadow-[0_20px_55px_rgba(0,0,0,0.75)] md:rounded-2xl">
+                <img src={displayItem.posterUrl} alt={displayItem.title} loading="lazy" decoding="async" sizes="(max-width: 768px) 92px, 120px" className="h-[138px] w-full object-cover md:h-[180px]" />
+              </div>
+              <button
+                type="button"
+                onClick={() => setInlineTrailerOpen((value) => !value)}
+                disabled={!displayItem.trailerUrl && !detailLoading}
+                className={`mt-2 h-8 w-full rounded-lg text-[10px] font-black transition md:h-9 md:text-[11px] ${displayItem.trailerUrl ? 'bg-[#e50914] text-white shadow-glow hover:bg-red-600' : 'bg-white/[0.08] text-white/38'}`}
+              >
+                {inlineTrailerOpen ? 'ซ่อนตัวอย่าง' : detailLoading && !displayItem.trailerUrl ? 'กำลังหา...' : '▶ ตัวอย่าง'}
+              </button>
             </div>
             <div className="min-w-0 pr-8 md:pr-10">
               <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#e50914] md:text-[10px] md:tracking-[0.24em]">{displayItem.mediaType === 'tv' ? 'Series' : 'Movie'}</p>
@@ -384,11 +397,20 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
               <button onClick={() => setExpanded((value) => !value)} className="mt-1 text-[10px] font-black text-red-200/80 hover:text-red-100 md:text-xs">{expanded ? 'ย่อ' : 'ดูเพิ่มเติม'}</button>
               <div className="mt-3 flex flex-wrap gap-2">
                 <button onClick={() => displayItem.watchUrl && setActiveTab('watch')} disabled={!displayItem.watchUrl} className={`inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-[11px] font-black text-white md:h-9 md:px-4 md:text-xs ${displayItem.watchUrl ? 'bg-[#e50914] shadow-glow' : 'bg-white/10 text-white/40'}`}>▶ รับชม</button>
-                <button onClick={() => setActiveTab('teaser')} className="inline-flex h-8 items-center rounded-lg border border-white/10 bg-white/[0.1] px-3 text-[11px] font-black text-white/82 hover:bg-white/[0.16] md:h-9 md:px-4 md:text-xs">ตัวอย่าง</button>
+                <button onClick={() => { setInlineTrailerOpen(true); setActiveTab('detail'); }} className="inline-flex h-8 items-center rounded-lg border border-white/10 bg-white/[0.1] px-3 text-[11px] font-black text-white/82 hover:bg-white/[0.16] md:h-9 md:px-4 md:text-xs">ตัวอย่าง</button>
                 <button onClick={() => setActiveTab('recommend')} className="inline-flex h-8 items-center rounded-lg border border-white/10 bg-white/[0.1] px-3 text-[11px] font-black text-white/82 hover:bg-white/[0.16] md:h-9 md:px-4 md:text-xs">+ รายการโปรด</button>
               </div>
             </div>
           </div>
+          {inlineTrailerOpen ? (
+            <div className="relative z-10 px-3.5 pb-4 md:px-5 md:pb-5">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-red-100/70 md:text-xs">TRAILER PREVIEW</p>
+                <button type="button" onClick={() => setInlineTrailerOpen(false)} className="rounded-full bg-white/[0.08] px-2.5 py-1 text-[10px] font-black text-white/58 hover:bg-white/[0.14]">ย่อ</button>
+              </div>
+              <InlinePlayer url={displayItem.trailerUrl} title={`ตัวอย่าง ${displayItem.title}`} fallbackImage={displayItem.backdropUrl || displayItem.posterUrl} emptyLabel="ยังไม่มีตัวอย่างที่ฝังใน Modal ได้" />
+            </div>
+          ) : null}
         </div>
 
         <div className="shrink-0 bg-black/82 px-3 md:px-5">
@@ -443,7 +465,7 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: {
                   </div>
                 ) : personLoading ? (
                   <div className="mt-4 grid grid-cols-3 gap-2 md:grid-cols-4 md:gap-3" aria-hidden="true">
-                    {Array.from({ length: 9 }).map((_, index) => <div key={index} className="aspect-[2/3] animate-pulse rounded-[8px] bg-white/[0.055] md:rounded-[10px]" />)}
+                    {Array.from({ length: 9 }).map((_, index) => <div key={index} className="aspect-[2/3] animate-pulse rounded-[8px] bg-white/[0.055] md:rounded-[10px] />)}
                   </div>
                 ) : personMovies.length ? (
                   <div className="mt-4 grid grid-cols-3 gap-2 md:grid-cols-4 md:gap-3">
