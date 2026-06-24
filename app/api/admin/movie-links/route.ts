@@ -103,6 +103,12 @@ function normalizeDrivePreviewUrl(value: unknown) {
   return url;
 }
 
+function playableStatus(requested: MovieStatus, watchUrl?: string) {
+  if (!watchUrl) return requested;
+  if (requested === 'draft' || requested === 'review') return 'published';
+  return requested;
+}
+
 function authError(request: Request) {
   const auth = requireAdminToken(request);
   if (auth.ok) return null;
@@ -238,7 +244,7 @@ function mergeSavedIntoCandidate(candidate: AdminMovieLink, saved?: AdminMovieLi
     runtime: candidate.runtime || saved.runtime || null,
     genres: candidate.genres?.length ? candidate.genres : saved.genres || [],
     section_slug: saved.section_slug || candidate.section_slug,
-    status: saved.status || candidate.status,
+    status: saved.watch_url ? playableStatus(saved.status || candidate.status, saved.watch_url) : (saved.status || candidate.status),
   };
 }
 
@@ -257,7 +263,7 @@ async function buildAdminLinks(savedLinks: AdminMovieLink[]) {
 
   for (const saved of enrichedSavedLinks) {
     const key = linkKey(saved.media_type, saved.tmdb_id);
-    if (!merged.has(key)) merged.set(key, saved);
+    if (!merged.has(key)) merged.set(key, saved.watch_url ? { ...saved, status: playableStatus(saved.status, saved.watch_url) } : saved);
   }
 
   return [...merged.values()].sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0));
@@ -293,8 +299,9 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;
   const tmdbId = Number(body?.tmdb_id);
   const mediaType = cleanText(body?.media_type) as MediaType | undefined;
-  const status = (cleanText(body?.status) || 'published') as MovieStatus;
+  const requestedStatus = (cleanText(body?.status) || 'published') as MovieStatus;
   const watchUrl = normalizeDrivePreviewUrl(body?.watch_url);
+  const status = playableStatus(requestedStatus, watchUrl);
 
   if (!Number.isInteger(tmdbId) || tmdbId <= 0) {
     return NextResponse.json({ ok: false, error: 'TMDB ID ไม่ถูกต้อง' }, { status: 400 });
@@ -360,7 +367,12 @@ export async function PATCH(request: Request) {
   }
 
   const watchUrl = normalizeDrivePreviewUrl(body?.watch_url);
-  if (watchUrl) patch.watch_url = watchUrl;
+  if (watchUrl) {
+    patch.watch_url = watchUrl;
+    const nextStatus = playableStatus((patch.status as MovieStatus | undefined) || 'published', watchUrl);
+    patch.status = nextStatus;
+    patch.is_active = nextStatus !== 'hidden';
+  }
   const trailerUrl = normalizeDrivePreviewUrl(body?.trailer_url);
   if (trailerUrl) patch.trailer_url = trailerUrl;
   const title = cleanText(body?.title);
