@@ -1,17 +1,15 @@
 import type { Metadata } from 'next';
 import { MovieCard } from '@/components/movie-card';
 import { getWatchReadyItems } from '@/lib/tmdb';
-
-const siteName = 'ดูดีดี';
+import { publicPageMetadata } from '@/lib/seo';
 
 export const metadata: Metadata = {
-  title: 'หนังและซีรีส์พร้อมรับชม',
-  description: 'รวมภาพยนตร์และซีรีส์ที่มีสถานะพร้อมรับชม คัดจากคะแนนสูงและรายการที่เผยแพร่ในดูดีดี',
-  openGraph: {
-    title: `หนังและซีรีส์พร้อมรับชม | ${siteName}`,
-    description: 'รวมภาพยนตร์และซีรีส์ที่มีสถานะพร้อมรับชมบนดูดีดี',
-    siteName,
-  },
+  ...publicPageMetadata({
+    title: 'หนังและซีรีส์พร้อมรับชม',
+    description: 'รวมหนังพร้อมดูและซีรีส์พร้อมรับชมบนดูดีดี คัดจากรายการคะแนนดี หนังใหม่ หนังไทย หนังฝรั่ง พากย์ไทย และซับไทย',
+    path: '/watch-ready',
+    keywords: ['หนังพร้อมดู', 'ซีรีส์พร้อมดู', 'ดูหนัง HD', 'ดูหนังพากย์ไทย'],
+  }),
 };
 
 export default async function WatchReadyPage() {
