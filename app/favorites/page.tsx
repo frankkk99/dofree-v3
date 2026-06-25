@@ -1,5 +1,9 @@
+import type { Metadata } from 'next';
 import { BackLink } from '@/components/back-link';
 import { FavoritesPanel } from '@/components/favorites-panel';
+import { privatePageMetadata } from '@/lib/seo';
+
+export const metadata: Metadata = privatePageMetadata('รายการโปรด');
 
 export default function FavoritesPage() {
   return (
