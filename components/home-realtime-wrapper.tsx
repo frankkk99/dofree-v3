@@ -7,6 +7,7 @@ import { HomeExperienceV3 } from '@/components/home-experience-v3';
 import { MovieCard } from '@/components/movie-card';
 import { DetailWindow } from '@/components/window-system';
 import { releaseMonthYear } from '@/lib/release-date';
+import { getStoredSession, signOut, type DofreeUser } from '@/lib/supabase-auth-browser';
 
 function unique(items: MovieItem[]) {
   const map = new Map<string, MovieItem>();
@@ -189,10 +190,18 @@ function HeaderAccountMenuPortal() {
   const [bodyHost, setBodyHost] = useState<HTMLElement | null>(null);
   const [open, setOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
+  const [user, setUser] = useState<DofreeUser | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const isSignedIn = Boolean(user?.id || user?.email || user?.phone);
+  const userLabel = user?.email || user?.phone || (user?.id ? `User ${user.id.slice(0, 8)}` : 'Guest');
 
   useEffect(() => {
     setBodyHost(document.body);
+
+    function syncAuth() {
+      const session = getStoredSession();
+      setUser(session?.user || null);
+    }
 
     function findHost() {
       const adminLink = document.querySelector('header a[href="/admin"]') as HTMLElement | null;
@@ -202,9 +211,17 @@ function HeaderAccountMenuPortal() {
       setHost(parent);
     }
 
+    syncAuth();
     findHost();
     const timer = window.setInterval(findHost, 1000);
-    return () => window.clearInterval(timer);
+    window.addEventListener('storage', syncAuth);
+    window.addEventListener('dofree-auth-change', syncAuth);
+
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('storage', syncAuth);
+      window.removeEventListener('dofree-auth-change', syncAuth);
+    };
   }, []);
 
   useEffect(() => {
@@ -229,6 +246,12 @@ function HeaderAccountMenuPortal() {
       document.body.style.overflow = '';
     };
   }, [open]);
+
+  async function handleLogout() {
+    await signOut();
+    setUser(null);
+    setOpen(false);
+  }
 
   if (!host) return null;
 
@@ -263,8 +286,10 @@ function HeaderAccountMenuPortal() {
         <div className="flex items-start justify-between gap-3 rounded-[22px] border border-white/8 bg-white/[0.04] p-4">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]/85">Account</p>
-            <h3 className="mt-1 text-[24px] font-black tracking-[-0.06em]">เมนูผู้ใช้</h3>
-            <p className="mt-1 text-[11px] font-semibold leading-5 text-white/44">บัญชี รายการโปรด ประวัติ และสมาชิก</p>
+            <h3 className="mt-1 text-[24px] font-black tracking-[-0.06em]">{isSignedIn ? 'บัญชีของฉัน' : 'เมนูผู้ใช้'}</h3>
+            <p className="mt-1 break-all text-[11px] font-semibold leading-5 text-white/44">
+              {isSignedIn ? userLabel : 'บัญชี รายการโปรด ประวัติ และสมาชิก'}
+            </p>
           </div>
           <button
             type="button"
@@ -275,6 +300,20 @@ function HeaderAccountMenuPortal() {
             ×
           </button>
         </div>
+
+        {isSignedIn ? (
+          <div className="mt-4 rounded-[22px] border border-[#e50914]/26 bg-[#170203]/70 p-4">
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#e50914]/85">Signed in</p>
+            <p className="mt-2 break-all text-sm font-black text-white/86">{userLabel}</p>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="mt-4 h-11 w-full rounded-2xl bg-white/[0.09] text-xs font-black text-white/72 transition hover:bg-white/[0.14] hover:text-white"
+            >
+              Logout
+            </button>
+          </div>
+        ) : null}
 
         <div className="mt-4 grid gap-2">
           {[
@@ -289,32 +328,36 @@ function HeaderAccountMenuPortal() {
           ))}
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          <a href="/auth?mode=signin" onClick={() => setAuthMode('signin')} className={`rounded-2xl px-4 py-3 text-center text-xs font-black ${authMode === 'signin' ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.075] text-white/72 hover:bg-white/[0.12]'}`}>
-            Sign in
-          </a>
-          <a href="/auth?mode=signup" onClick={() => setAuthMode('signup')} className={`rounded-2xl px-4 py-3 text-center text-xs font-black ${authMode === 'signup' ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.075] text-white/72 hover:bg-white/[0.12]'}`}>
-            Sign up
-          </a>
-        </div>
-
-        <div className="mt-4 rounded-[22px] border border-white/8 bg-white/[0.035] p-3">
-          <p className="mb-2 text-[10px] font-black uppercase tracking-[0.22em] text-white/40">เข้าสู่ระบบด้วย</p>
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              ['Google', '/auth?provider=google'],
-              ['Facebook', '/auth?provider=facebook'],
-              ['Apple', '/auth?provider=apple'],
-              ['LINE', '/auth?provider=line'],
-              ['Email', '/auth?method=email'],
-              ['เบอร์โทร', '/auth?method=phone'],
-            ].map(([label, href]) => (
-              <a key={label} href={href} className="rounded-xl bg-black/55 px-3 py-2.5 text-center text-[11px] font-black text-white/74 transition hover:bg-[#e50914] hover:text-white">
-                {label}
+        {!isSignedIn ? (
+          <>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <a href="/auth?mode=signin" onClick={() => setAuthMode('signin')} className={`rounded-2xl px-4 py-3 text-center text-xs font-black ${authMode === 'signin' ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.075] text-white/72 hover:bg-white/[0.12]'}`}>
+                Sign in
               </a>
-            ))}
-          </div>
-        </div>
+              <a href="/auth?mode=signup" onClick={() => setAuthMode('signup')} className={`rounded-2xl px-4 py-3 text-center text-xs font-black ${authMode === 'signup' ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.075] text-white/72 hover:bg-white/[0.12]'}`}>
+                Sign up
+              </a>
+            </div>
+
+            <div className="mt-4 rounded-[22px] border border-white/8 bg-white/[0.035] p-3">
+              <p className="mb-2 text-[10px] font-black uppercase tracking-[0.22em] text-white/40">เข้าสู่ระบบด้วย</p>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  ['Google', '/auth?provider=google'],
+                  ['Facebook', '/auth?provider=facebook'],
+                  ['Apple', '/auth?provider=apple'],
+                  ['LINE', '/auth?provider=line'],
+                  ['Email', '/auth?method=email'],
+                  ['เบอร์โทร', '/auth?method=phone'],
+                ].map(([label, href]) => (
+                  <a key={label} href={href} className="rounded-xl bg-black/55 px-3 py-2.5 text-center text-[11px] font-black text-white/74 transition hover:bg-[#e50914] hover:text-white">
+                    {label}
+                  </a>
+                ))}
+              </div>
+            </div>
+          </>
+        ) : null}
 
         <a href="/admin" className="mt-4 flex items-center justify-between rounded-2xl border border-[#e50914]/42 bg-[#170203] px-4 py-3 text-sm font-black text-red-100 shadow-[0_0_28px_rgba(229,9,20,0.20)]">
           <span>Admin login</span>
