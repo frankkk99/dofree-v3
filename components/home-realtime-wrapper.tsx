@@ -43,6 +43,16 @@ function allSection(sections: MovieSection[]): MovieSection {
   };
 }
 
+function recentUpcomingSection(items: MovieItem[]): MovieSection {
+  return {
+    slug: 'recent-upcoming',
+    eyebrow: 'Release Window',
+    title: 'หนังเข้าใหม่ / กำลังจะเข้า',
+    description: 'ช่วงย้อนหลัง 2 เดือนถึงหนังที่กำลังจะเข้าฉาย',
+    items: unique(items),
+  };
+}
+
 function fallbackRecentlyAdded(home: HomePayload) {
   const watchReady = home.sections.find((section) => section.slug === 'watch-ready')?.items || [];
   const nowPlaying = home.sections.find((section) => section.slug === 'now-playing')?.items || [];
@@ -258,7 +268,7 @@ function FullSectionOverlay({ section, allItems, onClose }: { section: MovieSect
   );
 }
 
-function RealtimeAddedCarousel({ items }: { items: MovieItem[] }) {
+function RealtimeAddedCarousel({ items, onViewAll }: { items: MovieItem[]; onViewAll: (items: MovieItem[]) => void }) {
   const railRef = useRef<HTMLDivElement | null>(null);
   const resumeTimerRef = useRef<number | null>(null);
   const frameRef = useRef<number | null>(null);
@@ -315,7 +325,9 @@ function RealtimeAddedCarousel({ items }: { items: MovieItem[] }) {
           <h2 className="mt-1 text-[20px] font-black tracking-[-0.04em] md:text-[30px]">หนังเข้าใหม่ / กำลังจะเข้า</h2>
           <p className="mt-1 text-[11px] font-semibold text-white/42">ช่วงย้อนหลัง 2 เดือนถึงหนังที่กำลังจะเข้าฉาย • ไหลช้าแบบต่อเนื่อง</p>
         </div>
-        <span className="rounded-full bg-white/[0.07] px-3 py-1.5 text-[10px] font-black text-white/52">Slow loop</span>
+        <button type="button" onClick={() => onViewAll(items)} className="text-[12px] font-black text-white/50 hover:text-white md:text-[16px]">
+          ดูทั้งหมด ›
+        </button>
       </div>
 
       <div
@@ -382,7 +394,7 @@ function HeroReleasePortal({ home }: { home: HomePayload }) {
   );
 }
 
-function RealtimePortal({ home }: { home: HomePayload }) {
+function RealtimePortal({ home, onOpen }: { home: HomePayload; onOpen: (section: MovieSection) => void }) {
   const [host, setHost] = useState<HTMLElement | null>(null);
   const [liveItems, setLiveItems] = useState<MovieItem[]>([]);
   const fallbackItems = useMemo(() => fallbackRecentlyAdded(home), [home]);
@@ -421,7 +433,7 @@ function RealtimePortal({ home }: { home: HomePayload }) {
     };
   }, []);
 
-  return host ? createPortal(<RealtimeAddedCarousel items={items} />, host) : null;
+  return host ? createPortal(<RealtimeAddedCarousel items={items} onViewAll={(nextItems) => onOpen(recentUpcomingSection(nextItems))} />, host) : null;
 }
 
 export function HomeRealtimeWrapper({ home }: { home: HomePayload }) {
@@ -435,7 +447,7 @@ export function HomeRealtimeWrapper({ home }: { home: HomePayload }) {
       <ViewAllClickBridge sections={home.sections} onOpen={setOpenSection} />
       <DynamicCategoryChips sections={home.sections} onOpen={setOpenSection} />
       <HeroReleasePortal home={home} />
-      <RealtimePortal home={home} />
+      <RealtimePortal home={home} onOpen={setOpenSection} />
       {openSection ? (
         <FullSectionOverlay
           section={openSection}
