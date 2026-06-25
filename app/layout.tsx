@@ -15,19 +15,34 @@ const notoSansThai = Noto_Sans_Thai({
   display: 'swap',
 });
 
+const siteName = 'ดูดีดี';
+const siteUrl = 'https://www.xn--l3caa5kbu.online';
+const siteDescription = 'ดูดีดี เว็บค้นหาและจัดหมวดคอนเทนต์ภาพยนตร์และซีรีส์ โทนมืดพรีเมียม พร้อมหน้ารายละเอียด ตัวอย่าง และระบบรับชมสำหรับคอนเทนต์ที่มีสิทธิ์เผยแพร่';
+
 export const metadata: Metadata = {
-  metadataBase: new URL('https://dofree-v3.vercel.app'),
+  metadataBase: new URL(siteUrl),
+  applicationName: siteName,
   title: {
-    default: 'DOFree v3 | Movie Content Platform',
-    template: '%s | DOFree v3',
+    default: `${siteName} | เว็บดูหนังและซีรีส์ออนไลน์`,
+    template: `%s | ${siteName}`,
   },
-  description: 'DOFree v3 คือเว็บหนังและแพลตฟอร์มคอนเทนต์วิดีโอ โทนมืดพรีเมียม พร้อมโครงสร้างสำหรับ TMDB, SEO และระบบหลังบ้านในอนาคต',
-  keywords: ['DOFree', 'เว็บหนัง', 'Movie Website', 'Movie Platform', 'Video Content Platform', 'Next.js'],
+  description: siteDescription,
+  keywords: [siteName, 'ดูดีดีออนไลน์', 'เว็บดูหนัง', 'ดูหนังออนไลน์', 'ซีรีส์ออนไลน์', 'Movie Website', 'Video Content Platform'],
+  alternates: {
+    canonical: '/',
+  },
   openGraph: {
-    title: 'DOFree v3 | Movie Content Platform',
-    description: 'เว็บหนังโทนมืดพรีเมียมสำหรับค้นหา จัดหมวด และต่อยอดเป็นแพลตฟอร์มคอนเทนต์เต็มระบบ',
+    title: `${siteName} | เว็บดูหนังและซีรีส์ออนไลน์`,
+    description: siteDescription,
+    url: siteUrl,
+    siteName,
     type: 'website',
     locale: 'th_TH',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${siteName} | เว็บดูหนังและซีรีส์ออนไลน์`,
+    description: siteDescription,
   },
   robots: {
     index: true,
