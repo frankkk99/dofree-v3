@@ -13,6 +13,7 @@ type CatalogRow = {
   vote_count?: number | string | null;
   popularity?: number | string | null;
   release_year?: string | null;
+  release_date?: string | null;
   genres?: string[] | null;
   language?: string | null;
   runtime?: number | null;
@@ -108,7 +109,7 @@ async function fetchWatchLinks() {
 
 function rowToMovie(row: CatalogRow, index: number): MovieItem {
   const rating = Number(row.rating || 0);
-  const base: MovieItem = {
+  const base = {
     id: row.tmdb_id,
     mediaType: row.media_type,
     title: row.title || row.title_en || `TMDB ${row.tmdb_id}`,
@@ -117,14 +118,15 @@ function rowToMovie(row: CatalogRow, index: number): MovieItem {
     posterUrl: row.poster_url || fallbackImage,
     backdropUrl: row.backdrop_url || row.poster_url || fallbackImage,
     rating,
-    year: row.release_year || 'ไม่ระบุ',
+    year: row.release_year || (row.release_date ? row.release_date.slice(0, 4) : 'ไม่ระบุ'),
+    releaseDate: row.release_date || undefined,
     genres: row.genres || [],
     runtime: row.runtime || undefined,
     language: row.language || undefined,
     status: rating >= 8 ? 'review' : 'draft',
     isWatchReady: false,
     label: rating >= 8 ? '8+' : '6.5+',
-  };
+  } satisfies MovieItem & { releaseDate?: string };
   return { ...base, badges: badges(base, index) };
 }
 
@@ -153,7 +155,7 @@ function unique(items: MovieItem[]) {
 
 async function rowsForBucket(slug: string, limit: number) {
   return supabaseRest<CatalogRow[]>(
-    `tmdb_catalog?select=tmdb_id,media_type,title,title_en,overview,poster_url,backdrop_url,rating,vote_count,popularity,release_year,genres,language,runtime,source_bucket,sort_score&is_active=eq.true&source_bucket=eq.${encodeURIComponent(slug)}&order=sort_score.desc&limit=${limit}`,
+    `tmdb_catalog?select=tmdb_id,media_type,title,title_en,overview,poster_url,backdrop_url,rating,vote_count,popularity,release_year,release_date,genres,language,runtime,source_bucket,sort_score&is_active=eq.true&source_bucket=eq.${encodeURIComponent(slug)}&order=sort_score.desc&limit=${limit}`,
     { mode: 'service', cache: 'no-store' }
   ).catch(() => []);
 }
