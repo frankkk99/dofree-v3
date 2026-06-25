@@ -29,8 +29,9 @@ function personInitial(name: string) {
 export function DetailPageView({ detail }: { detail: DetailPayload }) {
   const { item, cast, trailerUrl, recommendations } = detail;
   const effectiveTrailerUrl = item.trailerUrl || trailerUrl;
-  const primaryHref = item.watchUrl || effectiveTrailerUrl || '/watch-ready';
-  const primaryLabel = item.watchUrl ? 'รับชมทันที' : effectiveTrailerUrl ? 'ดูตัวอย่าง' : 'ดูรายการพร้อมรับชม';
+  const watchHref = `/watch/${item.mediaType}/${item.id}`;
+  const primaryHref = item.watchUrl ? watchHref : effectiveTrailerUrl || '/watch-ready';
+  const primaryLabel = item.watchUrl ? 'รับชมในเว็บ' : effectiveTrailerUrl ? 'ดูตัวอย่าง' : 'ดูรายการพร้อมรับชม';
   const secondaryHref = effectiveTrailerUrl || primaryHref;
   const secondaryLabel = effectiveTrailerUrl ? 'Teaser / Trailer' : 'รายละเอียดเพิ่มเติม';
   const detailFacts = [
@@ -53,7 +54,7 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
     potentialAction: item.watchUrl
       ? {
           '@type': 'WatchAction',
-          target: item.watchUrl,
+          target: watchHref,
         }
       : undefined,
     aggregateRating: item.rating
