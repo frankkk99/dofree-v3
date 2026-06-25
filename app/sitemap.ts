@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next';
+import { browseRoutes } from '@/lib/browse';
 import { hasSupabaseRestConfig, supabaseRest } from '@/lib/supabase-rest';
 import { seoConfig } from '@/lib/seo';
 
@@ -11,6 +12,7 @@ type CatalogSitemapRow = {
 const publicRoutes: Array<{ path: string; frequency: MetadataRoute.Sitemap[number]['changeFrequency']; priority: number }> = [
   { path: '/', frequency: 'daily', priority: 1 },
   { path: '/watch-ready', frequency: 'daily', priority: 0.9 },
+  { path: '/browse', frequency: 'weekly', priority: 0.72 },
   { path: '/search', frequency: 'weekly', priority: 0.7 },
   { path: '/membership', frequency: 'monthly', priority: 0.5 },
 ];
@@ -42,6 +44,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: now,
       changeFrequency: route.frequency,
       priority: route.priority,
+    })),
+    ...browseRoutes.map((route) => ({
+      url: `${seoConfig.domain}/browse/${route.slug}`,
+      lastModified: now,
+      changeFrequency: 'weekly' as const,
+      priority: route.slug === 'watch-ready' ? 0.82 : 0.68,
     })),
     ...(await catalogUrls(now)),
   ];
