@@ -1,5 +1,9 @@
+import type { Metadata } from 'next';
 import { BackLink } from '@/components/back-link';
 import { HistoryPanel } from '@/components/history-panel';
+import { privatePageMetadata } from '@/lib/seo';
+
+export const metadata: Metadata = privatePageMetadata('ประวัติการรับชม');
 
 export default function HistoryPage() {
   return (
