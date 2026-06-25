@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { AdminAuthGuard } from '@/components/admin-auth-guard';
 import { AdminCatalogBrowser } from '@/components/admin-catalog-browser';
 
 export const metadata: Metadata = {
@@ -11,5 +12,9 @@ export const metadata: Metadata = {
 };
 
 export default function AdminPage() {
-  return <AdminCatalogBrowser />;
+  return (
+    <AdminAuthGuard>
+      <AdminCatalogBrowser />
+    </AdminAuthGuard>
+  );
 }
