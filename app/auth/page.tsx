@@ -1,5 +1,9 @@
+import type { Metadata } from 'next';
 import { BackLink } from '@/components/back-link';
 import { AuthPanel } from '@/components/auth-panel';
+import { privatePageMetadata } from '@/lib/seo';
+
+export const metadata: Metadata = privatePageMetadata('เข้าสู่ระบบ');
 
 export default function AuthPage() {
   return (
