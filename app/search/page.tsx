@@ -2,13 +2,20 @@ import type { Metadata } from 'next';
 import { MovieCard } from '@/components/movie-card';
 import { searchMovies } from '@/lib/tmdb';
 
+const siteName = 'ดูดีดี';
+
 type SearchProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export const metadata: Metadata = {
   title: 'ค้นหาภาพยนตร์และซีรีส์',
-  description: 'ค้นหาภาพยนตร์ ซีรีส์ และข้อมูลจาก TMDB บน DOFree v3',
+  description: `ค้นหาภาพยนตร์ ซีรีส์ และข้อมูลจาก TMDB บน${siteName}`,
+  openGraph: {
+    title: `ค้นหาภาพยนตร์และซีรีส์ | ${siteName}`,
+    description: `ค้นหาภาพยนตร์ ซีรีส์ และข้อมูลจาก TMDB บน${siteName}`,
+    siteName,
+  },
 };
 
 export default async function SearchPage({ searchParams }: SearchProps) {
