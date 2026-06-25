@@ -66,6 +66,10 @@ const sectionDefs: SectionDef[] = [
   { slug: 'documentary', eyebrow: 'Documentary', title: 'สารคดี', description: 'สารคดีและเรื่องจริง', limit: 80, offset: 2660 },
 ];
 
+function isoDate(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
 function normalizeDrivePreviewUrl(value?: string | null) {
   const url = value?.trim();
   if (!url) return undefined;
@@ -153,6 +157,28 @@ function unique(items: MovieItem[]) {
   return [...map.values()];
 }
 
+function recentWindow() {
+  const now = new Date();
+  const start = new Date(now);
+  start.setMonth(start.getMonth() - 2);
+  const end = new Date(now);
+  end.setMonth(end.getMonth() + 8);
+  return { today: isoDate(now), from: isoDate(start), to: isoDate(end) };
+}
+
+function sortRecentHeroItems(items: MovieItem[]) {
+  const { today } = recentWindow();
+  return [...items].sort((a, b) => {
+    const ad = (a as MovieItem & { releaseDate?: string }).releaseDate || '';
+    const bd = (b as MovieItem & { releaseDate?: string }).releaseDate || '';
+    const au = ad > today;
+    const bu = bd > today;
+    if (au && bu) return ad.localeCompare(bd);
+    if (au !== bu) return au ? -1 : 1;
+    return bd.localeCompare(ad);
+  });
+}
+
 async function rowsForBucket(slug: string, limit: number) {
   return supabaseRest<CatalogRow[]>(
     `tmdb_catalog?select=tmdb_id,media_type,title,title_en,overview,poster_url,backdrop_url,rating,vote_count,popularity,release_year,release_date,genres,language,runtime,source_bucket,sort_score&is_active=eq.true&source_bucket=eq.${encodeURIComponent(slug)}&order=sort_score.desc&limit=${limit}`,
@@ -160,9 +186,20 @@ async function rowsForBucket(slug: string, limit: number) {
   ).catch(() => []);
 }
 
+async function rowsForRecentHero(limit = 36) {
+  const window = recentWindow();
+  return supabaseRest<CatalogRow[]>(
+    `tmdb_catalog?select=tmdb_id,media_type,title,title_en,overview,poster_url,backdrop_url,rating,vote_count,popularity,release_year,release_date,genres,language,runtime,source_bucket,sort_score&is_active=eq.true&release_date=gte.${window.from}&release_date=lte.${window.to}&order=release_date.asc&limit=${limit}`,
+    { mode: 'service', cache: 'no-store' }
+  ).catch(() => []);
+}
+
 export async function getCatalogHomePayload(): Promise<HomePayload> {
   const links = await fetchWatchLinks();
-  const rowsByBucket = await Promise.all(sectionDefs.map((section) => rowsForBucket(section.slug, section.limit)));
+  const [recentRows, rowsByBucket] = await Promise.all([
+    rowsForRecentHero(),
+    Promise.all(sectionDefs.map((section) => rowsForBucket(section.slug, section.limit))),
+  ]);
 
   const sections: MovieSection[] = sectionDefs
     .map((section, sectionIndex) => ({
@@ -177,7 +214,9 @@ export async function getCatalogHomePayload(): Promise<HomePayload> {
   if (!sections.length) return getTmdbHomePayload();
 
   const allItems = unique(sections.flatMap((section) => section.items));
-  const heroItems = allItems.filter((item) => item.backdropUrl && item.rating >= minRating).slice(0, 18);
+  const recentHeroItems = sortRecentHeroItems(unique(recentRows.map((row, index) => applyWatch(rowToMovie(row, index), links, index))).filter((item) => item.backdropUrl && item.rating >= minRating));
+  const fallbackHeroItems = allItems.filter((item) => item.backdropUrl && item.rating >= minRating).slice(0, 18);
+  const heroItems = recentHeroItems.length ? recentHeroItems.slice(0, 18) : fallbackHeroItems;
   const readyItems = allItems.filter((item) => item.isWatchReady && item.watchUrl && item.rating >= minRating);
   const watchReadySection: MovieSection = {
     slug: 'watch-ready',
