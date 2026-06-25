@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter, Noto_Sans_Thai } from 'next/font/google';
+import { seoConfig } from '@/lib/seo';
 import './globals.css';
 
 const inter = Inter({
@@ -15,45 +16,58 @@ const notoSansThai = Noto_Sans_Thai({
   display: 'swap',
 });
 
-const siteName = 'ดูดีดี';
-const englishSiteName = 'DodeedeeV3';
-const siteUrl = 'https://www.xn--l3caa5kbu.online';
-const siteDescription = 'ดูดีดี (DodeedeeV3) เว็บค้นหาและจัดหมวดคอนเทนต์ภาพยนตร์และซีรีส์ โทนมืดพรีเมียม พร้อมหน้ารายละเอียด ตัวอย่าง และระบบรับชมสำหรับคอนเทนต์ที่มีสิทธิ์เผยแพร่';
-
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
-  applicationName: siteName,
+  metadataBase: new URL(seoConfig.domain),
+  applicationName: seoConfig.siteName,
+  generator: 'Next.js',
+  referrer: 'origin-when-cross-origin',
   title: {
-    default: `${siteName} | ${englishSiteName} | เว็บดูหนังและซีรีส์ออนไลน์`,
-    template: `%s | ${siteName}`,
+    default: `${seoConfig.siteName} | เว็บดูหนังออนไลน์และซีรีส์ออนไลน์`,
+    template: `%s | ${seoConfig.siteName}`,
   },
-  description: siteDescription,
-  keywords: [siteName, englishSiteName, 'ดูดีดีออนไลน์', 'Dodeedee', 'Dodeedee online', 'เว็บดูหนัง', 'ดูหนังออนไลน์', 'ซีรีส์ออนไลน์', 'Movie Website', 'Video Content Platform'],
+  description: seoConfig.description,
+  keywords: seoConfig.keywords,
+  category: 'entertainment',
   alternates: {
     canonical: '/',
+    languages: {
+      'th-TH': '/',
+    },
   },
   openGraph: {
-    title: `${siteName} | ${englishSiteName} | เว็บดูหนังและซีรีส์ออนไลน์`,
-    description: siteDescription,
-    url: siteUrl,
-    siteName,
+    title: `${seoConfig.siteName} | เว็บดูหนังออนไลน์และซีรีส์ออนไลน์`,
+    description: seoConfig.description,
+    url: seoConfig.domain,
+    siteName: seoConfig.siteName,
     type: 'website',
-    locale: 'th_TH',
+    locale: seoConfig.locale,
+    images: [{ url: '/opengraph-image', alt: seoConfig.siteName }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: `${siteName} | ${englishSiteName} | เว็บดูหนังและซีรีส์ออนไลน์`,
-    description: siteDescription,
+    title: `${seoConfig.siteName} | เว็บดูหนังออนไลน์และซีรีส์ออนไลน์`,
+    description: seoConfig.description,
+    images: ['/opengraph-image'],
   },
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+      'max-video-preview': -1,
+    },
+  },
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
   },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="th-TH" className={`${inter.variable} ${notoSansThai.variable}`}>
+    <html lang={seoConfig.language} className={`${inter.variable} ${notoSansThai.variable}`}>
       <body>{children}</body>
     </html>
   );
