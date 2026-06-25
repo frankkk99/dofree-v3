@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import type { HomePayload, MovieItem } from '@/lib/tmdb';
 import { HomeExperienceV3 } from '@/components/home-experience-v3';
 import { MovieCard } from '@/components/movie-card';
+import { releaseMonthYear } from '@/lib/release-date';
 
 function unique(items: MovieItem[]) {
   const map = new Map<string, MovieItem>();
@@ -105,6 +106,48 @@ function RealtimeAddedCarousel({ items }: { items: MovieItem[] }) {
   );
 }
 
+function openCurrentHeroDetail() {
+  const buttons = Array.from(document.querySelectorAll('button'));
+  const detailButton = buttons.find((button) => button.textContent?.includes('รายละเอียด'));
+  detailButton?.click();
+}
+
+function HeroReleasePortal({ home }: { home: HomePayload }) {
+  const [host, setHost] = useState<HTMLElement | null>(null);
+  const label = releaseMonthYear(home.hero as MovieItem & { releaseDate?: string });
+
+  useEffect(() => {
+    const heroSection = document.querySelector('main > section.relative');
+    if (!heroSection) return;
+
+    let node = document.getElementById('hero-release-host');
+    if (!node) {
+      node = document.createElement('div');
+      node.id = 'hero-release-host';
+      heroSection.appendChild(node);
+    }
+    setHost(node);
+  }, []);
+
+  if (!host) return null;
+
+  return createPortal(
+    <div className="pointer-events-none absolute bottom-5 right-4 z-20 flex flex-col items-end gap-2 md:bottom-8 md:right-8">
+      <span className="rounded-full border border-white/10 bg-black/55 px-3 py-1.5 text-[10px] font-black text-white/80 shadow-[0_14px_40px_rgba(0,0,0,0.52)] backdrop-blur-xl md:text-xs">
+        เข้าฉาย {label}
+      </span>
+      <button
+        type="button"
+        onClick={openCurrentHeroDetail}
+        className="pointer-events-auto rounded-xl bg-white/[0.12] px-4 py-2 text-[11px] font-black text-white/86 shadow-[0_14px_46px_rgba(0,0,0,0.55)] backdrop-blur-xl transition hover:bg-[#e50914] md:px-5 md:py-3 md:text-sm"
+      >
+        ดูการ์ดเรื่องนี้
+      </button>
+    </div>,
+    host
+  );
+}
+
 function RealtimePortal({ home }: { home: HomePayload }) {
   const [host, setHost] = useState<HTMLElement | null>(null);
   const [liveItems, setLiveItems] = useState<MovieItem[]>([]);
@@ -151,6 +194,7 @@ export function HomeRealtimeWrapper({ home }: { home: HomePayload }) {
   return (
     <>
       <HomeExperienceV3 home={home} />
+      <HeroReleasePortal home={home} />
       <RealtimePortal home={home} />
     </>
   );
