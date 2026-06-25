@@ -10,7 +10,7 @@ export default function AuthPage() {
           <p className="text-[11px] font-black uppercase tracking-[0.28em] text-[#e50914]/85">Auth Center</p>
           <h1 className="mt-3 text-[36px] font-black tracking-[-0.07em] md:text-[64px]">เข้าสู่ระบบ / สมัครสมาชิก</h1>
           <p className="mt-3 max-w-2xl text-sm font-semibold leading-7 text-white/48 md:text-base">
-            เริ่มใช้บัญชี DOFree เพื่อเก็บรายการโปรด ดูประวัติการรับชม ใช้สถานะสมาชิก และต่อระบบ Admin role ในขั้นถัดไป
+            เริ่มใช้บัญชีดูดีดีเพื่อเก็บรายการโปรด ดูประวัติการรับชม ใช้สถานะสมาชิก และต่อระบบ Admin role ในขั้นถัดไป
           </p>
 
           <div className="mt-8 grid gap-3 md:grid-cols-2">
