@@ -1,3 +1,5 @@
+import { BackLink } from '@/components/back-link';
+
 const plans = [
   {
     name: 'Free',
@@ -22,6 +24,7 @@ const plans = [
 export default function MembershipPage() {
   return (
     <main className="min-h-screen bg-[#030303] px-4 py-24 text-white md:px-8">
+      <BackLink />
       <section className="mx-auto max-w-6xl">
         <p className="text-[11px] font-black uppercase tracking-[0.28em] text-[#e50914]/85">Membership</p>
         <h1 className="mt-3 text-[36px] font-black tracking-[-0.07em] md:text-[64px]">สมัครสมาชิก</h1>
