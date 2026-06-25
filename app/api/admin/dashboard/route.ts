@@ -12,8 +12,6 @@ type ProfileRecord = {
   role?: string | null;
 };
 
-type CountResponse = { count?: number };
-
 function supabaseUrl() {
   return process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, '');
 }
@@ -57,9 +55,9 @@ async function requireAdmin(token: string) {
   return { user, role };
 }
 
-async function count(path: string) {
-  const rows = await supabaseRest<CountResponse[]>(path);
-  return Number(rows?.[0]?.count || 0);
+async function countRows(path: string) {
+  const rows = await supabaseRest<unknown[]>(path);
+  return Array.isArray(rows) ? rows.length : 0;
 }
 
 export async function GET(request: Request) {
@@ -71,7 +69,6 @@ export async function GET(request: Request) {
     const [
       totalCatalog,
       readyLinks,
-      missingLinks,
       brokenLinks,
       users,
       favorites,
@@ -82,20 +79,20 @@ export async function GET(request: Request) {
       sections,
       categories,
     ] = await Promise.all([
-      count('tmdb_catalog?select=count'),
-      count('admin_movie_links?watch_url=not.is.null&select=count'),
-      count('tmdb_catalog?tmdb_id=not.in.(select.tmdb_id.admin_movie_links)&select=count'),
-      count('admin_movie_links?status=eq.broken&select=count'),
-      count('profiles?select=count'),
-      count('favorites?select=count'),
-      count('watch_history?select=count'),
-      count('memberships?select=count'),
-      count('memberships?status=eq.active&select=count'),
-      count('link_reports?select=count'),
-      count('admin_sections?select=count'),
-      count('admin_categories?select=count'),
+      countRows('tmdb_catalog?select=tmdb_id&limit=10000'),
+      countRows('admin_movie_links?watch_url=not.is.null&select=tmdb_id&limit=10000'),
+      countRows('admin_movie_links?status=eq.broken&select=tmdb_id&limit=10000'),
+      countRows('profiles?select=id&limit=10000'),
+      countRows('favorites?select=id&limit=10000'),
+      countRows('watch_history?select=id&limit=10000'),
+      countRows('memberships?select=id&limit=10000'),
+      countRows('memberships?status=eq.active&select=id&limit=10000'),
+      countRows('link_reports?select=id&limit=10000'),
+      countRows('admin_sections?select=id&limit=10000'),
+      countRows('admin_categories?select=id&limit=10000'),
     ]);
 
+    const missingLinks = Math.max(totalCatalog - readyLinks, 0);
     const missingSamples = await supabaseRest<Array<{ tmdb_id: number; media_type: string; title?: string | null; poster_url?: string | null; rating?: number | null; year?: string | null }>>(
       'tmdb_catalog?select=tmdb_id,media_type,title,poster_url,rating,year&order=rating.desc&limit=12',
     );
