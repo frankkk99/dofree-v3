@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { MovieCard } from '@/components/movie-card';
 import { getDetailPayload, type MediaType } from '@/lib/tmdb';
 
+const siteName = 'ดูดีดี';
 const allowedMediaTypes = new Set(['movie', 'tv']);
 
 type PageProps = {
@@ -54,11 +55,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   return {
     title: `รับชม ${detail.item.title}`,
-    description: detail.item.overview || `หน้ารับชม ${detail.item.title} บน DOFree v3`,
+    description: detail.item.overview || `หน้ารับชม ${detail.item.title} บน${siteName}`,
     openGraph: {
-      title: `รับชม ${detail.item.title} | DOFree v3`,
+      title: `รับชม ${detail.item.title} | ${siteName}`,
       description: detail.item.overview,
       images: [detail.item.backdropUrl],
+      siteName,
     },
   };
 }
@@ -85,7 +87,7 @@ export default async function WatchPage({ params }: PageProps) {
               กลับหน้ารายละเอียด
             </a>
             <a href="/" className="text-[24px] font-black tracking-[-0.08em] text-[#e50914] md:text-[34px]">
-              DOFree<span className="ml-1 rounded bg-[#e50914] px-1 py-0.5 text-[9px] tracking-normal text-white md:text-[13px]">v3</span>
+              {siteName}
             </a>
           </div>
 
