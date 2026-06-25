@@ -4,8 +4,8 @@ import { AdminCatalogBrowser } from '@/components/admin-catalog-browser';
 import { AdminDashboard } from '@/components/admin-dashboard';
 
 export const metadata: Metadata = {
-  title: 'DOFree Admin Dashboard',
-  description: 'DOFree v3 admin command center',
+  title: 'DodeedeeV3 Admin Dashboard',
+  description: 'ดูดีดี / DodeedeeV3 admin command center',
   robots: {
     index: false,
     follow: false,
