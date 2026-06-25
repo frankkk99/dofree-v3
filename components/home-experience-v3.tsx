@@ -6,6 +6,7 @@ import { categoryChips } from '@/lib/catalog';
 import type { HomePayload, MovieItem, MovieSection } from '@/lib/tmdb';
 import { MovieCard } from '@/components/movie-card';
 import { DetailWindow } from '@/components/window-system';
+import { HomeProjectOverview } from '@/components/home-portfolio-sections';
 
 function uniqueMovies(items: MovieItem[]) {
   const map = new Map<string, MovieItem>();
@@ -360,13 +361,17 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
             </span>
           </a>
 
-          <div className="ml-auto flex items-center gap-3 md:gap-5">
-            <a href="/watch-ready" className="hidden text-[15px] font-black text-[#f6c56b] md:block">
-              ♛ พรีเมียม
-            </a>
+          <div className="ml-auto flex min-w-0 items-center gap-2 md:gap-5">
+            <div className="hidden items-center gap-5 md:flex">
+              <a href="#portfolio-signal" className="text-[13px] font-black text-white/58 hover:text-white">ภาพรวม</a>
+              <a href="#sections" className="text-[13px] font-black text-white/58 hover:text-white">คอนเทนต์</a>
+              <a href="/search" className="text-[13px] font-black text-white/58 hover:text-white">ค้นหา</a>
+              <a href="/watch-ready" className="text-[15px] font-black text-[#f6c56b] hover:text-[#ffe0a3]">♛ พรีเมียม</a>
+            </div>
             <a
               href="/admin"
-              className="grid h-9 w-9 place-items-center rounded-full border border-[#e50914]/70 bg-[#170203] shadow-glow md:h-12 md:w-12"
+              aria-label="Admin dashboard"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[#e50914]/70 bg-[#170203] shadow-glow md:h-12 md:w-12"
             >
               <span className="text-[11px] font-black text-red-100 md:text-sm">A</span>
             </a>
@@ -374,7 +379,16 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
         </nav>
       </header>
 
-      <section className="relative min-h-[500px] border-b border-white/[0.08] pt-[58px] md:min-h-[585px] md:pt-[76px] xl:min-h-[610px] xl:pt-[88px]">
+      <div className="fixed inset-x-0 top-[58px] z-40 border-b border-white/[0.06] bg-black/78 px-4 py-2 backdrop-blur-2xl md:hidden">
+        <div className="movie-rail flex gap-2 overflow-x-auto">
+          <a href="#portfolio-signal" className="shrink-0 rounded-full bg-white/[0.08] px-3 py-1.5 text-[11px] font-black text-white/72">ภาพรวม</a>
+          <a href="#sections" className="shrink-0 rounded-full bg-white/[0.08] px-3 py-1.5 text-[11px] font-black text-white/72">คอนเทนต์</a>
+          <a href="/search" className="shrink-0 rounded-full bg-white/[0.08] px-3 py-1.5 text-[11px] font-black text-white/72">ค้นหา</a>
+          <a href="/watch-ready" className="shrink-0 rounded-full bg-[#e50914] px-3 py-1.5 text-[11px] font-black text-white">พร้อมดู</a>
+        </div>
+      </div>
+
+      <section className="relative min-h-[520px] border-b border-white/[0.08] pt-[96px] md:min-h-[585px] md:pt-[76px] xl:min-h-[610px] xl:pt-[88px]">
         <div className="absolute inset-0 overflow-hidden">
           <div
             className="absolute inset-y-0 right-0 w-full bg-cover bg-center opacity-90 transition duration-700 md:w-[78%]"
@@ -424,7 +438,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
         </div>
       </section>
 
-      <section className="sticky top-[58px] z-40 mx-auto -mt-5 max-w-[1920px] px-4 pb-2 md:top-[76px] md:-mt-7 md:px-7 xl:top-[88px]">
+      <section className="sticky top-[96px] z-40 mx-auto -mt-5 max-w-[1920px] px-4 pb-2 md:top-[76px] md:-mt-7 md:px-7 xl:top-[88px]">
         <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-full bg-[linear-gradient(180deg,rgba(3,3,3,0.92),rgba(3,3,3,0.72)_68%,rgba(3,3,3,0))] backdrop-blur-sm" />
         <div className="mx-auto max-w-[760px] rounded-[20px] bg-black/42 p-1.5 shadow-[0_22px_85px_rgba(0,0,0,0.72)] backdrop-blur-2xl md:max-w-[980px] md:rounded-[26px] md:p-2.5">
           <div className="rounded-[17px] bg-white/[0.065] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.045)] backdrop-blur-xl md:rounded-[22px] md:p-2.5">
@@ -481,6 +495,10 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
         </div>
       </section>
 
+      <div id="portfolio-signal" className="scroll-mt-[140px]">
+        <HomeProjectOverview />
+      </div>
+
       <section
         id="sections"
         className="mx-auto max-w-[1920px] scroll-mt-[220px] bg-black px-4 py-6 md:scroll-mt-[240px] md:px-7 md:py-8 xl:scroll-mt-[260px]"
@@ -509,7 +527,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
 
             {visibleFilteredItems.length ? (
               <>
-                <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-5 md:grid-cols-6 md:gap-4 lg:grid-cols-7 xl:grid-cols-8">
+                <div className="grid grid-cols-2 gap-3 min-[420px]:grid-cols-3 sm:grid-cols-4 md:grid-cols-6 md:gap-4 lg:grid-cols-7 xl:grid-cols-8">
                   {visibleFilteredItems.map((item, index) => (
                     <MovieCard
                       key={`filter-${item.mediaType}-${item.id}-${index}`}

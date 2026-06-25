@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { pageMetadata } from '@/lib/seo';
 import { MovieCard } from '@/components/movie-card';
 import { searchMovies } from '@/lib/tmdb';
 
@@ -6,11 +7,11 @@ type SearchProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: 'ค้นหาภาพยนตร์และซีรีส์',
-  description: 'ค้นหาภาพยนตร์ ซีรีส์ และข้อมูลจาก TMDB บน DOFree v3',
-};
-
+  description: 'ค้นหาภาพยนตร์ ซีรีส์ นักแสดง และข้อมูลจาก TMDB บน DOFree v3',
+  path: '/search',
+});
 export default async function SearchPage({ searchParams }: SearchProps) {
   const params = await searchParams;
   const q = typeof params.q === 'string' ? params.q : '';

@@ -1,4 +1,12 @@
+import type { Metadata } from 'next';
+import { pageMetadata } from '@/lib/seo';
 import { BackLink } from '@/components/back-link';
+
+export const metadata: Metadata = pageMetadata({
+  title: 'สมัครสมาชิก',
+  description: 'แผนสมาชิก DOFree v3 สำหรับผู้ใช้ทั่วไป สมาชิกพรีเมียม และผู้ดูแลระบบ',
+  path: '/membership',
+});
 
 const plans = [
   {

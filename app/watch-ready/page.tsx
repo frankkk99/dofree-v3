@@ -1,12 +1,13 @@
 import type { Metadata } from 'next';
+import { pageMetadata } from '@/lib/seo';
 import { MovieCard } from '@/components/movie-card';
 import { getWatchReadyItems } from '@/lib/tmdb';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: 'รายการแนะนำที่พร้อมรับชม',
   description: 'รวมภาพยนตร์และซีรีส์ที่มีสถานะพร้อมรับชม คัดจากคะแนนสูงและรายการที่เผยแพร่ใน DOFree v3',
-};
-
+  path: '/watch-ready',
+});
 export default async function WatchReadyPage() {
   const items = await getWatchReadyItems();
   const movies = items.filter((item) => item.mediaType === 'movie');

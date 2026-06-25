@@ -1,5 +1,13 @@
+import type { Metadata } from 'next';
+import { pageMetadata } from '@/lib/seo';
 import { BackLink } from '@/components/back-link';
 import { AuthPanel } from '@/components/auth-panel';
+
+export const metadata: Metadata = pageMetadata({
+  title: 'เข้าสู่ระบบ / สมัครสมาชิก',
+  description: 'Auth center สำหรับเข้าสู่ระบบ สมัครสมาชิก เก็บรายการโปรด และเชื่อมต่อสิทธิ์ผู้ใช้ DOFree v3',
+  path: '/auth',
+});
 
 export default function AuthPage() {
   return (
