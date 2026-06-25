@@ -80,7 +80,7 @@ export async function GET(request: Request) {
     if (!response.ok) return jsonError('Cannot load profile', response.status);
 
     const profile = data[0] || null;
-    const role = profile?.role || 'user';
+    const role = profile?.role || 'viewer';
 
     return NextResponse.json({
       ok: true,
