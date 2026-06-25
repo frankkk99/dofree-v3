@@ -185,7 +185,7 @@ function rowToMovie(row: CatalogRow, index: number): MovieItem {
 
 function applyWatch(item: MovieItem, links: Map<string, WatchLinkRecord>, index: number): MovieItem {
   const link = links.get(watchKey(item.mediaType, item.id));
-  if (!link) return { ...item, isWatchReady: false, watchUrl: undefined, badges: badges({ ...item, isWatchReady: false }, index) };
+  if (!link) return { ...item, isWatchReady: false, watchUrl: undefined, badges: item.badges || badges({ ...item, isWatchReady: false }, index) };
 
   const searchText = `${(item as MovieItem & { searchText?: string }).searchText || ''} ${link.title || ''} ${link.title_th || ''}`;
   const next: MovieItem = {
