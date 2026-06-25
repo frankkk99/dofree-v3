@@ -91,6 +91,33 @@ function profileName(user: DofreeUser) {
   return user.email?.split('@')[0] || user.phone || `user-${user.id.slice(0, 8)}`;
 }
 
+async function loadProfile(userId: string, token: string) {
+  const data = await restFetch<DofreeProfile[]>(
+    `profiles?id=eq.${encodeURIComponent(userId)}&select=id,display_name,avatar_url,role&limit=1`,
+    { method: 'GET' },
+    token,
+  );
+  return Array.isArray(data) ? data[0] || null : null;
+}
+
+async function createProfile(user: DofreeUser, token: string) {
+  const data = await restFetch<DofreeProfile[]>(
+    'profiles',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        id: user.id,
+        display_name: profileName(user),
+        role: 'user',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }),
+    },
+    token,
+  );
+  return Array.isArray(data) ? data[0] || null : null;
+}
+
 export function getStoredSession(): DofreeSession | null {
   if (typeof window === 'undefined') return null;
   try {
@@ -115,25 +142,10 @@ export async function ensureProfile(session: DofreeSession) {
   const token = session.access_token;
   const user = session.user || await authFetch<DofreeUser>('user', { method: 'GET' }, token);
 
-  const data = await restFetch<DofreeProfile[]>(
-    'profiles?on_conflict=id',
-    {
-      method: 'POST',
-      headers: {
-        Prefer: 'resolution=merge-duplicates,return=representation',
-      },
-      body: JSON.stringify({
-        id: user.id,
-        display_name: profileName(user),
-        role: 'user',
-        updated_at: new Date().toISOString(),
-      }),
-    },
-    token,
-  );
+  let profile = await loadProfile(user.id, token);
+  if (!profile) profile = await createProfile(user, token);
 
-  const profile = Array.isArray(data) ? data[0] : null;
-  const nextSession = { ...session, user: { ...user, role: profile?.role || user.role }, profile };
+  const nextSession = { ...session, user: { ...user, role: profile?.role || user.role || 'user' }, profile };
   storeSession(nextSession);
   return nextSession;
 }
