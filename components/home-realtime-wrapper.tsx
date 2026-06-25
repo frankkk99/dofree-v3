@@ -29,6 +29,88 @@ function fallbackRecentlyAdded(home: HomePayload) {
   ]).slice(0, 36);
 }
 
+function railFromTarget(target: EventTarget | null) {
+  if (!(target instanceof Element)) return null;
+  return target.closest('.movie-rail') as HTMLElement | null;
+}
+
+function DesktopRailScrollFix() {
+  useEffect(() => {
+    let activeRail: HTMLElement | null = null;
+    let startX = 0;
+    let startLeft = 0;
+    let dragged = false;
+
+    function onWheel(event: WheelEvent) {
+      const rail = railFromTarget(event.target);
+      if (!rail || rail.scrollWidth <= rail.clientWidth) return;
+
+      const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+      if (!delta) return;
+
+      event.preventDefault();
+      rail.scrollLeft += delta;
+    }
+
+    function onPointerDown(event: PointerEvent) {
+      if (event.pointerType === 'touch') return;
+      const rail = railFromTarget(event.target);
+      if (!rail || rail.scrollWidth <= rail.clientWidth) return;
+
+      activeRail = rail;
+      startX = event.clientX;
+      startLeft = rail.scrollLeft;
+      dragged = false;
+      rail.style.cursor = 'grabbing';
+      rail.style.userSelect = 'none';
+    }
+
+    function onPointerMove(event: PointerEvent) {
+      if (!activeRail) return;
+      const dx = event.clientX - startX;
+      if (Math.abs(dx) > 4) dragged = true;
+      if (dragged) event.preventDefault();
+      activeRail.scrollLeft = startLeft - dx;
+    }
+
+    function stopDrag() {
+      if (activeRail) {
+        activeRail.style.cursor = '';
+        activeRail.style.userSelect = '';
+      }
+      activeRail = null;
+      window.setTimeout(() => {
+        dragged = false;
+      }, 0);
+    }
+
+    function onClick(event: MouseEvent) {
+      if (!dragged) return;
+      if (!railFromTarget(event.target)) return;
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    document.addEventListener('wheel', onWheel, { passive: false });
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('pointermove', onPointerMove, { passive: false });
+    document.addEventListener('pointerup', stopDrag);
+    document.addEventListener('pointercancel', stopDrag);
+    document.addEventListener('click', onClick, true);
+
+    return () => {
+      document.removeEventListener('wheel', onWheel);
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('pointermove', onPointerMove);
+      document.removeEventListener('pointerup', stopDrag);
+      document.removeEventListener('pointercancel', stopDrag);
+      document.removeEventListener('click', onClick, true);
+    };
+  }, []);
+
+  return null;
+}
+
 function RealtimeAddedCarousel({ items }: { items: MovieItem[] }) {
   const railRef = useRef<HTMLDivElement | null>(null);
   const resumeTimerRef = useRef<number | null>(null);
@@ -95,7 +177,7 @@ function RealtimeAddedCarousel({ items }: { items: MovieItem[] }) {
         onPointerUp={pauseThenResume}
         onTouchEnd={pauseThenResume}
         onWheel={pauseThenResume}
-        className="movie-rail flex gap-2.5 overflow-x-auto scroll-smooth pb-3 sm:gap-3 md:gap-5 md:pb-4"
+        className="movie-rail flex cursor-grab gap-2.5 overflow-x-auto scroll-smooth pb-3 sm:gap-3 md:gap-5 md:pb-4"
       >
         {doubled.map((item, index) => (
           <MovieCard
@@ -199,6 +281,7 @@ export function HomeRealtimeWrapper({ home }: { home: HomePayload }) {
   return (
     <>
       <HomeExperienceV3 home={home} />
+      <DesktopRailScrollFix />
       <HeroReleasePortal home={home} />
       <RealtimePortal home={home} />
     </>
