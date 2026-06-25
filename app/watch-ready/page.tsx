@@ -2,9 +2,16 @@ import type { Metadata } from 'next';
 import { MovieCard } from '@/components/movie-card';
 import { getWatchReadyItems } from '@/lib/tmdb';
 
+const siteName = 'ดูดีดี';
+
 export const metadata: Metadata = {
-  title: 'รายการแนะนำที่พร้อมรับชม',
-  description: 'รวมภาพยนตร์และซีรีส์ที่มีสถานะพร้อมรับชม คัดจากคะแนนสูงและรายการที่เผยแพร่ใน DOFree v3',
+  title: 'หนังและซีรีส์พร้อมรับชม',
+  description: 'รวมภาพยนตร์และซีรีส์ที่มีสถานะพร้อมรับชม คัดจากคะแนนสูงและรายการที่เผยแพร่ในดูดีดี',
+  openGraph: {
+    title: `หนังและซีรีส์พร้อมรับชม | ${siteName}`,
+    description: 'รวมภาพยนตร์และซีรีส์ที่มีสถานะพร้อมรับชมบนดูดีดี',
+    siteName,
+  },
 };
 
 export default async function WatchReadyPage() {

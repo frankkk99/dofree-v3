@@ -1,8 +1,8 @@
-# DOFree v3
+# ดูดีดี / DodeedeeV3
 
-DOFree v3 คือโครงเว็บหนัง / Movie Content Platform เวอร์ชันใหม่ที่เริ่มจากฐาน clean กว่า v2 โดยแยก public frontend, TMDB feed และ admin module ออกจากกันชัดเจนตั้งแต่ต้น
+ดูดีดี (DodeedeeV3) คือโครงเว็บหนัง / Movie Content Platform เวอร์ชันใหม่ที่เริ่มจากฐาน clean โดยแยก public frontend, TMDB feed และ admin module ออกจากกันชัดเจนตั้งแต่ต้น
 
-## เป้าหมาย v3
+## เป้าหมาย DodeedeeV3
 
 - ทำหน้าแรกโทนมืด cinematic ใกล้ mockup ที่ใช้เสนอขาย
 - ใช้ TMDB แบบปลอดภัยผ่าน server env `TMDB_ACCESS_TOKEN`

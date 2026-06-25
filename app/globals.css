@@ -124,6 +124,40 @@ body div[role="dialog"] > div > div:nth-child(2) div.mt-3.flex > button:first-ch
   animation: watch-cta-breathe 7.6s ease-in-out infinite;
 }
 
+header a[href="/"] > span:first-child {
+  font-size: 0;
+}
+
+header a[href="/"] > span:first-child::after {
+  content: "ดูดีดี";
+  font-size: 24px;
+}
+
+header a[href="/"] > span:nth-child(2) {
+  font-size: 0;
+}
+
+header a[href="/"] > span:nth-child(2)::after {
+  content: "DodeedeeV3";
+  font-size: 9px;
+}
+
+@media (min-width: 768px) {
+  header a[href="/"] > span:first-child::after {
+    font-size: 34px;
+  }
+
+  header a[href="/"] > span:nth-child(2)::after {
+    font-size: 13px;
+  }
+}
+
+@media (min-width: 1280px) {
+  header a[href="/"] > span:first-child::after {
+    font-size: 38px;
+  }
+}
+
 @keyframes auto-carousel-scroll {
   from {
     transform: translate3d(0, 0, 0);

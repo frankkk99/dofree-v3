@@ -1,5 +1,7 @@
 import type { MetadataRoute } from 'next';
 
+const siteUrl = 'https://www.xn--l3caa5kbu.online';
+
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
@@ -9,6 +11,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ['/api/'],
       },
     ],
-    sitemap: 'https://dofree-v3.vercel.app/sitemap.xml',
+    sitemap: `${siteUrl}/sitemap.xml`,
   };
 }
