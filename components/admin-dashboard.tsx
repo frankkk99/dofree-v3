@@ -52,6 +52,17 @@ const metricLabels: Array<{ key: keyof Metrics; label: string; hint: string }> =
   { key: 'watchHistory', label: 'History', hint: 'ประวัติการรับชม' },
 ];
 
+const adminModules = [
+  { label: 'Catalog Manager', href: '#catalog-manager', description: 'เติมลิงก์ ดูสถานะ และแก้ข้อมูลหนัง' },
+  { label: 'Missing Link Queue', href: '#catalog-manager', description: 'คิวหนังที่ควรเติมลิงก์ก่อน' },
+  { label: 'Broken Link Reports', href: '#catalog-manager', description: 'เตรียมต่อรายงานลิงก์เสีย' },
+  { label: 'Users & Roles', href: '/admin/users', description: 'จัดการผู้ใช้และ role viewer/admin' },
+  { label: 'Premium Memberships', href: '/admin/users', description: 'ดูสถานะสมาชิกเบื้องต้น' },
+  { label: 'Import / Export', href: '#catalog-manager', description: 'นำเข้า/ส่งออก CSV สำหรับลิงก์หนัง' },
+  { label: 'Site Settings', href: '#catalog-manager', description: 'เตรียมต่อการตั้งค่าเว็บ' },
+  { label: 'Analytics', href: '#catalog-manager', description: 'เตรียมต่อสถิติการใช้งาน' },
+];
+
 function formatNumber(value: number) {
   return new Intl.NumberFormat('th-TH').format(value || 0);
 }
@@ -120,6 +131,7 @@ export function AdminDashboard() {
 
           <div className="flex flex-wrap gap-2">
             <a href="/" className="rounded-2xl bg-white/[0.08] px-4 py-3 text-xs font-black text-white/75 hover:bg-white/[0.14]">หน้าเว็บ</a>
+            <a href="/admin/users" className="rounded-2xl bg-white/[0.08] px-4 py-3 text-xs font-black text-white/75 hover:bg-white/[0.14]">Users</a>
             <a href="/favorites" className="rounded-2xl bg-white/[0.08] px-4 py-3 text-xs font-black text-white/75 hover:bg-white/[0.14]">Favorites</a>
             <a href="/history" className="rounded-2xl bg-white/[0.08] px-4 py-3 text-xs font-black text-white/75 hover:bg-white/[0.14]">History</a>
             <button onClick={loadDashboard} className="rounded-2xl bg-[#e50914] px-4 py-3 text-xs font-black text-white shadow-glow">Refresh</button>
@@ -191,8 +203,11 @@ export function AdminDashboard() {
                 <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/36">Admin Modules</p>
                 <h2 className="mt-2 text-2xl font-black tracking-[-0.05em]">เมนูที่ควรมี</h2>
                 <div className="mt-4 grid gap-2">
-                  {['Catalog Manager', 'Missing Link Queue', 'Broken Link Reports', 'Users & Roles', 'Premium Memberships', 'Import / Export', 'Site Settings', 'Analytics'].map((label) => (
-                    <div key={label} className="rounded-2xl bg-white/[0.055] px-4 py-3 text-sm font-black text-white/70">{label}</div>
+                  {adminModules.map((item) => (
+                    <a key={item.label} href={item.href} className="rounded-2xl bg-white/[0.055] px-4 py-3 text-sm font-black text-white/70 transition hover:bg-[#170203] hover:text-white">
+                      <span className="block">{item.label}</span>
+                      <span className="mt-1 block text-[11px] font-semibold text-white/36">{item.description}</span>
+                    </a>
                   ))}
                 </div>
               </article>
