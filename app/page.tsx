@@ -5,10 +5,21 @@ import { HomeRealtimeWrapper } from '@/components/home-realtime-wrapper';
 import { WatchHistoryClickBridge } from '@/components/watch-history-click-bridge';
 import { getCatalogHomePayload } from '@/lib/catalog-home';
 
+const siteName = 'ดูดีดี';
+const siteUrl = 'https://www.xn--l3caa5kbu.online/';
+const websiteJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: siteName,
+  alternateName: ['ดูดีดีออนไลน์', 'DooDeeDee'],
+  url: siteUrl,
+};
+
 export default async function HomePage() {
   const home = await getCatalogHomePayload();
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
       <HomeRealtimeWrapper home={home} />
       <HomeCardLinkBridge home={home} />
       <FavoriteClickBridge home={home} />
