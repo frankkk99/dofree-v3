@@ -48,7 +48,7 @@ function recentUpcomingSection(items: MovieItem[]): MovieSection {
     slug: 'recent-upcoming',
     eyebrow: 'Release Window',
     title: 'หนังเข้าใหม่ / กำลังจะเข้า',
-    description: 'ช่วงย้อนหลัง 2 เดือนถึงหนังที่กำลังจะเข้าฉาย',
+    description: 'หนังเข้าใหม่และกำลังจะเข้าฉาย',
     items: unique(items),
   };
 }
@@ -184,6 +184,117 @@ function DesktopRailScrollFix() {
   return null;
 }
 
+function HeaderAccountMenuPortal() {
+  const [host, setHost] = useState<HTMLElement | null>(null);
+  const [open, setOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    function findHost() {
+      const adminLink = document.querySelector('header a[href="/admin"]') as HTMLElement | null;
+      const parent = adminLink?.parentElement;
+      if (!adminLink || !parent) return;
+      adminLink.style.display = 'none';
+      setHost(parent);
+    }
+
+    findHost();
+    const timer = window.setInterval(findHost, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') setOpen(false);
+    }
+
+    function onClick(event: MouseEvent) {
+      if (!open) return;
+      const target = event.target;
+      if (target instanceof Node && menuRef.current?.contains(target)) return;
+      setOpen(false);
+    }
+
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onClick);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('mousedown', onClick);
+    };
+  }, [open]);
+
+  if (!host) return null;
+
+  return createPortal(
+    <div ref={menuRef} className="relative">
+      <button
+        type="button"
+        aria-label="เปิดเมนูบัญชี"
+        onClick={() => setOpen((value) => !value)}
+        className="grid h-9 w-9 place-items-center rounded-full border border-white/12 bg-white/[0.08] text-white shadow-[0_0_24px_rgba(229,9,20,0.24)] transition hover:border-[#e50914]/70 hover:bg-[#170203] md:h-12 md:w-12"
+      >
+        <span className="flex flex-col gap-1.5">
+          <span className="block h-0.5 w-4 rounded-full bg-white md:w-5" />
+          <span className="block h-0.5 w-4 rounded-full bg-white md:w-5" />
+          <span className="block h-0.5 w-4 rounded-full bg-white md:w-5" />
+        </span>
+      </button>
+
+      {open ? (
+        <div className="absolute right-0 top-[calc(100%+12px)] z-[120] w-[318px] max-w-[calc(100vw-24px)] overflow-hidden rounded-[28px] border border-white/10 bg-[#080808]/96 p-3 text-white shadow-[0_24px_90px_rgba(0,0,0,0.72)] backdrop-blur-2xl md:w-[360px]">
+          <div className="rounded-[22px] bg-white/[0.055] p-4">
+            <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]/85">Account</p>
+            <h3 className="mt-1 text-[22px] font-black tracking-[-0.055em]">เมนูผู้ใช้</h3>
+            <p className="mt-1 text-[11px] font-semibold text-white/42">จัดการบัญชี รายการโปรด และระบบสมาชิก</p>
+          </div>
+
+          <div className="mt-3 grid gap-1.5">
+            {[
+              ['♡ รายการโปรด', 'เก็บหนังที่อยากดูไว้ในบัญชี'],
+              ['⏱ ประวัติการรับชม', 'ดูเรื่องที่เปิดล่าสุดและดูต่อ'],
+              ['♛ สมัครสมาชิก', 'แพ็กเกจ Premium / ไม่มีโฆษณา'],
+            ].map(([title, desc]) => (
+              <button key={title} type="button" className="rounded-2xl bg-white/[0.055] px-4 py-3 text-left transition hover:bg-white/[0.1]">
+                <span className="block text-sm font-black text-white/88">{title}</span>
+                <span className="mt-0.5 block text-[11px] font-semibold text-white/38">{desc}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => setAuthMode('signin')} className={`rounded-2xl px-4 py-3 text-xs font-black ${authMode === 'signin' ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.07] text-white/70'}`}>
+              Sign in
+            </button>
+            <button type="button" onClick={() => setAuthMode('signup')} className={`rounded-2xl px-4 py-3 text-xs font-black ${authMode === 'signup' ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.07] text-white/70'}`}>
+              Sign up
+            </button>
+          </div>
+
+          <div className="mt-3 rounded-[22px] border border-white/8 bg-black/35 p-3">
+            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.22em] text-white/38">
+              {authMode === 'signin' ? 'เข้าสู่ระบบด้วย' : 'สมัครด้วย'}
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {['Google', 'Facebook', 'Apple', 'LINE', 'Email', 'เบอร์โทร'].map((label) => (
+                <button key={label} type="button" className="rounded-xl bg-white/[0.075] px-3 py-2 text-[11px] font-black text-white/72 transition hover:bg-white/[0.13] hover:text-white">
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <a href="/admin" className="mt-3 flex items-center justify-between rounded-2xl border border-[#e50914]/35 bg-[#170203]/70 px-4 py-3 text-sm font-black text-red-100 shadow-[0_0_24px_rgba(229,9,20,0.16)]">
+            <span>Admin login</span>
+            <span>›</span>
+          </a>
+        </div>
+      ) : null}
+    </div>,
+    host
+  );
+}
+
 function HeroAutoRotatorPortal({ home, onSelect }: { home: HomePayload; onSelect: (item: MovieItem) => void }) {
   const [host, setHost] = useState<HTMLElement | null>(null);
   const items = useMemo(() => heroPool(home), [home]);
@@ -252,19 +363,10 @@ function HeroAutoRotatorPortal({ home, onSelect }: { home: HomePayload; onSelect
           </p>
 
           <div className="mt-5 flex gap-2.5 md:mt-8 md:gap-5">
-            <button
-              type="button"
-              onClick={() => onSelect(item)}
-              className="inline-flex h-[42px] items-center gap-2 rounded-lg bg-[#e50914] px-5 text-[13px] font-black text-white shadow-glow md:h-[55px] md:px-9 md:text-[16px]"
-            >
+            <button type="button" onClick={() => onSelect(item)} className="inline-flex h-[42px] items-center gap-2 rounded-lg bg-[#e50914] px-5 text-[13px] font-black text-white shadow-glow md:h-[55px] md:px-9 md:text-[16px]">
               ▶ รับชม
             </button>
-
-            <button
-              type="button"
-              onClick={() => onSelect(item)}
-              className="inline-flex h-[42px] items-center gap-2 rounded-lg border border-white/10 bg-white/[0.12] px-5 text-[13px] font-black text-white/86 md:h-[55px] md:px-8 md:text-[16px]"
-            >
+            <button type="button" onClick={() => onSelect(item)} className="inline-flex h-[42px] items-center gap-2 rounded-lg border border-white/10 bg-white/[0.12] px-5 text-[13px] font-black text-white/86 md:h-[55px] md:px-8 md:text-[16px]">
               ⓘ รายละเอียด
             </button>
           </div>
@@ -327,12 +429,7 @@ function DynamicCategoryChips({ sections, onOpen }: { sections: MovieSection[]; 
   return createPortal(
     <div id="dynamic-category-chip-row" className="flex max-h-[138px] flex-wrap gap-1.5 overflow-y-auto pr-1 md:max-h-[96px] md:gap-2 xl:max-h-[112px]">
       {categorySections.map((section, index) => (
-        <button
-          key={`${section.slug}-${index}`}
-          type="button"
-          onClick={() => onOpen(section)}
-          className="inline-flex h-[22px] items-center rounded-full bg-white/[0.075] px-2.5 text-[9px] font-black leading-none text-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition hover:bg-[#e50914] hover:text-white md:h-7 md:px-3 md:text-[11px]"
-        >
+        <button key={`${section.slug}-${index}`} type="button" onClick={() => onOpen(section)} className="inline-flex h-[22px] items-center rounded-full bg-white/[0.075] px-2.5 text-[9px] font-black leading-none text-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition hover:bg-[#e50914] hover:text-white md:h-7 md:px-3 md:text-[11px]">
           {index === 0 ? 'ทั้งหมด' : sectionDisplayTitle(section, index - 1)}
         </button>
       ))}
@@ -365,33 +462,15 @@ function FullSectionOverlay({ section, allItems, onClose }: { section: MovieSect
             <h2 className="mt-1 text-[28px] font-black tracking-[-0.05em] md:text-[48px]">{section.title}</h2>
             <p className="mt-1 text-xs font-bold text-white/45">ทั้งหมด {items.length} เรื่อง</p>
           </div>
-          <button type="button" onClick={onClose} className="rounded-full bg-white/[0.1] px-4 py-2 text-xs font-black text-white/80 hover:bg-[#e50914]">
-            ปิด
-          </button>
+          <button type="button" onClick={onClose} className="rounded-full bg-white/[0.1] px-4 py-2 text-xs font-black text-white/80 hover:bg-[#e50914]">ปิด</button>
         </div>
-
         <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-5 md:grid-cols-6 md:gap-4 lg:grid-cols-7 xl:grid-cols-8">
           {items.map((item, index) => (
-            <MovieCard
-              key={`full-${section.slug}-${item.mediaType}-${item.id}-${index}`}
-              item={item}
-              onSelect={setSelected}
-              grid
-              priority={index < 12}
-              priorityBadge={section.title === 'ทั้งหมด' ? undefined : section.title}
-            />
+            <MovieCard key={`full-${section.slug}-${item.mediaType}-${item.id}-${index}`} item={item} onSelect={setSelected} grid priority={index < 12} priorityBadge={section.title === 'ทั้งหมด' ? undefined : section.title} />
           ))}
         </div>
       </div>
-
-      {selected ? (
-        <DetailWindow
-          item={selected}
-          recommendations={recommendations}
-          onClose={() => setSelected(null)}
-          onSelect={setSelected}
-        />
-      ) : null}
+      {selected ? <DetailWindow item={selected} recommendations={recommendations} onClose={() => setSelected(null)} onSelect={setSelected} /> : null}
     </div>
   );
 }
@@ -407,26 +486,20 @@ function RealtimeAddedCarousel({ items, onViewAll }: { items: MovieItem[]; onVie
   useEffect(() => {
     const rail = railRef.current;
     if (!rail || items.length < 4) return;
-
     const pixelsPerSecond = 18;
-
     function tick(now: number) {
       if (!rail) return;
       const last = lastFrameRef.current ?? now;
       const delta = Math.min(now - last, 64);
       lastFrameRef.current = now;
-
       if (!paused) {
         rail.scrollLeft += (pixelsPerSecond * delta) / 1000;
         const half = rail.scrollWidth / 2;
         if (half > 0 && rail.scrollLeft >= half) rail.scrollLeft -= half;
       }
-
       frameRef.current = window.requestAnimationFrame(tick);
     }
-
     frameRef.current = window.requestAnimationFrame(tick);
-
     return () => {
       if (frameRef.current) window.cancelAnimationFrame(frameRef.current);
       frameRef.current = null;
@@ -451,28 +524,12 @@ function RealtimeAddedCarousel({ items, onViewAll }: { items: MovieItem[]; onVie
         <div>
           <p className="text-[9px] font-black uppercase tracking-[0.28em] text-[#e50914]/80">Release Window</p>
           <h2 className="mt-1 text-[20px] font-black tracking-[-0.04em] md:text-[30px]">หนังเข้าใหม่ / กำลังจะเข้า</h2>
-          <p className="mt-1 text-[11px] font-semibold text-white/42">ช่วงย้อนหลัง 2 เดือนถึงหนังที่กำลังจะเข้าฉาย • ไหลช้าแบบต่อเนื่อง</p>
         </div>
-        <button type="button" onClick={() => onViewAll(items)} className="text-[12px] font-black text-white/50 hover:text-white md:text-[16px]">
-          ดูทั้งหมด ›
-        </button>
+        <button type="button" onClick={() => onViewAll(items)} className="text-[12px] font-black text-white/50 hover:text-white md:text-[16px]">ดูทั้งหมด ›</button>
       </div>
-
-      <div
-        ref={railRef}
-        onPointerDown={pauseThenResume}
-        onPointerUp={pauseThenResume}
-        onTouchEnd={pauseThenResume}
-        onWheel={pauseThenResume}
-        className="movie-rail flex cursor-grab gap-2.5 overflow-x-auto scroll-smooth pb-3 sm:gap-3 md:gap-5 md:pb-4"
-      >
+      <div ref={railRef} onPointerDown={pauseThenResume} onPointerUp={pauseThenResume} onTouchEnd={pauseThenResume} onWheel={pauseThenResume} className="movie-rail flex cursor-grab gap-2.5 overflow-x-auto scroll-smooth pb-3 sm:gap-3 md:gap-5 md:pb-4">
         {doubled.map((item, index) => (
-          <MovieCard
-            key={`realtime-${item.mediaType}-${item.id}-${index}`}
-            item={item}
-            priority={index < 8}
-            priorityBadge={item.label || (index % 3 === 0 ? 'เข้าใหม่' : index % 3 === 1 ? 'พร้อมดู' : undefined)}
-          />
+          <MovieCard key={`realtime-${item.mediaType}-${item.id}-${index}`} item={item} priority={index < 8} priorityBadge={item.label || (index % 3 === 0 ? 'เข้าใหม่' : index % 3 === 1 ? 'พร้อมดู' : undefined)} />
         ))}
       </div>
     </section>
@@ -488,7 +545,6 @@ function RealtimePortal({ home, onOpen }: { home: HomePayload; onOpen: (section:
   useEffect(() => {
     const searchSection = document.querySelector('main section.sticky');
     if (!searchSection?.parentElement) return;
-
     let node = document.getElementById('realtime-added-host');
     if (!node) {
       node = document.createElement('div');
@@ -500,7 +556,6 @@ function RealtimePortal({ home, onOpen }: { home: HomePayload; onOpen: (section:
 
   useEffect(() => {
     let active = true;
-
     async function loadRecent() {
       try {
         const response = await fetch('/api/catalog/recent', { cache: 'no-store' });
@@ -508,10 +563,8 @@ function RealtimePortal({ home, onOpen }: { home: HomePayload; onOpen: (section:
         if (active && payload.ok && payload.items?.length) setLiveItems(payload.items);
       } catch {}
     }
-
     void loadRecent();
     const timer = window.setInterval(loadRecent, 60_000);
-
     return () => {
       active = false;
       window.clearInterval(timer);
@@ -525,33 +578,19 @@ export function HomeRealtimeWrapper({ home }: { home: HomePayload }) {
   const [openSection, setOpenSection] = useState<MovieSection | null>(null);
   const [selected, setSelected] = useState<MovieItem | null>(null);
   const allItems = useMemo(() => unique(home.sections.flatMap((section) => section.items)), [home.sections]);
-  const recommendations = selected
-    ? allItems.filter((item) => `${item.mediaType}-${item.id}` !== `${selected.mediaType}-${selected.id}`).slice(0, 24)
-    : allItems.slice(0, 24);
+  const recommendations = selected ? allItems.filter((item) => `${item.mediaType}-${item.id}` !== `${selected.mediaType}-${selected.id}`).slice(0, 24) : allItems.slice(0, 24);
 
   return (
     <>
       <HomeExperienceV3 home={home} />
+      <HeaderAccountMenuPortal />
       <HeroAutoRotatorPortal home={home} onSelect={setSelected} />
       <DesktopRailScrollFix />
       <ViewAllClickBridge sections={home.sections} onOpen={setOpenSection} />
       <DynamicCategoryChips sections={home.sections} onOpen={setOpenSection} />
       <RealtimePortal home={home} onOpen={setOpenSection} />
-      {openSection ? (
-        <FullSectionOverlay
-          section={openSection}
-          allItems={allItems}
-          onClose={() => setOpenSection(null)}
-        />
-      ) : null}
-      {selected ? (
-        <DetailWindow
-          item={selected}
-          recommendations={recommendations}
-          onClose={() => setSelected(null)}
-          onSelect={setSelected}
-        />
-      ) : null}
+      {openSection ? <FullSectionOverlay section={openSection} allItems={allItems} onClose={() => setOpenSection(null)} /> : null}
+      {selected ? <DetailWindow item={selected} recommendations={recommendations} onClose={() => setSelected(null)} onSelect={setSelected} /> : null}
     </>
   );
 }
