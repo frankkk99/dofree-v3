@@ -13,6 +13,10 @@ function unique(items: MovieItem[]) {
   return [...map.values()];
 }
 
+function shortTitle(item: MovieItem) {
+  return item.title.length > 14 ? item.title.slice(0, 13) : item.title;
+}
+
 function fallbackRecentlyAdded(home: HomePayload) {
   const watchReady = home.sections.find((section) => section.slug === 'watch-ready')?.items || [];
   const nowPlaying = home.sections.find((section) => section.slug === 'now-playing')?.items || [];
@@ -106,44 +110,45 @@ function RealtimeAddedCarousel({ items }: { items: MovieItem[] }) {
   );
 }
 
-function openCurrentHeroDetail() {
-  const buttons = Array.from(document.querySelectorAll('button'));
-  const detailButton = buttons.find((button) => button.textContent?.includes('รายละเอียด'));
-  detailButton?.click();
-}
-
 function HeroReleasePortal({ home }: { home: HomePayload }) {
   const [host, setHost] = useState<HTMLElement | null>(null);
-  const label = releaseMonthYear(home.hero as MovieItem & { releaseDate?: string });
+  const [label, setLabel] = useState(releaseMonthYear(home.hero as MovieItem & { releaseDate?: string }));
+
+  const heroCandidates = useMemo(
+    () => unique([home.hero, ...(home.heroItems || []), ...home.sections.flatMap((section) => section.items)]),
+    [home]
+  );
 
   useEffect(() => {
-    const heroSection = document.querySelector('main > section.relative');
-    if (!heroSection) return;
-
-    let node = document.getElementById('hero-release-host');
-    if (!node) {
-      node = document.createElement('div');
-      node.id = 'hero-release-host';
-      heroSection.appendChild(node);
+    function findHeroLabelHost() {
+      const paragraphs = Array.from(document.querySelectorAll('p'));
+      const target = paragraphs.find((paragraph) => {
+        const text = paragraph.textContent || '';
+        return text.includes('ภาพยนตร์พร้อมรับชม') || text.includes('ภาพยนตร์สุ่มแนะนำ');
+      });
+      if (target) setHost(target);
     }
-    setHost(node);
-  }, []);
+
+    function syncCurrentHeroRelease() {
+      const currentTitle = document.querySelector('h1.hero-title')?.textContent?.trim() || '';
+      const match = heroCandidates.find((item) => shortTitle(item) === currentTitle || item.title === currentTitle);
+      setLabel(releaseMonthYear((match || home.hero) as MovieItem & { releaseDate?: string }));
+    }
+
+    findHeroLabelHost();
+    syncCurrentHeroRelease();
+    const timer = window.setInterval(() => {
+      findHeroLabelHost();
+      syncCurrentHeroRelease();
+    }, 800);
+
+    return () => window.clearInterval(timer);
+  }, [heroCandidates, home.hero]);
 
   if (!host) return null;
 
   return createPortal(
-    <div className="pointer-events-none absolute bottom-5 right-4 z-20 flex flex-col items-end gap-2 md:bottom-8 md:right-8">
-      <span className="rounded-full border border-white/10 bg-black/55 px-3 py-1.5 text-[10px] font-black text-white/80 shadow-[0_14px_40px_rgba(0,0,0,0.52)] backdrop-blur-xl md:text-xs">
-        เข้าฉาย {label}
-      </span>
-      <button
-        type="button"
-        onClick={openCurrentHeroDetail}
-        className="pointer-events-auto rounded-xl bg-white/[0.12] px-4 py-2 text-[11px] font-black text-white/86 shadow-[0_14px_46px_rgba(0,0,0,0.55)] backdrop-blur-xl transition hover:bg-[#e50914] md:px-5 md:py-3 md:text-sm"
-      >
-        ดูการ์ดเรื่องนี้
-      </button>
-    </div>,
+    <span className="ml-2 text-white/90">• เข้าฉาย {label}</span>,
     host
   );
 }
