@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import { MovieCard } from '@/components/movie-card';
 import { getDetailPayload, type MediaType } from '@/lib/tmdb';
+import { absoluteUrl, canonical, seoConfig } from '@/lib/seo';
 
-const siteName = 'ดูดีดี';
 const allowedMediaTypes = new Set(['movie', 'tv']);
 
 type PageProps = {
@@ -51,16 +51,31 @@ function linkProps(href?: string) {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { mediaType, id } = await params;
-  const detail = await getDetailPayload(parseMediaType(mediaType), id);
+  const parsedMediaType = parseMediaType(mediaType);
+  const detail = await getDetailPayload(parsedMediaType, id);
+  const title = `รับชม ${detail.item.title}`;
+  const description = detail.item.overview || `หน้ารับชม ${detail.item.title} บน${seoConfig.siteName}`;
+  const path = `/watch/${parsedMediaType}/${id}`;
 
   return {
-    title: `รับชม ${detail.item.title}`,
-    description: detail.item.overview || `หน้ารับชม ${detail.item.title} บน${siteName}`,
+    title,
+    description,
+    alternates: {
+      canonical: canonical(path),
+    },
     openGraph: {
-      title: `รับชม ${detail.item.title} | ${siteName}`,
-      description: detail.item.overview,
-      images: [detail.item.backdropUrl],
-      siteName,
+      title: `${title} | ${seoConfig.siteName}`,
+      description,
+      url: absoluteUrl(path),
+      images: [{ url: detail.item.backdropUrl || detail.item.posterUrl, alt: detail.item.title }],
+      siteName: seoConfig.siteName,
+      locale: seoConfig.locale,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${title} | ${seoConfig.siteName}`,
+      description,
+      images: [detail.item.backdropUrl || detail.item.posterUrl],
     },
   };
 }
@@ -87,7 +102,7 @@ export default async function WatchPage({ params }: PageProps) {
               กลับหน้ารายละเอียด
             </a>
             <a href="/" className="text-[24px] font-black tracking-[-0.08em] text-[#e50914] md:text-[34px]">
-              {siteName}
+              {seoConfig.siteName}
             </a>
           </div>
 
