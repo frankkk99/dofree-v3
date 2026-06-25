@@ -57,7 +57,7 @@ const adminModules = [
   { label: 'Missing Link Queue', href: '#catalog-manager', description: 'คิวหนังที่ควรเติมลิงก์ก่อน' },
   { label: 'Broken Link Reports', href: '#catalog-manager', description: 'เตรียมต่อรายงานลิงก์เสีย' },
   { label: 'Users & Roles', href: '/admin/users', description: 'จัดการผู้ใช้และ role viewer/admin' },
-  { label: 'Premium Memberships', href: '/admin/users', description: 'ดูสถานะสมาชิกเบื้องต้น' },
+  { label: 'Premium Memberships', href: '/admin/memberships', description: 'อนุมัติ Premium และตั้งวันหมดอายุ' },
   { label: 'Import / Export', href: '#catalog-manager', description: 'นำเข้า/ส่งออก CSV สำหรับลิงก์หนัง' },
   { label: 'Site Settings', href: '#catalog-manager', description: 'เตรียมต่อการตั้งค่าเว็บ' },
   { label: 'Analytics', href: '#catalog-manager', description: 'เตรียมต่อสถิติการใช้งาน' },
@@ -132,6 +132,7 @@ export function AdminDashboard() {
           <div className="flex flex-wrap gap-2">
             <a href="/" className="rounded-2xl bg-white/[0.08] px-4 py-3 text-xs font-black text-white/75 hover:bg-white/[0.14]">หน้าเว็บ</a>
             <a href="/admin/users" className="rounded-2xl bg-white/[0.08] px-4 py-3 text-xs font-black text-white/75 hover:bg-white/[0.14]">Users</a>
+            <a href="/admin/memberships" className="rounded-2xl bg-white/[0.08] px-4 py-3 text-xs font-black text-white/75 hover:bg-white/[0.14]">Memberships</a>
             <a href="/favorites" className="rounded-2xl bg-white/[0.08] px-4 py-3 text-xs font-black text-white/75 hover:bg-white/[0.14]">Favorites</a>
             <a href="/history" className="rounded-2xl bg-white/[0.08] px-4 py-3 text-xs font-black text-white/75 hover:bg-white/[0.14]">History</a>
             <button onClick={loadDashboard} className="rounded-2xl bg-[#e50914] px-4 py-3 text-xs font-black text-white shadow-glow">Refresh</button>
