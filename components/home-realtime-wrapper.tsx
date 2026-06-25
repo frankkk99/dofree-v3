@@ -65,6 +65,17 @@ function fallbackRecentlyAdded(home: HomePayload) {
   ]).slice(0, 36);
 }
 
+function heroPool(home: HomePayload) {
+  const primary = home.heroItems?.length ? home.heroItems : [home.hero];
+  return unique([...primary, ...fallbackRecentlyAdded(home)]).filter((item) => item.backdropUrl || item.posterUrl);
+}
+
+function randomNextIndex(length: number, current: number) {
+  if (length <= 1) return current;
+  const next = Math.floor(Math.random() * length);
+  return next === current ? (next + 1) % length : next;
+}
+
 function railFromTarget(target: EventTarget | null) {
   if (!(target instanceof Element)) return null;
   return target.closest('.movie-rail') as HTMLElement | null;
@@ -145,6 +156,97 @@ function DesktopRailScrollFix() {
   }, []);
 
   return null;
+}
+
+function HeroAutoRotatorPortal({ home, onSelect }: { home: HomePayload; onSelect: (item: MovieItem) => void }) {
+  const [host, setHost] = useState<HTMLElement | null>(null);
+  const items = useMemo(() => heroPool(home), [home]);
+  const [index, setIndex] = useState(0);
+  const [visible, setVisible] = useState(true);
+  const item = items[index] || home.hero;
+
+  useEffect(() => {
+    const heroSection = document.querySelector('main > section.relative');
+    if (heroSection instanceof HTMLElement) setHost(heroSection);
+  }, []);
+
+  useEffect(() => {
+    setIndex((current) => Math.min(current, Math.max(items.length - 1, 0)));
+  }, [items.length]);
+
+  useEffect(() => {
+    if (items.length <= 1) return;
+
+    let fadeTimer: number | null = null;
+    const timer = window.setInterval(() => {
+      setVisible(false);
+      fadeTimer = window.setTimeout(() => {
+        setIndex((current) => randomNextIndex(items.length, current));
+        setVisible(true);
+      }, 420);
+    }, 8000);
+
+    return () => {
+      window.clearInterval(timer);
+      if (fadeTimer) window.clearTimeout(fadeTimer);
+    };
+  }, [items.length]);
+
+  if (!host || !item) return null;
+
+  const releaseLabel = releaseMonthYear(item as MovieItem & { releaseDate?: string });
+  const heroLabel = item.status === 'published' || item.watchUrl ? 'ภาพยนตร์พร้อมรับชม' : 'ภาพยนตร์สุ่มแนะนำ';
+
+  return createPortal(
+    <div className="absolute inset-0 z-30 overflow-hidden bg-[#030303]">
+      <div
+        className={`absolute inset-y-0 right-0 w-full bg-cover bg-center transition-opacity duration-700 md:w-[78%] ${visible ? 'opacity-90' : 'opacity-0'}`}
+        style={{ backgroundImage: `url(${item.backdropUrl || item.posterUrl})` }}
+      />
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,#030303_0%,rgba(3,3,3,0.96)_24%,rgba(3,3,3,0.78)_52%,rgba(0,0,0,0.32)_78%,#030303_100%)]" />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.06)_0%,rgba(0,0,0,0.10)_42%,#030303_100%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_42%,rgba(0,0,0,0.48),transparent_18rem)]" />
+
+      <div className="relative z-10 mx-auto flex min-h-[500px] max-w-[1920px] flex-col justify-end px-4 pb-9 pt-[58px] md:min-h-[585px] md:justify-center md:px-7 md:pb-0 md:pt-[76px] xl:min-h-[610px] xl:pt-[88px]">
+        <div className={`max-w-[680px] transition-all duration-700 md:ml-[6vw] xl:ml-[10vw] ${visible ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'}`}>
+          <p className="mb-3 text-[13px] font-black text-[#e50914] md:mb-5 md:text-[22px]">
+            {heroLabel} <span className="ml-2 text-white/90">• เข้าฉาย {releaseLabel}</span>
+          </p>
+
+          <h1 className="hero-title max-w-[92vw] text-[42px] font-black leading-[0.88] tracking-[-0.085em] text-white md:whitespace-nowrap md:text-[92px] lg:text-[112px] xl:text-[120px]">
+            {shortTitle(item)}
+          </h1>
+
+          <h2 className="mt-3 max-w-[92vw] text-[16px] font-black tracking-[-0.04em] text-white md:mt-6 md:text-[28px]">
+            หนังเข้าใหม่ / กำลังจะเข้า
+          </h2>
+
+          <p className="mt-2 line-clamp-3 max-w-[92vw] text-[12px] leading-5 text-white/56 md:mt-3 md:max-w-[620px] md:text-[18px] md:leading-7">
+            {item.overview}
+          </p>
+
+          <div className="mt-5 flex gap-2.5 md:mt-8 md:gap-5">
+            <button
+              type="button"
+              onClick={() => onSelect(item)}
+              className="inline-flex h-[42px] items-center gap-2 rounded-lg bg-[#e50914] px-5 text-[13px] font-black text-white shadow-glow md:h-[55px] md:px-9 md:text-[16px]"
+            >
+              ▶ รับชม
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onSelect(item)}
+              className="inline-flex h-[42px] items-center gap-2 rounded-lg border border-white/10 bg-white/[0.12] px-5 text-[13px] font-black text-white/86 md:h-[55px] md:px-8 md:text-[16px]"
+            >
+              ⓘ รายละเอียด
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>,
+    host
+  );
 }
 
 function ViewAllClickBridge({ sections, onOpen }: { sections: MovieSection[]; onOpen: (section: MovieSection) => void }) {
@@ -351,49 +453,6 @@ function RealtimeAddedCarousel({ items, onViewAll }: { items: MovieItem[]; onVie
   );
 }
 
-function HeroReleasePortal({ home }: { home: HomePayload }) {
-  const [host, setHost] = useState<HTMLElement | null>(null);
-  const [label, setLabel] = useState(releaseMonthYear(home.hero as MovieItem & { releaseDate?: string }));
-
-  const heroCandidates = useMemo(
-    () => unique([home.hero, ...(home.heroItems || []), ...home.sections.flatMap((section) => section.items)]),
-    [home]
-  );
-
-  useEffect(() => {
-    function findHeroLabelHost() {
-      const paragraphs = Array.from(document.querySelectorAll('p'));
-      const target = paragraphs.find((paragraph) => {
-        const text = paragraph.textContent || '';
-        return text.includes('ภาพยนตร์พร้อมรับชม') || text.includes('ภาพยนตร์สุ่มแนะนำ');
-      });
-      if (target) setHost(target);
-    }
-
-    function syncCurrentHeroRelease() {
-      const currentTitle = document.querySelector('h1.hero-title')?.textContent?.trim() || '';
-      const match = heroCandidates.find((item) => shortTitle(item) === currentTitle || item.title === currentTitle);
-      setLabel(releaseMonthYear((match || home.hero) as MovieItem & { releaseDate?: string }));
-    }
-
-    findHeroLabelHost();
-    syncCurrentHeroRelease();
-    const timer = window.setInterval(() => {
-      findHeroLabelHost();
-      syncCurrentHeroRelease();
-    }, 800);
-
-    return () => window.clearInterval(timer);
-  }, [heroCandidates, home.hero]);
-
-  if (!host) return null;
-
-  return createPortal(
-    <span className="ml-2 text-white/90">• เข้าฉาย {label}</span>,
-    host
-  );
-}
-
 function RealtimePortal({ home, onOpen }: { home: HomePayload; onOpen: (section: MovieSection) => void }) {
   const [host, setHost] = useState<HTMLElement | null>(null);
   const [liveItems, setLiveItems] = useState<MovieItem[]>([]);
@@ -438,21 +497,33 @@ function RealtimePortal({ home, onOpen }: { home: HomePayload; onOpen: (section:
 
 export function HomeRealtimeWrapper({ home }: { home: HomePayload }) {
   const [openSection, setOpenSection] = useState<MovieSection | null>(null);
+  const [selected, setSelected] = useState<MovieItem | null>(null);
   const allItems = useMemo(() => unique(home.sections.flatMap((section) => section.items)), [home.sections]);
+  const recommendations = selected
+    ? allItems.filter((item) => `${item.mediaType}-${item.id}` !== `${selected.mediaType}-${selected.id}`).slice(0, 24)
+    : allItems.slice(0, 24);
 
   return (
     <>
       <HomeExperienceV3 home={home} />
+      <HeroAutoRotatorPortal home={home} onSelect={setSelected} />
       <DesktopRailScrollFix />
       <ViewAllClickBridge sections={home.sections} onOpen={setOpenSection} />
       <DynamicCategoryChips sections={home.sections} onOpen={setOpenSection} />
-      <HeroReleasePortal home={home} />
       <RealtimePortal home={home} onOpen={setOpenSection} />
       {openSection ? (
         <FullSectionOverlay
           section={openSection}
           allItems={allItems}
           onClose={() => setOpenSection(null)}
+        />
+      ) : null}
+      {selected ? (
+        <DetailWindow
+          item={selected}
+          recommendations={recommendations}
+          onClose={() => setSelected(null)}
+          onSelect={setSelected}
         />
       ) : null}
     </>
