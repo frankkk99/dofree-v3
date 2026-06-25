@@ -22,7 +22,7 @@ export type DofreeSession = {
   profile?: DofreeProfile | null;
 };
 
-const sessionKey = 'dofree_auth_session';
+const sessionKey = 'dodeedee_auth_session';
 const defaultRole = 'viewer';
 
 function baseUrl() {
@@ -34,8 +34,8 @@ function anonKey() {
 }
 
 function currentOrigin() {
-  if (typeof window === 'undefined') return 'https://dofree-v3.vercel.app';
-  return window.location.origin.includes('localhost') ? 'https://dofree-v3.vercel.app' : window.location.origin;
+  if (typeof window === 'undefined') return 'https://www.xn--l3caa5kbu.online';
+  return window.location.origin.includes('localhost') ? 'https://www.xn--l3caa5kbu.online' : window.location.origin;
 }
 
 function authRedirectTo() {
