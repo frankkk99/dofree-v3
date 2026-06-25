@@ -1,4 +1,15 @@
+import type { Metadata } from 'next';
 import { BackLink } from '@/components/back-link';
+import { publicPageMetadata } from '@/lib/seo';
+
+export const metadata: Metadata = {
+  ...publicPageMetadata({
+    title: 'สมัครสมาชิกดูหนังออนไลน์',
+    description: 'สมัครสมาชิกดูดีดีเพื่อเก็บรายการโปรด ดูประวัติการรับชม ติดตามหนังใหม่ และเตรียมใช้สิทธิ์ Premium สำหรับประสบการณ์ดูหนังออนไลน์ที่ครบขึ้น',
+    path: '/membership',
+    keywords: ['สมัครสมาชิกดูหนัง', 'สมาชิกดูหนังออนไลน์', 'Premium ดูหนัง'],
+  }),
+};
 
 const plans = [
   {
