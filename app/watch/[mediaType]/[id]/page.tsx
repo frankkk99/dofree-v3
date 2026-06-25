@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { MovieCard } from '@/components/movie-card';
+import { WatchHistoryRecorder } from '@/components/watch-history-recorder';
 import { getDetailPayload, type MediaType } from '@/lib/tmdb';
 import { absoluteUrl, canonical, seoConfig } from '@/lib/seo';
 
@@ -91,6 +92,7 @@ export default async function WatchPage({ params }: PageProps) {
 
   return (
     <main className="min-h-screen bg-[#030303] text-white">
+      <WatchHistoryRecorder item={item} />
       <section className="relative overflow-hidden border-b border-white/10 px-4 pb-8 pt-4 md:px-6 md:pb-12">
         <div className="absolute inset-0 bg-cover bg-center opacity-30" style={{ backgroundImage: `url(${item.backdropUrl})` }} />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(3,3,3,0.64),#030303_82%)]" />
