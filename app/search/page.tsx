@@ -1,21 +1,19 @@
 import type { Metadata } from 'next';
 import { MovieCard } from '@/components/movie-card';
 import { searchMovies } from '@/lib/tmdb';
-
-const siteName = 'ดูดีดี';
+import { publicPageMetadata } from '@/lib/seo';
 
 type SearchProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export const metadata: Metadata = {
-  title: 'ค้นหาภาพยนตร์และซีรีส์',
-  description: `ค้นหาภาพยนตร์ ซีรีส์ และข้อมูลจาก TMDB บน${siteName}`,
-  openGraph: {
-    title: `ค้นหาภาพยนตร์และซีรีส์ | ${siteName}`,
-    description: `ค้นหาภาพยนตร์ ซีรีส์ และข้อมูลจาก TMDB บน${siteName}`,
-    siteName,
-  },
+  ...publicPageMetadata({
+    title: 'ค้นหาหนังออนไลน์และซีรีส์ออนไลน์',
+    description: 'ค้นหาหนังออนไลน์ ซีรีส์ออนไลน์ หนังไทย หนังฝรั่ง ซีรีส์เกาหลี พากย์ไทย ซับไทย และข้อมูลเรื่องย่อบนดูดีดี',
+    path: '/search',
+    keywords: ['ค้นหาหนัง', 'ค้นหาซีรีส์', 'รายชื่อหนัง', 'เรื่องย่อหนัง'],
+  }),
 };
 
 export default async function SearchPage({ searchParams }: SearchProps) {
