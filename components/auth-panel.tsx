@@ -1,7 +1,16 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { getCurrentUser, getStoredSession, signInWithEmail, signOut, signUpWithEmail, type DofreeUser } from '@/lib/supabase-auth-browser';
+import {
+  consumeAuthRedirectFromUrl,
+  getCurrentUser,
+  getStoredSession,
+  resendConfirmationEmail,
+  signInWithEmail,
+  signOut,
+  signUpWithEmail,
+  type DofreeUser,
+} from '@/lib/supabase-auth-browser';
 
 type AuthMode = 'signin' | 'signup';
 
@@ -16,6 +25,8 @@ function methodHint() {
   const params = new URLSearchParams(window.location.search);
   const provider = params.get('provider');
   const method = params.get('method');
+  const confirmed = params.get('confirmed');
+  if (confirmed) return 'ยืนยันอีเมลแล้ว ระบบกำลังผูกบัญชีให้';
   if (provider) return `เลือก ${provider} ไว้แล้ว — ขั้นต่อไปจะต่อ OAuth จริง`;
   if (method === 'phone') return 'เลือกเบอร์โทรไว้แล้ว — ขั้นต่อไปจะต่อ Phone OTP';
   if (method === 'email') return 'เลือก Email ไว้แล้ว — ใช้ฟอร์มด้านล่างได้เลย';
@@ -29,18 +40,37 @@ export function AuthPanel() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [user, setUser] = useState<DofreeUser | null>(null);
+  const [needsConfirmation, setNeedsConfirmation] = useState(false);
   const hint = useMemo(() => methodHint(), []);
 
   useEffect(() => {
     setMode(initialMode());
     const session = getStoredSession();
     setUser(session?.user || null);
-    void getCurrentUser().then(setUser).catch(() => null);
+
+    async function boot() {
+      try {
+        const redirectSession = await consumeAuthRedirectFromUrl();
+        if (redirectSession?.user) {
+          setUser(redirectSession.user);
+          setMessage('ยืนยันอีเมลและเข้าสู่ระบบสำเร็จ');
+          setNeedsConfirmation(false);
+          return;
+        }
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : 'ลิงก์ยืนยันไม่ถูกต้องหรือหมดอายุ');
+      }
+
+      await getCurrentUser().then(setUser).catch(() => null);
+    }
+
+    void boot();
   }, []);
 
   async function submit() {
     setLoading(true);
     setMessage('');
+    setNeedsConfirmation(false);
 
     try {
       if (!email.trim() || !password.trim()) throw new Error('กรอกอีเมลและรหัสผ่านก่อน');
@@ -54,10 +84,31 @@ export function AuthPanel() {
         setUser(session.user);
         setMessage(mode === 'signin' ? 'เข้าสู่ระบบสำเร็จ' : 'สมัครสมาชิกสำเร็จ');
       } else {
-        setMessage('สมัครแล้ว โปรดเช็กอีเมลเพื่อยืนยันบัญชี ก่อนเข้าสู่ระบบ');
+        setNeedsConfirmation(true);
+        setMessage('สมัครแล้ว โปรดเช็กอีเมลเพื่อยืนยันบัญชี ก่อนกลับมา Sign in');
       }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'เกิดข้อผิดพลาด');
+      const text = error instanceof Error ? error.message : 'เกิดข้อผิดพลาด';
+      setMessage(text);
+      if (text.toLowerCase().includes('confirm') || text.toLowerCase().includes('not confirmed')) {
+        setNeedsConfirmation(true);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function resend() {
+    setLoading(true);
+    setMessage('');
+
+    try {
+      if (!email.trim()) throw new Error('กรอกอีเมลก่อนส่งลิงก์ยืนยันใหม่');
+      await resendConfirmationEmail(email.trim());
+      setNeedsConfirmation(true);
+      setMessage('ส่งอีเมลยืนยันใหม่แล้ว ลิงก์รอบนี้จะกลับมาที่เว็บจริง ไม่ใช่ localhost');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'ส่งอีเมลยืนยันใหม่ไม่ได้');
     } finally {
       setLoading(false);
     }
@@ -137,6 +188,17 @@ export function AuthPanel() {
           >
             {loading ? 'กำลังดำเนินการ...' : mode === 'signin' ? 'เข้าสู่ระบบด้วย Email' : 'สมัครสมาชิกด้วย Email'}
           </button>
+
+          {needsConfirmation ? (
+            <button
+              type="button"
+              onClick={resend}
+              disabled={loading}
+              className="h-12 rounded-2xl bg-white/[0.09] px-5 text-sm font-black text-white/78 transition hover:bg-white/[0.14] disabled:opacity-50"
+            >
+              ส่งอีเมลยืนยันใหม่
+            </button>
+          ) : null}
         </div>
       )}
 
