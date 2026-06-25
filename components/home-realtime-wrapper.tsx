@@ -65,9 +65,35 @@ function fallbackRecentlyAdded(home: HomePayload) {
   ]).slice(0, 36);
 }
 
+function isoDate(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function releaseWindowBounds() {
+  const now = new Date();
+  const fromDate = new Date(now);
+  fromDate.setMonth(fromDate.getMonth() - 2);
+  const toDate = new Date(now);
+  toDate.setMonth(toDate.getMonth() + 8);
+  return { from: isoDate(fromDate), to: isoDate(toDate) };
+}
+
+function releaseDateOf(item: MovieItem) {
+  return (item as MovieItem & { releaseDate?: string }).releaseDate || '';
+}
+
+function isInReleaseWindow(item: MovieItem) {
+  const date = releaseDateOf(item);
+  if (!date) return false;
+  const window = releaseWindowBounds();
+  return date >= window.from && date <= window.to;
+}
+
 function heroPool(home: HomePayload) {
-  const primary = home.heroItems?.length ? home.heroItems : [home.hero];
-  return unique([...primary, ...fallbackRecentlyAdded(home)]).filter((item) => item.backdropUrl || item.posterUrl);
+  const primary = unique(home.heroItems?.length ? home.heroItems : [home.hero]);
+  const windowItems = primary.filter(isInReleaseWindow).filter((item) => item.backdropUrl || item.posterUrl);
+  if (windowItems.length) return windowItems;
+  return primary.filter((item) => item.backdropUrl || item.posterUrl).slice(0, 1);
 }
 
 function randomNextIndex(length: number, current: number) {
