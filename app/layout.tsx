@@ -16,23 +16,24 @@ const notoSansThai = Noto_Sans_Thai({
 });
 
 const siteName = 'ดูดีดี';
+const englishSiteName = 'DodeedeeV3';
 const siteUrl = 'https://www.xn--l3caa5kbu.online';
-const siteDescription = 'ดูดีดี เว็บค้นหาและจัดหมวดคอนเทนต์ภาพยนตร์และซีรีส์ โทนมืดพรีเมียม พร้อมหน้ารายละเอียด ตัวอย่าง และระบบรับชมสำหรับคอนเทนต์ที่มีสิทธิ์เผยแพร่';
+const siteDescription = 'ดูดีดี (DodeedeeV3) เว็บค้นหาและจัดหมวดคอนเทนต์ภาพยนตร์และซีรีส์ โทนมืดพรีเมียม พร้อมหน้ารายละเอียด ตัวอย่าง และระบบรับชมสำหรับคอนเทนต์ที่มีสิทธิ์เผยแพร่';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   applicationName: siteName,
   title: {
-    default: `${siteName} | เว็บดูหนังและซีรีส์ออนไลน์`,
+    default: `${siteName} | ${englishSiteName} | เว็บดูหนังและซีรีส์ออนไลน์`,
     template: `%s | ${siteName}`,
   },
   description: siteDescription,
-  keywords: [siteName, 'ดูดีดีออนไลน์', 'เว็บดูหนัง', 'ดูหนังออนไลน์', 'ซีรีส์ออนไลน์', 'Movie Website', 'Video Content Platform'],
+  keywords: [siteName, englishSiteName, 'ดูดีดีออนไลน์', 'Dodeedee', 'Dodeedee online', 'เว็บดูหนัง', 'ดูหนังออนไลน์', 'ซีรีส์ออนไลน์', 'Movie Website', 'Video Content Platform'],
   alternates: {
     canonical: '/',
   },
   openGraph: {
-    title: `${siteName} | เว็บดูหนังและซีรีส์ออนไลน์`,
+    title: `${siteName} | ${englishSiteName} | เว็บดูหนังและซีรีส์ออนไลน์`,
     description: siteDescription,
     url: siteUrl,
     siteName,
@@ -41,7 +42,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: `${siteName} | เว็บดูหนังและซีรีส์ออนไลน์`,
+    title: `${siteName} | ${englishSiteName} | เว็บดูหนังและซีรีส์ออนไลน์`,
     description: siteDescription,
   },
   robots: {
