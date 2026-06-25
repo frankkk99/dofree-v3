@@ -95,6 +95,38 @@ function badges(item: Pick<MovieItem, 'rating' | 'language' | 'isWatchReady'>, i
   return items.slice(0, 3);
 }
 
+function hiddenSearchAliases(text: string) {
+  const source = text.toLowerCase();
+  const terms: string[] = [];
+
+  if (/(race|racing|car|cars|drive|driving|driver|speed|fast|furious|drift|motor|formula|vehicle|road)/.test(source)) {
+    terms.push('หนังที่ขับรถแข่งกัน', 'ขับรถแข่งกัน', 'ขับรถแข่ง', 'แข่งรถ', 'รถแข่ง', 'รถซิ่ง', 'ซิ่ง', 'ดริฟต์', 'racing movie', 'car racing', 'speed racing');
+  }
+  if (/(fight|fighting|martial|war|soldier|battle|mission|spy|agent|revenge|gun|weapon|action)/.test(source)) {
+    terms.push('หนังต่อสู้', 'หนังบู๊', 'หนังแอ็กชัน', 'ยิงกัน', 'ภารกิจ', 'สายลับ');
+  }
+  if (/(ghost|haunted|horror|demon|curse|evil|spirit|supernatural|zombie)/.test(source)) {
+    terms.push('หนังผี', 'หนังสยอง', 'น่ากลัว', 'หลอน', 'ปีศาจ', 'ซอมบี้');
+  }
+  if (/(love|romance|romantic|relationship|wedding|couple)/.test(source)) {
+    terms.push('หนังรัก', 'โรแมนติก', 'ความรัก', 'คู่รัก');
+  }
+  if (/(detective|crime|murder|mystery|investigation|police|case)/.test(source)) {
+    terms.push('หนังสืบสวน', 'ฆาตกรรม', 'อาชญากรรม', 'นักสืบ', 'คดี', 'ปริศนา');
+  }
+  if (/(space|alien|future|robot|technology|sci-fi|science fiction|apocalypse)/.test(source)) {
+    terms.push('หนังอวกาศ', 'เอเลี่ยน', 'โลกอนาคต', 'หุ่นยนต์', 'ไซไฟ');
+  }
+  if (/(magic|fantasy|dragon|kingdom|wizard|myth|fairy)/.test(source)) {
+    terms.push('เวทมนตร์', 'มังกร', 'แฟนตาซี', 'โลกเวทมนตร์');
+  }
+  if (/(funny|comedy|comedian|laugh|family)/.test(source)) {
+    terms.push('หนังตลก', 'ฮา', 'คอมเมดี้', 'ดูสบาย');
+  }
+
+  return terms;
+}
+
 async function fetchWatchLinks() {
   const map = new Map<string, WatchLinkRecord>();
   try {
@@ -128,6 +160,7 @@ function rowSearchText(row: CatalogRow) {
 function rowToMovie(row: CatalogRow, index: number): MovieItem {
   const rating = Number(row.rating || 0);
   const mainTitle = row.title_en || row.title || `TMDB ${row.tmdb_id}`;
+  const searchText = rowSearchText(row);
   const base = {
     id: row.tmdb_id,
     mediaType: row.media_type,
@@ -139,7 +172,7 @@ function rowToMovie(row: CatalogRow, index: number): MovieItem {
     rating,
     year: row.release_year || (row.release_date ? row.release_date.slice(0, 4) : 'ไม่ระบุ'),
     releaseDate: row.release_date || undefined,
-    searchText: rowSearchText(row),
+    searchText,
     genres: row.genres || [],
     runtime: row.runtime || undefined,
     language: row.language || undefined,
@@ -147,13 +180,14 @@ function rowToMovie(row: CatalogRow, index: number): MovieItem {
     isWatchReady: false,
     label: rating >= 8 ? '8+' : '6.5+',
   } satisfies MovieItem & { releaseDate?: string; searchText?: string };
-  return { ...base, badges: badges(base, index) };
+  return { ...base, badges: [...badges(base, index), searchText, ...hiddenSearchAliases(searchText)] };
 }
 
 function applyWatch(item: MovieItem, links: Map<string, WatchLinkRecord>, index: number): MovieItem {
   const link = links.get(watchKey(item.mediaType, item.id));
   if (!link) return { ...item, isWatchReady: false, watchUrl: undefined, badges: badges({ ...item, isWatchReady: false }, index) };
 
+  const searchText = `${(item as MovieItem & { searchText?: string }).searchText || ''} ${link.title || ''} ${link.title_th || ''}`;
   const next: MovieItem = {
     ...item,
     title: link.title || item.titleEn || item.title,
@@ -164,7 +198,7 @@ function applyWatch(item: MovieItem, links: Map<string, WatchLinkRecord>, index:
     status: 'published',
     label: 'พร้อมดู',
   };
-  return { ...next, searchText: `${(item as MovieItem & { searchText?: string }).searchText || ''} ${link.title || ''} ${link.title_th || ''}`, badges: badges(next, index) } as MovieItem & { searchText?: string };
+  return { ...next, searchText, badges: [...badges(next, index), searchText, ...hiddenSearchAliases(searchText)] } as MovieItem & { searchText?: string };
 }
 
 function unique(items: MovieItem[]) {
