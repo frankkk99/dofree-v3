@@ -186,11 +186,14 @@ function DesktopRailScrollFix() {
 
 function HeaderAccountMenuPortal() {
   const [host, setHost] = useState<HTMLElement | null>(null);
+  const [bodyHost, setBodyHost] = useState<HTMLElement | null>(null);
   const [open, setOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
+    setBodyHost(document.body);
+
     function findHost() {
       const adminLink = document.querySelector('header a[href="/admin"]') as HTMLElement | null;
       const parent = adminLink?.parentElement;
@@ -218,21 +221,24 @@ function HeaderAccountMenuPortal() {
 
     document.addEventListener('keydown', onKey);
     document.addEventListener('mousedown', onClick);
+    document.body.style.overflow = open ? 'hidden' : '';
+
     return () => {
       document.removeEventListener('keydown', onKey);
       document.removeEventListener('mousedown', onClick);
+      document.body.style.overflow = '';
     };
   }, [open]);
 
   if (!host) return null;
 
-  return createPortal(
+  const menuButton = createPortal(
     <div ref={menuRef} className="relative">
       <button
         type="button"
         aria-label="เปิดเมนูบัญชี"
         onClick={() => setOpen((value) => !value)}
-        className="grid h-9 w-9 place-items-center rounded-full border border-white/12 bg-white/[0.08] text-white shadow-[0_0_24px_rgba(229,9,20,0.24)] transition hover:border-[#e50914]/70 hover:bg-[#170203] md:h-12 md:w-12"
+        className={`grid h-9 w-9 place-items-center rounded-full border text-white shadow-[0_0_28px_rgba(229,9,20,0.28)] transition md:h-12 md:w-12 ${open ? 'border-[#e50914]/80 bg-[#170203]' : 'border-white/12 bg-white/[0.08] hover:border-[#e50914]/70 hover:bg-[#170203]'}`}
       >
         <span className="flex flex-col gap-1.5">
           <span className="block h-0.5 w-4 rounded-full bg-white md:w-5" />
@@ -240,65 +246,90 @@ function HeaderAccountMenuPortal() {
           <span className="block h-0.5 w-4 rounded-full bg-white md:w-5" />
         </span>
       </button>
-
-      {open ? (
-        <div className="fixed inset-0 z-[120] bg-black/58 backdrop-blur-md md:bg-transparent md:backdrop-blur-0">
-          <div className="absolute right-3 top-[70px] max-h-[calc(100vh-86px)] w-[330px] max-w-[calc(100vw-24px)] overflow-y-auto rounded-[28px] border border-white/10 bg-[#080808]/98 p-3 text-white shadow-[0_24px_90px_rgba(0,0,0,0.82)] md:right-7 md:top-[92px] md:w-[380px]">
-            <div className="rounded-[22px] bg-white/[0.055] p-4">
-              <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]/85">Account</p>
-              <h3 className="mt-1 text-[22px] font-black tracking-[-0.055em]">เมนูผู้ใช้</h3>
-              <p className="mt-1 text-[11px] font-semibold text-white/42">บัญชี รายการโปรด ประวัติ และสมาชิก</p>
-            </div>
-
-            <div className="mt-3 grid gap-1.5">
-              {[
-                ['/favorites', '♡ รายการโปรด', 'เก็บหนังที่อยากดูไว้ในบัญชี'],
-                ['/history', '⏱ ประวัติการรับชม', 'ดูเรื่องที่เปิดล่าสุดและดูต่อ'],
-                ['/membership', '♛ สมัครสมาชิก', 'แพ็กเกจ Premium / ไม่มีโฆษณา'],
-              ].map(([href, title, desc]) => (
-                <a key={href} href={href} className="rounded-2xl bg-white/[0.055] px-4 py-3 text-left transition hover:bg-white/[0.1]">
-                  <span className="block text-sm font-black text-white/88">{title}</span>
-                  <span className="mt-0.5 block text-[11px] font-semibold text-white/38">{desc}</span>
-                </a>
-              ))}
-            </div>
-
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <a href="/auth?mode=signin" onClick={() => setAuthMode('signin')} className={`rounded-2xl px-4 py-3 text-center text-xs font-black ${authMode === 'signin' ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.07] text-white/70'}`}>
-                Sign in
-              </a>
-              <a href="/auth?mode=signup" onClick={() => setAuthMode('signup')} className={`rounded-2xl px-4 py-3 text-center text-xs font-black ${authMode === 'signup' ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.07] text-white/70'}`}>
-                Sign up
-              </a>
-            </div>
-
-            <div className="mt-3 rounded-[22px] border border-white/8 bg-black/35 p-3">
-              <p className="mb-2 text-[10px] font-black uppercase tracking-[0.22em] text-white/38">เข้าสู่ระบบด้วย</p>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  ['Google', '/auth?provider=google'],
-                  ['Facebook', '/auth?provider=facebook'],
-                  ['Apple', '/auth?provider=apple'],
-                  ['LINE', '/auth?provider=line'],
-                  ['Email', '/auth?method=email'],
-                  ['เบอร์โทร', '/auth?method=phone'],
-                ].map(([label, href]) => (
-                  <a key={label} href={href} className="rounded-xl bg-white/[0.075] px-3 py-2 text-center text-[11px] font-black text-white/72 transition hover:bg-white/[0.13] hover:text-white">
-                    {label}
-                  </a>
-                ))}
-              </div>
-            </div>
-
-            <a href="/admin" className="mt-3 flex items-center justify-between rounded-2xl border border-[#e50914]/35 bg-[#170203]/70 px-4 py-3 text-sm font-black text-red-100 shadow-[0_0_24px_rgba(229,9,20,0.16)]">
-              <span>Admin login</span>
-              <span>›</span>
-            </a>
-          </div>
-        </div>
-      ) : null}
     </div>,
     host
+  );
+
+  const drawer = open && bodyHost ? createPortal(
+    <div
+      className="fixed inset-0 z-[1000] bg-[#030303]/90 text-white backdrop-blur-2xl"
+      onMouseDown={() => setOpen(false)}
+    >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_8%,rgba(229,9,20,0.24),transparent_18rem)]" />
+      <aside
+        className="absolute bottom-3 right-3 top-[68px] w-[calc(100vw-24px)] max-w-[390px] overflow-y-auto rounded-[30px] border border-white/14 bg-[#050505] p-4 shadow-[0_30px_120px_rgba(0,0,0,0.92)] md:right-7 md:top-[92px] md:w-[390px]"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3 rounded-[22px] border border-white/8 bg-white/[0.04] p-4">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]/85">Account</p>
+            <h3 className="mt-1 text-[24px] font-black tracking-[-0.06em]">เมนูผู้ใช้</h3>
+            <p className="mt-1 text-[11px] font-semibold leading-5 text-white/44">บัญชี รายการโปรด ประวัติ และสมาชิก</p>
+          </div>
+          <button
+            type="button"
+            aria-label="ปิดเมนู"
+            onClick={() => setOpen(false)}
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/[0.08] text-lg font-black text-white/80 hover:bg-[#e50914] hover:text-white"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="mt-4 grid gap-2">
+          {[
+            ['/favorites', '♡ รายการโปรด', 'เก็บหนังที่อยากดูไว้ในบัญชี'],
+            ['/history', '⏱ ประวัติการรับชม', 'ดูเรื่องที่เปิดล่าสุดและดูต่อ'],
+            ['/membership', '♛ สมัครสมาชิก', 'Premium / ไม่มีโฆษณา / ดูต่อทุกอุปกรณ์'],
+          ].map(([href, title, desc]) => (
+            <a key={href} href={href} className="rounded-2xl border border-white/8 bg-white/[0.055] px-4 py-3 text-left transition hover:border-[#e50914]/60 hover:bg-[#120102]">
+              <span className="block text-sm font-black text-white/90">{title}</span>
+              <span className="mt-0.5 block text-[11px] font-semibold text-white/40">{desc}</span>
+            </a>
+          ))}
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <a href="/auth?mode=signin" onClick={() => setAuthMode('signin')} className={`rounded-2xl px-4 py-3 text-center text-xs font-black ${authMode === 'signin' ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.075] text-white/72 hover:bg-white/[0.12]'}`}>
+            Sign in
+          </a>
+          <a href="/auth?mode=signup" onClick={() => setAuthMode('signup')} className={`rounded-2xl px-4 py-3 text-center text-xs font-black ${authMode === 'signup' ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.075] text-white/72 hover:bg-white/[0.12]'}`}>
+            Sign up
+          </a>
+        </div>
+
+        <div className="mt-4 rounded-[22px] border border-white/8 bg-white/[0.035] p-3">
+          <p className="mb-2 text-[10px] font-black uppercase tracking-[0.22em] text-white/40">เข้าสู่ระบบด้วย</p>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              ['Google', '/auth?provider=google'],
+              ['Facebook', '/auth?provider=facebook'],
+              ['Apple', '/auth?provider=apple'],
+              ['LINE', '/auth?provider=line'],
+              ['Email', '/auth?method=email'],
+              ['เบอร์โทร', '/auth?method=phone'],
+            ].map(([label, href]) => (
+              <a key={label} href={href} className="rounded-xl bg-black/55 px-3 py-2.5 text-center text-[11px] font-black text-white/74 transition hover:bg-[#e50914] hover:text-white">
+                {label}
+              </a>
+            ))}
+          </div>
+        </div>
+
+        <a href="/admin" className="mt-4 flex items-center justify-between rounded-2xl border border-[#e50914]/42 bg-[#170203] px-4 py-3 text-sm font-black text-red-100 shadow-[0_0_28px_rgba(229,9,20,0.20)]">
+          <span>Admin login</span>
+          <span>›</span>
+        </a>
+      </aside>
+    </div>,
+    bodyHost
+  ) : null;
+
+  return (
+    <>
+      {menuButton}
+      {drawer}
+    </>
   );
 }
 
