@@ -1,5 +1,6 @@
 import type { DetailPayload } from '@/lib/tmdb';
 import { MovieCard } from '@/components/movie-card';
+import { absoluteUrl, seoConfig } from '@/lib/seo';
 
 function statusLabel(status?: string, isWatchReady?: boolean) {
   if (isWatchReady || status === 'published') return 'พร้อมรับชม';
@@ -48,13 +49,20 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
     alternateName: item.titleEn,
     description: item.overview,
     datePublished: item.year,
-    image: item.posterUrl,
+    image: [item.posterUrl, item.backdropUrl].filter(Boolean),
     genre: item.genres,
     inLanguage: item.language,
+    url: absoluteUrl(`/${item.mediaType}/${item.id}`),
+    isAccessibleForFree: true,
+    publisher: {
+      '@type': 'Organization',
+      name: seoConfig.siteName,
+      url: absoluteUrl('/'),
+    },
     potentialAction: item.watchUrl
       ? {
           '@type': 'WatchAction',
-          target: watchHref,
+          target: absoluteUrl(watchHref),
         }
       : undefined,
     aggregateRating: item.rating
