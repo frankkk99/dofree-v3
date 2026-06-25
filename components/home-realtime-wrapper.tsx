@@ -242,52 +242,59 @@ function HeaderAccountMenuPortal() {
       </button>
 
       {open ? (
-        <div className="absolute right-0 top-[calc(100%+12px)] z-[120] w-[318px] max-w-[calc(100vw-24px)] overflow-hidden rounded-[28px] border border-white/10 bg-[#080808]/96 p-3 text-white shadow-[0_24px_90px_rgba(0,0,0,0.72)] backdrop-blur-2xl md:w-[360px]">
-          <div className="rounded-[22px] bg-white/[0.055] p-4">
-            <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]/85">Account</p>
-            <h3 className="mt-1 text-[22px] font-black tracking-[-0.055em]">เมนูผู้ใช้</h3>
-            <p className="mt-1 text-[11px] font-semibold text-white/42">จัดการบัญชี รายการโปรด และระบบสมาชิก</p>
-          </div>
+        <div className="fixed inset-0 z-[120] bg-black/58 backdrop-blur-md md:bg-transparent md:backdrop-blur-0">
+          <div className="absolute right-3 top-[70px] max-h-[calc(100vh-86px)] w-[330px] max-w-[calc(100vw-24px)] overflow-y-auto rounded-[28px] border border-white/10 bg-[#080808]/98 p-3 text-white shadow-[0_24px_90px_rgba(0,0,0,0.82)] md:right-7 md:top-[92px] md:w-[380px]">
+            <div className="rounded-[22px] bg-white/[0.055] p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]/85">Account</p>
+              <h3 className="mt-1 text-[22px] font-black tracking-[-0.055em]">เมนูผู้ใช้</h3>
+              <p className="mt-1 text-[11px] font-semibold text-white/42">บัญชี รายการโปรด ประวัติ และสมาชิก</p>
+            </div>
 
-          <div className="mt-3 grid gap-1.5">
-            {[
-              ['♡ รายการโปรด', 'เก็บหนังที่อยากดูไว้ในบัญชี'],
-              ['⏱ ประวัติการรับชม', 'ดูเรื่องที่เปิดล่าสุดและดูต่อ'],
-              ['♛ สมัครสมาชิก', 'แพ็กเกจ Premium / ไม่มีโฆษณา'],
-            ].map(([title, desc]) => (
-              <button key={title} type="button" className="rounded-2xl bg-white/[0.055] px-4 py-3 text-left transition hover:bg-white/[0.1]">
-                <span className="block text-sm font-black text-white/88">{title}</span>
-                <span className="mt-0.5 block text-[11px] font-semibold text-white/38">{desc}</span>
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => setAuthMode('signin')} className={`rounded-2xl px-4 py-3 text-xs font-black ${authMode === 'signin' ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.07] text-white/70'}`}>
-              Sign in
-            </button>
-            <button type="button" onClick={() => setAuthMode('signup')} className={`rounded-2xl px-4 py-3 text-xs font-black ${authMode === 'signup' ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.07] text-white/70'}`}>
-              Sign up
-            </button>
-          </div>
-
-          <div className="mt-3 rounded-[22px] border border-white/8 bg-black/35 p-3">
-            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.22em] text-white/38">
-              {authMode === 'signin' ? 'เข้าสู่ระบบด้วย' : 'สมัครด้วย'}
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {['Google', 'Facebook', 'Apple', 'LINE', 'Email', 'เบอร์โทร'].map((label) => (
-                <button key={label} type="button" className="rounded-xl bg-white/[0.075] px-3 py-2 text-[11px] font-black text-white/72 transition hover:bg-white/[0.13] hover:text-white">
-                  {label}
-                </button>
+            <div className="mt-3 grid gap-1.5">
+              {[
+                ['/favorites', '♡ รายการโปรด', 'เก็บหนังที่อยากดูไว้ในบัญชี'],
+                ['/history', '⏱ ประวัติการรับชม', 'ดูเรื่องที่เปิดล่าสุดและดูต่อ'],
+                ['/membership', '♛ สมัครสมาชิก', 'แพ็กเกจ Premium / ไม่มีโฆษณา'],
+              ].map(([href, title, desc]) => (
+                <a key={href} href={href} className="rounded-2xl bg-white/[0.055] px-4 py-3 text-left transition hover:bg-white/[0.1]">
+                  <span className="block text-sm font-black text-white/88">{title}</span>
+                  <span className="mt-0.5 block text-[11px] font-semibold text-white/38">{desc}</span>
+                </a>
               ))}
             </div>
-          </div>
 
-          <a href="/admin" className="mt-3 flex items-center justify-between rounded-2xl border border-[#e50914]/35 bg-[#170203]/70 px-4 py-3 text-sm font-black text-red-100 shadow-[0_0_24px_rgba(229,9,20,0.16)]">
-            <span>Admin login</span>
-            <span>›</span>
-          </a>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <a href="/auth?mode=signin" onClick={() => setAuthMode('signin')} className={`rounded-2xl px-4 py-3 text-center text-xs font-black ${authMode === 'signin' ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.07] text-white/70'}`}>
+                Sign in
+              </a>
+              <a href="/auth?mode=signup" onClick={() => setAuthMode('signup')} className={`rounded-2xl px-4 py-3 text-center text-xs font-black ${authMode === 'signup' ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.07] text-white/70'}`}>
+                Sign up
+              </a>
+            </div>
+
+            <div className="mt-3 rounded-[22px] border border-white/8 bg-black/35 p-3">
+              <p className="mb-2 text-[10px] font-black uppercase tracking-[0.22em] text-white/38">เข้าสู่ระบบด้วย</p>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  ['Google', '/auth?provider=google'],
+                  ['Facebook', '/auth?provider=facebook'],
+                  ['Apple', '/auth?provider=apple'],
+                  ['LINE', '/auth?provider=line'],
+                  ['Email', '/auth?method=email'],
+                  ['เบอร์โทร', '/auth?method=phone'],
+                ].map(([label, href]) => (
+                  <a key={label} href={href} className="rounded-xl bg-white/[0.075] px-3 py-2 text-center text-[11px] font-black text-white/72 transition hover:bg-white/[0.13] hover:text-white">
+                    {label}
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            <a href="/admin" className="mt-3 flex items-center justify-between rounded-2xl border border-[#e50914]/35 bg-[#170203]/70 px-4 py-3 text-sm font-black text-red-100 shadow-[0_0_24px_rgba(229,9,20,0.16)]">
+              <span>Admin login</span>
+              <span>›</span>
+            </a>
+          </div>
         </div>
       ) : null}
     </div>,
@@ -336,39 +343,19 @@ function HeroAutoRotatorPortal({ home, onSelect }: { home: HomePayload; onSelect
 
   return createPortal(
     <div className="absolute inset-0 z-30 overflow-hidden bg-[#030303]">
-      <div
-        className={`absolute inset-y-0 right-0 w-full bg-cover bg-center transition-opacity duration-700 md:w-[78%] ${visible ? 'opacity-90' : 'opacity-0'}`}
-        style={{ backgroundImage: `url(${item.backdropUrl || item.posterUrl})` }}
-      />
+      <div className={`absolute inset-y-0 right-0 w-full bg-cover bg-center transition-opacity duration-700 md:w-[78%] ${visible ? 'opacity-90' : 'opacity-0'}`} style={{ backgroundImage: `url(${item.backdropUrl || item.posterUrl})` }} />
       <div className="absolute inset-0 bg-[linear-gradient(90deg,#030303_0%,rgba(3,3,3,0.96)_24%,rgba(3,3,3,0.78)_52%,rgba(0,0,0,0.32)_78%,#030303_100%)]" />
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.06)_0%,rgba(0,0,0,0.10)_42%,#030303_100%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_42%,rgba(0,0,0,0.48),transparent_18rem)]" />
-
       <div className="relative z-10 mx-auto flex min-h-[500px] max-w-[1920px] flex-col justify-end px-4 pb-9 pt-[58px] md:min-h-[585px] md:justify-center md:px-7 md:pb-0 md:pt-[76px] xl:min-h-[610px] xl:pt-[88px]">
         <div className={`max-w-[680px] transition-all duration-700 md:ml-[6vw] xl:ml-[10vw] ${visible ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'}`}>
-          <p className="mb-3 text-[13px] font-black text-[#e50914] md:mb-5 md:text-[22px]">
-            {heroLabel} <span className="ml-2 text-white/90">• เข้าฉาย {releaseLabel}</span>
-          </p>
-
-          <h1 className="hero-title max-w-[92vw] text-[42px] font-black leading-[0.88] tracking-[-0.085em] text-white md:whitespace-nowrap md:text-[92px] lg:text-[112px] xl:text-[120px]">
-            {shortTitle(item)}
-          </h1>
-
-          <h2 className="mt-3 max-w-[92vw] text-[16px] font-black tracking-[-0.04em] text-white md:mt-6 md:text-[28px]">
-            หนังเข้าใหม่ / กำลังจะเข้า
-          </h2>
-
-          <p className="mt-2 line-clamp-3 max-w-[92vw] text-[12px] leading-5 text-white/56 md:mt-3 md:max-w-[620px] md:text-[18px] md:leading-7">
-            {item.overview}
-          </p>
-
+          <p className="mb-3 text-[13px] font-black text-[#e50914] md:mb-5 md:text-[22px]">{heroLabel} <span className="ml-2 text-white/90">• เข้าฉาย {releaseLabel}</span></p>
+          <h1 className="hero-title max-w-[92vw] text-[42px] font-black leading-[0.88] tracking-[-0.085em] text-white md:whitespace-nowrap md:text-[92px] lg:text-[112px] xl:text-[120px]">{shortTitle(item)}</h1>
+          <h2 className="mt-3 max-w-[92vw] text-[16px] font-black tracking-[-0.04em] text-white md:mt-6 md:text-[28px]">หนังเข้าใหม่ / กำลังจะเข้า</h2>
+          <p className="mt-2 line-clamp-3 max-w-[92vw] text-[12px] leading-5 text-white/56 md:mt-3 md:max-w-[620px] md:text-[18px] md:leading-7">{item.overview}</p>
           <div className="mt-5 flex gap-2.5 md:mt-8 md:gap-5">
-            <button type="button" onClick={() => onSelect(item)} className="inline-flex h-[42px] items-center gap-2 rounded-lg bg-[#e50914] px-5 text-[13px] font-black text-white shadow-glow md:h-[55px] md:px-9 md:text-[16px]">
-              ▶ รับชม
-            </button>
-            <button type="button" onClick={() => onSelect(item)} className="inline-flex h-[42px] items-center gap-2 rounded-lg border border-white/10 bg-white/[0.12] px-5 text-[13px] font-black text-white/86 md:h-[55px] md:px-8 md:text-[16px]">
-              ⓘ รายละเอียด
-            </button>
+            <button type="button" onClick={() => onSelect(item)} className="inline-flex h-[42px] items-center gap-2 rounded-lg bg-[#e50914] px-5 text-[13px] font-black text-white shadow-glow md:h-[55px] md:px-9 md:text-[16px]">▶ รับชม</button>
+            <button type="button" onClick={() => onSelect(item)} className="inline-flex h-[42px] items-center gap-2 rounded-lg border border-white/10 bg-white/[0.12] px-5 text-[13px] font-black text-white/86 md:h-[55px] md:px-8 md:text-[16px]">ⓘ รายละเอียด</button>
           </div>
         </div>
       </div>
@@ -384,27 +371,22 @@ function ViewAllClickBridge({ sections, onOpen }: { sections: MovieSection[]; on
       if (!(target instanceof Element)) return;
       const link = target.closest('a');
       if (!link || !link.textContent?.includes('ดูทั้งหมด')) return;
-
       const wrapper = link.closest('.relative') || link.parentElement;
       const title = wrapper?.querySelector('h2')?.textContent || '';
       const section = sectionFromTitle(title, sections) || sections[0];
       if (!section) return;
-
       event.preventDefault();
       event.stopPropagation();
       onOpen(section);
     }
-
     document.addEventListener('click', onClick, true);
     return () => document.removeEventListener('click', onClick, true);
   }, [onOpen, sections]);
-
   return null;
 }
 
 function DynamicCategoryChips({ sections, onOpen }: { sections: MovieSection[]; onOpen: (section: MovieSection) => void }) {
   const [host, setHost] = useState<HTMLElement | null>(null);
-
   useEffect(() => {
     function findHost() {
       const searchForm = document.querySelector('main section.sticky form');
@@ -416,22 +398,16 @@ function DynamicCategoryChips({ sections, onOpen }: { sections: MovieSection[]; 
         setHost(next);
       }
     }
-
     findHost();
     const timer = window.setInterval(findHost, 1200);
     return () => window.clearInterval(timer);
   }, []);
-
   const categorySections = useMemo(() => [allSection(sections), ...sections], [sections]);
-
   if (!host) return null;
-
   return createPortal(
     <div id="dynamic-category-chip-row" className="flex max-h-[138px] flex-wrap gap-1.5 overflow-y-auto pr-1 md:max-h-[96px] md:gap-2 xl:max-h-[112px]">
       {categorySections.map((section, index) => (
-        <button key={`${section.slug}-${index}`} type="button" onClick={() => onOpen(section)} className="inline-flex h-[22px] items-center rounded-full bg-white/[0.075] px-2.5 text-[9px] font-black leading-none text-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition hover:bg-[#e50914] hover:text-white md:h-7 md:px-3 md:text-[11px]">
-          {index === 0 ? 'ทั้งหมด' : sectionDisplayTitle(section, index - 1)}
-        </button>
+        <button key={`${section.slug}-${index}`} type="button" onClick={() => onOpen(section)} className="inline-flex h-[22px] items-center rounded-full bg-white/[0.075] px-2.5 text-[9px] font-black leading-none text-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition hover:bg-[#e50914] hover:text-white md:h-7 md:px-3 md:text-[11px]">{index === 0 ? 'ทั้งหมด' : sectionDisplayTitle(section, index - 1)}</button>
       ))}
     </div>,
     host
@@ -441,33 +417,21 @@ function DynamicCategoryChips({ sections, onOpen }: { sections: MovieSection[]; 
 function FullSectionOverlay({ section, allItems, onClose }: { section: MovieSection; allItems: MovieItem[]; onClose: () => void }) {
   const [selected, setSelected] = useState<MovieItem | null>(null);
   const items = section.items;
-  const recommendations = selected
-    ? allItems.filter((item) => `${item.mediaType}-${item.id}` !== `${selected.mediaType}-${selected.id}`).slice(0, 24)
-    : allItems.slice(0, 24);
-
+  const recommendations = selected ? allItems.filter((item) => `${item.mediaType}-${item.id}` !== `${selected.mediaType}-${selected.id}`).slice(0, 24) : allItems.slice(0, 24);
   useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
-
   return (
     <div className="fixed inset-0 z-[80] overflow-y-auto bg-[#030303]/96 p-4 text-white backdrop-blur-xl md:p-7">
       <div className="mx-auto max-w-[1920px]">
         <div className="sticky top-0 z-10 mb-5 flex items-end justify-between gap-3 border-b border-white/10 bg-[#030303]/88 py-4 backdrop-blur-xl">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#e50914]/80">{section.eyebrow || 'Category'}</p>
-            <h2 className="mt-1 text-[28px] font-black tracking-[-0.05em] md:text-[48px]">{section.title}</h2>
-            <p className="mt-1 text-xs font-bold text-white/45">ทั้งหมด {items.length} เรื่อง</p>
-          </div>
+          <div><p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#e50914]/80">{section.eyebrow || 'Category'}</p><h2 className="mt-1 text-[28px] font-black tracking-[-0.05em] md:text-[48px]">{section.title}</h2><p className="mt-1 text-xs font-bold text-white/45">ทั้งหมด {items.length} เรื่อง</p></div>
           <button type="button" onClick={onClose} className="rounded-full bg-white/[0.1] px-4 py-2 text-xs font-black text-white/80 hover:bg-[#e50914]">ปิด</button>
         </div>
         <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-5 md:grid-cols-6 md:gap-4 lg:grid-cols-7 xl:grid-cols-8">
-          {items.map((item, index) => (
-            <MovieCard key={`full-${section.slug}-${item.mediaType}-${item.id}-${index}`} item={item} onSelect={setSelected} grid priority={index < 12} priorityBadge={section.title === 'ทั้งหมด' ? undefined : section.title} />
-          ))}
+          {items.map((item, index) => <MovieCard key={`full-${section.slug}-${item.mediaType}-${item.id}-${index}`} item={item} onSelect={setSelected} grid priority={index < 12} priorityBadge={section.title === 'ทั้งหมด' ? undefined : section.title} />)}
         </div>
       </div>
       {selected ? <DetailWindow item={selected} recommendations={recommendations} onClose={() => setSelected(null)} onSelect={setSelected} /> : null}
@@ -482,7 +446,6 @@ function RealtimeAddedCarousel({ items, onViewAll }: { items: MovieItem[]; onVie
   const lastFrameRef = useRef<number | null>(null);
   const [paused, setPaused] = useState(false);
   const doubled = useMemo(() => [...items, ...items], [items]);
-
   useEffect(() => {
     const rail = railRef.current;
     if (!rail || items.length < 4) return;
@@ -500,37 +463,19 @@ function RealtimeAddedCarousel({ items, onViewAll }: { items: MovieItem[]; onVie
       frameRef.current = window.requestAnimationFrame(tick);
     }
     frameRef.current = window.requestAnimationFrame(tick);
-    return () => {
-      if (frameRef.current) window.cancelAnimationFrame(frameRef.current);
-      frameRef.current = null;
-      lastFrameRef.current = null;
-    };
+    return () => { if (frameRef.current) window.cancelAnimationFrame(frameRef.current); frameRef.current = null; lastFrameRef.current = null; };
   }, [items.length, paused]);
-
   function pauseThenResume() {
     setPaused(true);
     if (resumeTimerRef.current) window.clearTimeout(resumeTimerRef.current);
-    resumeTimerRef.current = window.setTimeout(() => {
-      lastFrameRef.current = null;
-      setPaused(false);
-    }, 2000);
+    resumeTimerRef.current = window.setTimeout(() => { lastFrameRef.current = null; setPaused(false); }, 2000);
   }
-
   if (!items.length) return null;
-
   return (
     <section className="mx-auto max-w-[1920px] bg-[#030303] px-4 pb-4 pt-2 md:px-7 md:pb-6 md:pt-3">
-      <div className="mb-3 flex items-end justify-between gap-3 md:mb-4">
-        <div>
-          <p className="text-[9px] font-black uppercase tracking-[0.28em] text-[#e50914]/80">Release Window</p>
-          <h2 className="mt-1 text-[20px] font-black tracking-[-0.04em] md:text-[30px]">หนังเข้าใหม่ / กำลังจะเข้า</h2>
-        </div>
-        <button type="button" onClick={() => onViewAll(items)} className="text-[12px] font-black text-white/50 hover:text-white md:text-[16px]">ดูทั้งหมด ›</button>
-      </div>
+      <div className="mb-3 flex items-end justify-between gap-3 md:mb-4"><div><p className="text-[9px] font-black uppercase tracking-[0.28em] text-[#e50914]/80">Release Window</p><h2 className="mt-1 text-[20px] font-black tracking-[-0.04em] md:text-[30px]">หนังเข้าใหม่ / กำลังจะเข้า</h2></div><button type="button" onClick={() => onViewAll(items)} className="text-[12px] font-black text-white/50 hover:text-white md:text-[16px]">ดูทั้งหมด ›</button></div>
       <div ref={railRef} onPointerDown={pauseThenResume} onPointerUp={pauseThenResume} onTouchEnd={pauseThenResume} onWheel={pauseThenResume} className="movie-rail flex cursor-grab gap-2.5 overflow-x-auto scroll-smooth pb-3 sm:gap-3 md:gap-5 md:pb-4">
-        {doubled.map((item, index) => (
-          <MovieCard key={`realtime-${item.mediaType}-${item.id}-${index}`} item={item} priority={index < 8} priorityBadge={item.label || (index % 3 === 0 ? 'เข้าใหม่' : index % 3 === 1 ? 'พร้อมดู' : undefined)} />
-        ))}
+        {doubled.map((item, index) => <MovieCard key={`realtime-${item.mediaType}-${item.id}-${index}`} item={item} priority={index < 8} priorityBadge={item.label || (index % 3 === 0 ? 'เข้าใหม่' : index % 3 === 1 ? 'พร้อมดู' : undefined)} />)}
       </div>
     </section>
   );
@@ -541,19 +486,13 @@ function RealtimePortal({ home, onOpen }: { home: HomePayload; onOpen: (section:
   const [liveItems, setLiveItems] = useState<MovieItem[]>([]);
   const fallbackItems = useMemo(() => fallbackRecentlyAdded(home), [home]);
   const items = liveItems.length ? liveItems : fallbackItems;
-
   useEffect(() => {
     const searchSection = document.querySelector('main section.sticky');
     if (!searchSection?.parentElement) return;
     let node = document.getElementById('realtime-added-host');
-    if (!node) {
-      node = document.createElement('div');
-      node.id = 'realtime-added-host';
-      searchSection.insertAdjacentElement('afterend', node);
-    }
+    if (!node) { node = document.createElement('div'); node.id = 'realtime-added-host'; searchSection.insertAdjacentElement('afterend', node); }
     setHost(node);
   }, []);
-
   useEffect(() => {
     let active = true;
     async function loadRecent() {
@@ -565,12 +504,8 @@ function RealtimePortal({ home, onOpen }: { home: HomePayload; onOpen: (section:
     }
     void loadRecent();
     const timer = window.setInterval(loadRecent, 60_000);
-    return () => {
-      active = false;
-      window.clearInterval(timer);
-    };
+    return () => { active = false; window.clearInterval(timer); };
   }, []);
-
   return host ? createPortal(<RealtimeAddedCarousel items={items} onViewAll={(nextItems) => onOpen(recentUpcomingSection(nextItems))} />, host) : null;
 }
 
@@ -579,7 +514,6 @@ export function HomeRealtimeWrapper({ home }: { home: HomePayload }) {
   const [selected, setSelected] = useState<MovieItem | null>(null);
   const allItems = useMemo(() => unique(home.sections.flatMap((section) => section.items)), [home.sections]);
   const recommendations = selected ? allItems.filter((item) => `${item.mediaType}-${item.id}` !== `${selected.mediaType}-${selected.id}`).slice(0, 24) : allItems.slice(0, 24);
-
   return (
     <>
       <HomeExperienceV3 home={home} />
