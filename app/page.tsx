@@ -1,3 +1,4 @@
+import { AdminLinkVisibilityGuard } from '@/components/admin-link-visibility-guard';
 import { FavoriteClickBridge } from '@/components/favorite-click-bridge';
 import { HomeRealtimeWrapper } from '@/components/home-realtime-wrapper';
 import { WatchHistoryClickBridge } from '@/components/watch-history-click-bridge';
@@ -10,6 +11,7 @@ export default async function HomePage() {
       <HomeRealtimeWrapper home={home} />
       <FavoriteClickBridge home={home} />
       <WatchHistoryClickBridge home={home} />
+      <AdminLinkVisibilityGuard />
     </>
   );
 }
