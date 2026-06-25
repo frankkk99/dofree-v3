@@ -1,6 +1,7 @@
 'use client';
 
 import type { MovieItem } from '@/lib/tmdb';
+import { releaseMonthYear } from '@/lib/release-date';
 
 type MovieCardProps = {
   item: MovieItem;
@@ -21,6 +22,7 @@ function statusBadge(item: MovieItem, priorityBadge?: string) {
 export function MovieCard({ item, priorityBadge, onSelect, compact = false, grid = false, priority = false }: MovieCardProps) {
   const badge = statusBadge(item, priorityBadge);
   const href = `/${item.mediaType}/${item.id}`;
+  const releaseLabel = releaseMonthYear(item as MovieItem & { releaseDate?: string });
   const badges = item.badges?.length ? item.badges : [badge, item.isWatchReady ? 'HD' : undefined].filter(Boolean) as string[];
   const sizeClass = grid
     ? 'aspect-[2/3] h-auto w-full min-w-0'
@@ -62,7 +64,7 @@ export function MovieCard({ item, priorityBadge, onSelect, compact = false, grid
         <div className="mt-1 flex items-center gap-1 text-[8px] font-bold text-white/58 md:mt-2 md:gap-2 md:text-[11px]">
           <span className="text-[#f4c46b]">★ {item.rating.toFixed(1)}</span>
           <span>•</span>
-          <span>{item.year}</span>
+          <span>{releaseLabel}</span>
         </div>
       </div>
     </>
