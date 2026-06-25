@@ -111,26 +111,42 @@ async function fetchWatchLinks() {
   return map;
 }
 
+function rowSearchText(row: CatalogRow) {
+  return [
+    row.title,
+    row.title_en,
+    row.overview,
+    row.release_year,
+    row.release_date,
+    row.language,
+    row.media_type,
+    row.source_bucket,
+    ...(row.genres || []),
+  ].filter(Boolean).join(' ');
+}
+
 function rowToMovie(row: CatalogRow, index: number): MovieItem {
   const rating = Number(row.rating || 0);
+  const mainTitle = row.title_en || row.title || `TMDB ${row.tmdb_id}`;
   const base = {
     id: row.tmdb_id,
     mediaType: row.media_type,
-    title: row.title || row.title_en || `TMDB ${row.tmdb_id}`,
-    titleEn: row.title_en || undefined,
+    title: mainTitle,
+    titleEn: row.title_en || row.title || undefined,
     overview: row.overview || 'ค้นพบเรื่องราวใหม่ พร้อมข้อมูลภาพยนตร์ ตัวอย่าง นักแสดง และสถานะการรับชมที่ชัดเจน',
     posterUrl: row.poster_url || fallbackImage,
     backdropUrl: row.backdrop_url || row.poster_url || fallbackImage,
     rating,
     year: row.release_year || (row.release_date ? row.release_date.slice(0, 4) : 'ไม่ระบุ'),
     releaseDate: row.release_date || undefined,
+    searchText: rowSearchText(row),
     genres: row.genres || [],
     runtime: row.runtime || undefined,
     language: row.language || undefined,
     status: rating >= 8 ? 'review' : 'draft',
     isWatchReady: false,
     label: rating >= 8 ? '8+' : '6.5+',
-  } satisfies MovieItem & { releaseDate?: string };
+  } satisfies MovieItem & { releaseDate?: string; searchText?: string };
   return { ...base, badges: badges(base, index) };
 }
 
@@ -140,7 +156,7 @@ function applyWatch(item: MovieItem, links: Map<string, WatchLinkRecord>, index:
 
   const next: MovieItem = {
     ...item,
-    title: link.title_th || item.title,
+    title: link.title || item.titleEn || item.title,
     titleEn: link.title || item.titleEn,
     watchUrl: normalizeDrivePreviewUrl(link.watch_url),
     trailerUrl: normalizeDrivePreviewUrl(link.trailer_url) || item.trailerUrl,
@@ -148,7 +164,7 @@ function applyWatch(item: MovieItem, links: Map<string, WatchLinkRecord>, index:
     status: 'published',
     label: 'พร้อมดู',
   };
-  return { ...next, badges: badges(next, index) };
+  return { ...next, searchText: `${(item as MovieItem & { searchText?: string }).searchText || ''} ${link.title || ''} ${link.title_th || ''}`, badges: badges(next, index) } as MovieItem & { searchText?: string };
 }
 
 function unique(items: MovieItem[]) {
