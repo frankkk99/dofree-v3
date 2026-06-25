@@ -23,6 +23,7 @@ export type DofreeSession = {
 };
 
 const sessionKey = 'dofree_auth_session';
+const defaultRole = 'viewer';
 
 function baseUrl() {
   return process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/$/, '');
@@ -119,7 +120,7 @@ async function createProfile(user: DofreeUser, token: string) {
       body: JSON.stringify({
         id: user.id,
         display_name: profileName(user),
-        role: 'user',
+        role: defaultRole,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }),
@@ -156,7 +157,7 @@ export async function ensureProfile(session: DofreeSession) {
   let profile = await loadProfile(user.id, token);
   if (!profile) profile = await createProfile(user, token);
 
-  const nextSession = { ...session, user: { ...user, role: profile?.role || user.role || 'user' }, profile };
+  const nextSession = { ...session, user: { ...user, role: profile?.role || user.role || defaultRole }, profile };
   storeSession(nextSession);
   return nextSession;
 }
