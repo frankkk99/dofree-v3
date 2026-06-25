@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { HomePayload, MovieItem } from '@/lib/tmdb';
+import type { HomePayload, MovieItem, MovieSection } from '@/lib/tmdb';
 import { HomeExperienceV3 } from '@/components/home-experience-v3';
 import { MovieCard } from '@/components/movie-card';
+import { DetailWindow } from '@/components/window-system';
 import { releaseMonthYear } from '@/lib/release-date';
 
 function unique(items: MovieItem[]) {
@@ -15,6 +16,31 @@ function unique(items: MovieItem[]) {
 
 function shortTitle(item: MovieItem) {
   return item.title.length > 14 ? item.title.slice(0, 13) : item.title;
+}
+
+function sectionDisplayTitle(section: MovieSection, index: number) {
+  return index === 0 || section.slug === 'watch-ready' ? 'แนะนำสำหรับคุณ' : section.title;
+}
+
+function sectionFromTitle(title: string, sections: MovieSection[]) {
+  const normalized = title.trim();
+  if (!normalized) return null;
+  if (normalized.includes('แนะนำสำหรับคุณ')) return sections[0] || null;
+
+  return sections.find((section, index) => {
+    const displayTitle = sectionDisplayTitle(section, index);
+    return normalized === displayTitle || normalized.includes(displayTitle) || displayTitle.includes(normalized);
+  }) || null;
+}
+
+function allSection(sections: MovieSection[]): MovieSection {
+  return {
+    slug: 'all-home-sections',
+    eyebrow: 'รวมทั้งหมด',
+    title: 'ทั้งหมด',
+    description: 'รวมการ์ดหนังจากทุกหมวดที่แสดงบนหน้าแรก',
+    items: unique(sections.flatMap((section) => section.items)),
+  };
 }
 
 function fallbackRecentlyAdded(home: HomePayload) {
@@ -109,6 +135,127 @@ function DesktopRailScrollFix() {
   }, []);
 
   return null;
+}
+
+function ViewAllClickBridge({ sections, onOpen }: { sections: MovieSection[]; onOpen: (section: MovieSection) => void }) {
+  useEffect(() => {
+    function onClick(event: MouseEvent) {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const link = target.closest('a');
+      if (!link || !link.textContent?.includes('ดูทั้งหมด')) return;
+
+      const wrapper = link.closest('.relative') || link.parentElement;
+      const title = wrapper?.querySelector('h2')?.textContent || '';
+      const section = sectionFromTitle(title, sections) || sections[0];
+      if (!section) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      onOpen(section);
+    }
+
+    document.addEventListener('click', onClick, true);
+    return () => document.removeEventListener('click', onClick, true);
+  }, [onOpen, sections]);
+
+  return null;
+}
+
+function DynamicCategoryChips({ sections, onOpen }: { sections: MovieSection[]; onOpen: (section: MovieSection) => void }) {
+  const [host, setHost] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    function findHost() {
+      const searchForm = document.querySelector('main section.sticky form');
+      const next = searchForm?.nextElementSibling;
+      if (next instanceof HTMLElement) {
+        Array.from(next.children).forEach((child) => {
+          if ((child as HTMLElement).id !== 'dynamic-category-chip-row') (child as HTMLElement).style.display = 'none';
+        });
+        setHost(next);
+      }
+    }
+
+    findHost();
+    const timer = window.setInterval(findHost, 1200);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const categorySections = useMemo(() => [allSection(sections), ...sections], [sections]);
+
+  if (!host) return null;
+
+  return createPortal(
+    <div id="dynamic-category-chip-row" className="flex max-h-[138px] flex-wrap gap-1.5 overflow-y-auto pr-1 md:max-h-[96px] md:gap-2 xl:max-h-[112px]">
+      {categorySections.map((section, index) => (
+        <button
+          key={`${section.slug}-${index}`}
+          type="button"
+          onClick={() => onOpen(section)}
+          className="inline-flex h-[22px] items-center rounded-full bg-white/[0.075] px-2.5 text-[9px] font-black leading-none text-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition hover:bg-[#e50914] hover:text-white md:h-7 md:px-3 md:text-[11px]"
+        >
+          {index === 0 ? 'ทั้งหมด' : sectionDisplayTitle(section, index - 1)}
+        </button>
+      ))}
+    </div>,
+    host
+  );
+}
+
+function FullSectionOverlay({ section, allItems, onClose }: { section: MovieSection; allItems: MovieItem[]; onClose: () => void }) {
+  const [selected, setSelected] = useState<MovieItem | null>(null);
+  const items = section.items;
+  const recommendations = selected
+    ? allItems.filter((item) => `${item.mediaType}-${item.id}` !== `${selected.mediaType}-${selected.id}`).slice(0, 24)
+    : allItems.slice(0, 24);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-[80] overflow-y-auto bg-[#030303]/96 p-4 text-white backdrop-blur-xl md:p-7">
+      <div className="mx-auto max-w-[1920px]">
+        <div className="sticky top-0 z-10 mb-5 flex items-end justify-between gap-3 border-b border-white/10 bg-[#030303]/88 py-4 backdrop-blur-xl">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#e50914]/80">{section.eyebrow || 'Category'}</p>
+            <h2 className="mt-1 text-[28px] font-black tracking-[-0.05em] md:text-[48px]">{section.title}</h2>
+            <p className="mt-1 text-xs font-bold text-white/45">ทั้งหมด {items.length} เรื่อง</p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-full bg-white/[0.1] px-4 py-2 text-xs font-black text-white/80 hover:bg-[#e50914]">
+            ปิด
+          </button>
+        </div>
+
+        <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-5 md:grid-cols-6 md:gap-4 lg:grid-cols-7 xl:grid-cols-8">
+          {items.map((item, index) => (
+            <MovieCard
+              key={`full-${section.slug}-${item.mediaType}-${item.id}-${index}`}
+              item={item}
+              onSelect={setSelected}
+              grid
+              priority={index < 12}
+              priorityBadge={section.title === 'ทั้งหมด' ? undefined : section.title}
+            />
+          ))}
+        </div>
+      </div>
+
+      {selected ? (
+        <DetailWindow
+          item={selected}
+          recommendations={recommendations}
+          onClose={() => setSelected(null)}
+          onSelect={setSelected}
+        />
+      ) : null}
+    </div>
+  );
 }
 
 function RealtimeAddedCarousel({ items }: { items: MovieItem[] }) {
@@ -278,12 +425,24 @@ function RealtimePortal({ home }: { home: HomePayload }) {
 }
 
 export function HomeRealtimeWrapper({ home }: { home: HomePayload }) {
+  const [openSection, setOpenSection] = useState<MovieSection | null>(null);
+  const allItems = useMemo(() => unique(home.sections.flatMap((section) => section.items)), [home.sections]);
+
   return (
     <>
       <HomeExperienceV3 home={home} />
       <DesktopRailScrollFix />
+      <ViewAllClickBridge sections={home.sections} onOpen={setOpenSection} />
+      <DynamicCategoryChips sections={home.sections} onOpen={setOpenSection} />
       <HeroReleasePortal home={home} />
       <RealtimePortal home={home} />
+      {openSection ? (
+        <FullSectionOverlay
+          section={openSection}
+          allItems={allItems}
+          onClose={() => setOpenSection(null)}
+        />
+      ) : null}
     </>
   );
 }
