@@ -16,6 +16,8 @@ export type DofreeSession = {
   access_token: string;
   refresh_token?: string;
   expires_at?: number;
+  expires_in?: number;
+  token_type?: string;
   user?: DofreeUser;
   profile?: DofreeProfile | null;
 };
@@ -28,6 +30,15 @@ function baseUrl() {
 
 function anonKey() {
   return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+}
+
+function currentOrigin() {
+  if (typeof window === 'undefined') return 'https://dofree-v3.vercel.app';
+  return window.location.origin.includes('localhost') ? 'https://dofree-v3.vercel.app' : window.location.origin;
+}
+
+function authRedirectTo() {
+  return `${currentOrigin()}/auth?confirmed=1`;
 }
 
 function authHeaders(token?: string) {
@@ -150,6 +161,34 @@ export async function ensureProfile(session: DofreeSession) {
   return nextSession;
 }
 
+export async function consumeAuthRedirectFromUrl() {
+  if (typeof window === 'undefined') return null;
+  const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
+  if (!hash) return null;
+
+  const params = new URLSearchParams(hash);
+  const error = params.get('error') || params.get('error_code');
+  if (error) {
+    const description = params.get('error_description') || error;
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    throw new Error(decodeURIComponent(description.replace(/\+/g, ' ')));
+  }
+
+  const accessToken = params.get('access_token');
+  if (!accessToken) return null;
+
+  const session: DofreeSession = {
+    access_token: accessToken,
+    refresh_token: params.get('refresh_token') || undefined,
+    expires_in: params.get('expires_in') ? Number(params.get('expires_in')) : undefined,
+    token_type: params.get('token_type') || undefined,
+  };
+
+  const nextSession = await ensureProfile(session);
+  window.history.replaceState(null, '', window.location.pathname + window.location.search);
+  return nextSession;
+}
+
 export async function signInWithEmail(email: string, password: string) {
   const data = await authFetch<DofreeSession>('token?grant_type=password', {
     method: 'POST',
@@ -160,12 +199,21 @@ export async function signInWithEmail(email: string, password: string) {
 }
 
 export async function signUpWithEmail(email: string, password: string) {
-  const data = await authFetch<DofreeSession>('signup', {
+  const redirectTo = encodeURIComponent(authRedirectTo());
+  const data = await authFetch<DofreeSession>(`signup?redirect_to=${redirectTo}`, {
     method: 'POST',
     body: JSON.stringify({ email, password }),
   });
   if (data?.access_token) return ensureProfile(data);
   return data;
+}
+
+export async function resendConfirmationEmail(email: string) {
+  const redirectTo = encodeURIComponent(authRedirectTo());
+  return authFetch(`resend?redirect_to=${redirectTo}`, {
+    method: 'POST',
+    body: JSON.stringify({ type: 'signup', email }),
+  });
 }
 
 export async function getCurrentUser() {
