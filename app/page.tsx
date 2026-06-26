@@ -3,6 +3,7 @@ import { CleanHamburgerMenu } from '@/components/clean-hamburger-menu';
 import { FavoriteClickBridge } from '@/components/favorite-click-bridge';
 import { HomeCardLinkBridge } from '@/components/home-card-link-bridge';
 import { HomeRealtimeWrapper } from '@/components/home-realtime-wrapper';
+import { ReliableHeroCarousel } from '@/components/reliable-hero-carousel';
 import { WatchHistoryClickBridge } from '@/components/watch-history-click-bridge';
 import { getCatalogHomePayload } from '@/lib/catalog-home';
 
@@ -28,6 +29,7 @@ export default async function HomePage() {
       <WatchHistoryClickBridge home={home} />
       <AdminLinkVisibilityGuard />
       <CleanHamburgerMenu />
+      <ReliableHeroCarousel home={home} />
     </>
   );
 }
