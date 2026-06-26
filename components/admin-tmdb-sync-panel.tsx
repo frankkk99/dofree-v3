@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { adminSessionHeaders } from '@/lib/admin-session-browser';
 
 type SyncResponse = {
   ok: boolean;
@@ -32,10 +33,6 @@ function buttonClass(active = true) {
   }`;
 }
 
-function cleanAdminToken(value: string) {
-  return value.trim().replace(/^DOFREE_ADMIN_TOKEN\s*=\s*/i, '').trim();
-}
-
 async function readJsonResponse<T>(response: Response): Promise<T> {
   const text = await response.text();
   if (!text.trim()) {
@@ -50,7 +47,6 @@ async function readJsonResponse<T>(response: Response): Promise<T> {
 }
 
 export function AdminTmdbSyncPanel() {
-  const [adminToken, setAdminToken] = useState('');
   const [cursor, setCursor] = useState(0);
   const [pagesPerRun, setPagesPerRun] = useState(20);
   const [targetLimit, setTargetLimit] = useState(10000);
@@ -69,20 +65,13 @@ export function AdminTmdbSyncPanel() {
   }, [cursor, latest]);
 
   useEffect(() => {
-    const savedToken = window.localStorage.getItem('dofree_admin_token') || '';
-    if (savedToken) setAdminToken(savedToken);
+    void loadStats();
   }, []);
 
-  async function loadStats(token = adminToken) {
-    const cleanToken = cleanAdminToken(token);
-    if (!cleanToken) {
-      setError('ใส่เฉพาะค่า Admin Token หลังเครื่องหมาย =');
-      return;
-    }
-
+  async function loadStats() {
     try {
       const response = await fetch('/api/admin/tmdb-catalog-stats', {
-        headers: { 'x-admin-token': cleanToken },
+        headers: adminSessionHeaders(),
         cache: 'no-store',
       });
       const payload = await readJsonResponse<StatsResponse>(response);
@@ -95,14 +84,6 @@ export function AdminTmdbSyncPanel() {
   }
 
   async function syncOnce(nextCursor = cursor) {
-    const cleanToken = cleanAdminToken(adminToken);
-    if (!cleanToken) {
-      setError('ใส่เฉพาะค่า Admin Token หลังเครื่องหมาย = เช่น dofree_admin_xxx ไม่ต้องใส่ DOFREE_ADMIN_TOKEN=');
-      return null;
-    }
-
-    window.localStorage.setItem('dofree_admin_token', cleanToken);
-    setAdminToken(cleanToken);
     setRunning(true);
     setError(null);
 
@@ -111,8 +92,7 @@ export function AdminTmdbSyncPanel() {
       const response = await fetch('/api/admin/tmdb-catalog-sync', {
         method: 'POST',
         headers: {
-          'content-type': 'application/json',
-          'x-admin-token': cleanToken,
+          ...adminSessionHeaders({ 'content-type': 'application/json' }),
         },
         body: JSON.stringify({ cursor: nextCursor, pagesPerRun: safePagesPerRun, targetLimit }),
       });
@@ -122,7 +102,7 @@ export function AdminTmdbSyncPanel() {
       setPagesPerRun(safePagesPerRun);
       setCursor(payload.nextCursor || nextCursor);
       setLog((items) => [payload, ...items].slice(0, 20));
-      await loadStats(cleanToken);
+      await loadStats();
       return payload;
     } catch (nextError) {
       const message = nextError instanceof Error ? nextError.message : 'Sync ไม่สำเร็จ';
@@ -169,17 +149,7 @@ export function AdminTmdbSyncPanel() {
         </section>
 
         <section className={cardClass()}>
-          <div className="grid gap-4 md:grid-cols-[1.4fr_0.6fr_0.6fr_0.6fr]">
-            <label>
-              <span className="text-xs font-black text-white/46">Admin Token</span>
-              <input
-                value={adminToken}
-                onChange={(event) => setAdminToken(event.target.value)}
-                onBlur={() => setAdminToken((value) => cleanAdminToken(value))}
-                placeholder="ใส่เฉพาะ token ไม่ต้องใส่ DOFREE_ADMIN_TOKEN="
-                className="mt-2 h-11 w-full rounded-2xl bg-white/[0.075] px-4 text-sm font-bold text-white outline-none ring-1 ring-white/[0.06] placeholder:text-white/28 focus:ring-[#e50914]/70"
-              />
-            </label>
+          <div className="grid gap-4 md:grid-cols-3">
             <label>
               <span className="text-xs font-black text-white/46">Cursor</span>
               <input
@@ -270,9 +240,9 @@ export function AdminTmdbSyncPanel() {
         <section className={cardClass()}>
           <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]">คำแนะนำ</p>
           <div className="mt-3 grid gap-3 text-sm font-semibold leading-6 text-white/58 md:grid-cols-3">
-            <p>1. ใส่เฉพาะ token หลังเครื่องหมาย = ไม่ต้องใส่ชื่อ DOFREE_ADMIN_TOKEN</p>
+            <p>1. ใช้บัญชีแอดมินเดียวกับที่เข้าสู่ระบบ ไม่ต้องกรอก token แยก</p>
             <p>2. Sync ให้ได้ 3,000–5,000 เรื่องก่อน แล้วเปิด /admin ตรวจว่าหน้าโหลดไหว</p>
-            <p>3. ขั้นถัดไปควรเปลี่ยนหน้าเว็บหลักให้อ่านจาก tmdb_catalog แทน TMDB สด</p>
+            <p>3. ถ้า request timeout ให้ลด Pages / Run เหลือ 10 แล้วค่อยเพิ่มเมื่อระบบนิ่ง</p>
           </div>
         </section>
       </div>

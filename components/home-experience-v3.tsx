@@ -198,8 +198,11 @@ function LazyMovieRail({
     }
 
     function maybeLoadMore() {
-      const remaining = rail.scrollWidth - rail.clientWidth - rail.scrollLeft;
-      const threshold = Math.max(RAIL_LOAD_THRESHOLD, rail.clientWidth * 0.38);
+      const currentRail = railRef.current;
+      if (!currentRail) return;
+
+      const remaining = currentRail.scrollWidth - currentRail.clientWidth - currentRail.scrollLeft;
+      const threshold = Math.max(RAIL_LOAD_THRESHOLD, currentRail.clientWidth * 0.38);
       if (remaining <= threshold) loadNextBatch();
     }
 
@@ -379,12 +382,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
             <a href="/watch-ready" className="hidden text-[15px] font-black text-[#f6c56b] md:block">
               ♛ พรีเมียม
             </a>
-            <a
-              href="/admin"
-              className="grid h-9 w-9 place-items-center rounded-full border border-[#e50914]/70 bg-[#170203] shadow-glow md:h-12 md:w-12"
-            >
-              <span className="text-[11px] font-black text-red-100 md:text-sm">A</span>
-            </a>
+            <div data-dofree-menu-host="true" className="grid h-9 w-9 place-items-center md:h-12 md:w-12" />
           </div>
         </nav>
       </header>
