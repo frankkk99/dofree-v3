@@ -20,6 +20,18 @@ function initialMode(): AuthMode {
   return params.get('mode') === 'signup' ? 'signup' : 'signin';
 }
 
+function redirectTarget() {
+  if (typeof window === 'undefined') return '';
+  const params = new URLSearchParams(window.location.search);
+  const next = params.get('next') || '';
+  if (!next.startsWith('/') || next.startsWith('//')) return '';
+  return next;
+}
+
+function isAdminEntry() {
+  return redirectTarget().startsWith('/admin');
+}
+
 function methodHint() {
   if (typeof window === 'undefined') return '';
   const params = new URLSearchParams(window.location.search);
@@ -42,6 +54,8 @@ export function AuthPanel() {
   const [user, setUser] = useState<DofreeUser | null>(null);
   const [needsConfirmation, setNeedsConfirmation] = useState(false);
   const hint = useMemo(() => methodHint(), []);
+  const next = useMemo(() => redirectTarget(), []);
+  const adminEntry = useMemo(() => isAdminEntry(), []);
 
   useEffect(() => {
     setMode(initialMode());
@@ -55,17 +69,21 @@ export function AuthPanel() {
           setUser(redirectSession.user);
           setMessage('ยืนยันอีเมลและเข้าสู่ระบบสำเร็จ');
           setNeedsConfirmation(false);
+          if (next) window.location.assign(next);
           return;
         }
       } catch (error) {
         setMessage(error instanceof Error ? error.message : 'ลิงก์ยืนยันไม่ถูกต้องหรือหมดอายุ');
       }
 
-      await getCurrentUser().then(setUser).catch(() => null);
+      await getCurrentUser().then((currentUser) => {
+        setUser(currentUser);
+        if (currentUser && next) window.location.assign(next);
+      }).catch(() => null);
     }
 
     void boot();
-  }, []);
+  }, [next]);
 
   async function submit() {
     setLoading(true);
@@ -83,6 +101,10 @@ export function AuthPanel() {
       if (session?.user) {
         setUser(session.user);
         setMessage(mode === 'signin' ? 'เข้าสู่ระบบสำเร็จ' : 'สมัครสมาชิกสำเร็จ');
+        if (next) {
+          window.location.assign(next);
+          return;
+        }
       } else {
         setNeedsConfirmation(true);
         setMessage('สมัครแล้ว โปรดเช็กอีเมลเพื่อยืนยันบัญชี ก่อนกลับมา Sign in');
@@ -141,20 +163,32 @@ export function AuthPanel() {
         </button>
       </div>
 
+      {adminEntry ? <p className="mt-4 rounded-2xl bg-[#e50914]/10 px-4 py-3 text-xs font-bold text-red-100/70">เข้าสู่ระบบเพื่อดำเนินการต่อ</p> : null}
       {hint ? <p className="mt-4 rounded-2xl bg-white/[0.055] px-4 py-3 text-xs font-bold text-white/52">{hint}</p> : null}
 
       {user ? (
         <div className="mt-5 rounded-[24px] border border-[#e50914]/25 bg-[#170203]/55 p-4">
           <p className="text-xs font-black uppercase tracking-[0.24em] text-[#e50914]/85">Signed in</p>
           <p className="mt-2 break-all text-sm font-black text-white">{user.email || user.phone || user.id}</p>
-          <button
-            type="button"
-            onClick={logout}
-            disabled={loading}
-            className="mt-4 h-12 w-full rounded-2xl bg-white/[0.1] text-sm font-black text-white/78 hover:bg-white/[0.16] disabled:opacity-50"
-          >
-            Logout
-          </button>
+          <div className="mt-4 grid gap-2">
+            {next ? (
+              <a href={next} className="h-12 rounded-2xl bg-[#e50914] px-5 py-3 text-center text-sm font-black text-white shadow-glow">
+                ไปต่อ
+              </a>
+            ) : (
+              <a href="/" className="h-12 rounded-2xl bg-[#e50914] px-5 py-3 text-center text-sm font-black text-white shadow-glow">
+                กลับหน้าเว็บ
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={logout}
+              disabled={loading}
+              className="h-12 rounded-2xl bg-white/[0.1] text-sm font-black text-white/78 hover:bg-white/[0.16] disabled:opacity-50"
+            >
+              Logout
+            </button>
+          </div>
         </div>
       ) : (
         <div className="mt-5 grid gap-3">
