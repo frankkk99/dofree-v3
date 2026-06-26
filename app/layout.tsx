@@ -1,5 +1,19 @@
 import type { Metadata } from 'next';
+import { Inter, Noto_Sans_Thai } from 'next/font/google';
 import './globals.css';
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+});
+
+const notoSansThai = Noto_Sans_Thai({
+  subsets: ['thai'],
+  variable: '--font-thai',
+  weight: ['300', '400', '500', '600', '700', '800', '900'],
+  display: 'swap',
+});
 
 const siteName = 'ดูดีดี';
 const englishSiteName = 'DodeedeeV3';
@@ -39,7 +53,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="th-TH">
+    <html lang="th-TH" className={`${inter.variable} ${notoSansThai.variable}`}>
       <body>{children}</body>
     </html>
   );
