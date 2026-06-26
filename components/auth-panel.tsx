@@ -184,7 +184,7 @@ export function AuthPanel() {
             type="button"
             onClick={submit}
             disabled={loading}
-            className="h-13 rounded-2xl bg-[#e50914] px-5 py-4 text-sm font-black text-white shadow-glow transition hover:bg-red-600 disabled:opacity-50"
+            className="h-[52px] rounded-2xl bg-[#e50914] px-5 py-4 text-sm font-black text-white shadow-glow transition hover:bg-red-600 disabled:opacity-50"
           >
             {loading ? 'กำลังดำเนินการ...' : mode === 'signin' ? 'เข้าสู่ระบบด้วย Email' : 'สมัครสมาชิกด้วย Email'}
           </button>
