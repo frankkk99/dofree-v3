@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireAdminToken } from '@/lib/admin-auth';
+import { requireAdminAccess } from '@/lib/admin-auth';
 import { supabaseRest } from '@/lib/supabase-rest';
 
 type MediaType = 'movie' | 'tv';
@@ -119,8 +119,34 @@ function toRecord(row: Record<string, string>): ImportRecord | null {
   };
 }
 
+async function writeAuditLog(input: {
+  actorId: string;
+  actorLabel: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  afterData: Record<string, unknown>;
+  request: Request;
+}) {
+  await supabaseRest('admin_audit_logs', {
+    method: 'POST',
+    mode: 'service',
+    prefer: 'return=minimal',
+    body: [{
+      actor_id: input.actorId === 'admin-token' ? null : input.actorId,
+      actor_label: input.actorLabel,
+      action: input.action,
+      entity_type: input.entityType,
+      entity_id: input.entityId,
+      after_data: input.afterData,
+      ip_address: input.request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null,
+      user_agent: input.request.headers.get('user-agent') || null,
+    }],
+  }).catch(() => null);
+}
+
 export async function POST(request: Request) {
-  const auth = requireAdminToken(request);
+  const auth = await requireAdminAccess(request);
   if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
 
   const formData = await request.formData().catch(() => null);
@@ -151,5 +177,17 @@ export async function POST(request: Request) {
     });
   }
 
-  return NextResponse.json({ ok: true, imported: records.length, parsedRows: Math.max(table.length - 1, 0), skipped: Math.max(table.length - 1 - records.length, 0) });
+  const parsedRows = Math.max(table.length - 1, 0);
+  const skipped = Math.max(parsedRows - records.length, 0);
+  await writeAuditLog({
+    actorId: auth.actor.id,
+    actorLabel: auth.actor.label,
+    action: 'bulk_import_movie_links',
+    entityType: 'admin_movie_links',
+    entityId: `csv:${new Date().toISOString()}`,
+    afterData: { imported: records.length, parsedRows, skipped, fileName: file.name },
+    request,
+  });
+
+  return NextResponse.json({ ok: true, imported: records.length, parsedRows, skipped });
 }
