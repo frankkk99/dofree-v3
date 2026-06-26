@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { getStoredSession } from '@/lib/supabase-auth-browser';
 
-function importHeaders() {
+function importHeaders(): Record<string, string> | null {
   const session = getStoredSession();
   if (session?.access_token) return { Authorization: `Bearer ${session.access_token}` };
 
