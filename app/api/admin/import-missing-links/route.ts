@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { recordAdminAuditLog } from '@/lib/admin-audit';
 import { requireAdminAccess } from '@/lib/admin-auth';
 import { supabaseRest } from '@/lib/supabase-rest';
 
@@ -150,6 +151,27 @@ export async function POST(request: Request) {
       body: records.slice(index, index + 200),
     });
   }
+
+  await recordAdminAuditLog({
+    request,
+    actor: auth,
+    action: 'movie_link.csv_import',
+    entityType: 'admin_movie_links',
+    entityId: `csv-import-${Date.now()}`,
+    afterData: {
+      imported: records.length,
+      parsedRows: Math.max(table.length - 1, 0),
+      skipped: Math.max(table.length - 1 - records.length, 0),
+      sample: records.slice(0, 20).map((record) => ({
+        tmdb_id: record.tmdb_id,
+        media_type: record.media_type,
+        title: record.title_th || record.title,
+        provider: record.provider,
+        section_slug: record.section_slug,
+        status: record.status,
+      })),
+    },
+  });
 
   return NextResponse.json({ ok: true, imported: records.length, parsedRows: Math.max(table.length - 1, 0), skipped: Math.max(table.length - 1 - records.length, 0) });
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { recordAdminAuditLog } from '@/lib/admin-audit';
 import { requireAdminAccess } from '@/lib/admin-auth';
 
 const posterBase = 'https://image.tmdb.org/t/p/w342';
@@ -217,6 +218,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'ต้องมี TMDB ID และลิงก์รับชม' }, { status: 400 });
     }
 
+    const before = (await fetchExistingLinks(mediaType, [tmdbId])).get(tmdbId) || null;
     const result = await upsertWatchLink({
       tmdb_id: tmdbId,
       media_type: mediaType,
@@ -230,6 +232,16 @@ export async function POST(request: Request) {
     });
 
     if (!result.ok) return NextResponse.json({ error: result.error }, { status: 500 });
+
+    await recordAdminAuditLog({
+      request,
+      actor: auth,
+      action: before ? 'watch_link.search_update' : 'watch_link.search_create',
+      entityType: 'admin_movie_links',
+      entityId: `${mediaType}-${tmdbId}`,
+      beforeData: before,
+      afterData: result.record || null,
+    });
 
     return NextResponse.json({ ok: true, record: result.record });
   } catch (error) {

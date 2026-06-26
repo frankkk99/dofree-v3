@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { recordAdminAuditLog } from '@/lib/admin-audit';
 import { requireAdminAccess } from '@/lib/admin-auth';
 import { supabaseRest } from '@/lib/supabase-rest';
 
@@ -245,6 +246,24 @@ export async function POST(request: Request) {
         },
       });
     }
+
+    await recordAdminAuditLog({
+      request,
+      actor: auth,
+      action: 'tmdb_catalog.sync_batch',
+      entityType: 'tmdb_catalog_sync_runs',
+      entityId: runId || `cursor-${cursor}`,
+      afterData: {
+        runId,
+        upserted,
+        skipped,
+        cursor,
+        pagesPerRun,
+        nextCursor: cursor + selectedTasks.length,
+        totalTasks: allTasks.length,
+        done,
+      },
+    });
 
     return NextResponse.json({
       ok: true,

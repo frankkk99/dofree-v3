@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { AdminAuditLogPanel } from '@/components/admin-audit-log-panel';
 import { AdminAuthGuard } from '@/components/admin-auth-guard';
 import { AdminCatalogBrowser } from '@/components/admin-catalog-browser';
 import { AdminDashboard } from '@/components/admin-dashboard';
@@ -17,6 +18,7 @@ export default function AdminPage() {
     <AdminAuthGuard>
       <main className="min-h-screen bg-[#030303] text-white">
         <AdminDashboard />
+        <AdminAuditLogPanel />
         <section id="catalog-manager" className="border-t border-white/10">
           <AdminCatalogBrowser />
         </section>

@@ -92,6 +92,7 @@ const adminModules = [
   { label: 'Analytics', href: '#analytics', description: 'ดูคนเข้าเว็บ คำค้น และคอนเทนต์ยอดนิยม' },
   { label: 'Missing Link Queue', href: '#catalog-manager', description: 'คิวหนังที่ควรเติมลิงก์ก่อน' },
   { label: 'Broken Link Reports', href: '#maintenance', description: 'รายงานลิงก์เสียและงานซ่อมด่วน' },
+  { label: 'Update History', href: '#update-history', description: 'ดูประวัติการเพิ่ม แก้ไข Import, Sync, Role และ Membership' },
   { label: 'Users & Roles', href: '/admin/users', description: 'จัดการผู้ใช้และ role viewer/admin' },
   { label: 'Premium Memberships', href: '/admin/memberships', description: 'อนุมัติ Premium และตั้งวันหมดอายุ' },
   { label: 'Import / Export', href: '#catalog-manager', description: 'นำเข้า/ส่งออก CSV สำหรับลิงก์หนัง' },
@@ -182,6 +183,7 @@ export function AdminDashboard() {
           <div className="flex flex-wrap gap-2">
             <a href="/" className="rounded-2xl bg-white/[0.08] px-4 py-3 text-xs font-black text-white/75 hover:bg-white/[0.14]">หน้าเว็บ</a>
             <a href="#analytics" className="rounded-2xl bg-white/[0.08] px-4 py-3 text-xs font-black text-white/75 hover:bg-white/[0.14]">Analytics</a>
+            <a href="#update-history" className="rounded-2xl bg-white/[0.08] px-4 py-3 text-xs font-black text-white/75 hover:bg-white/[0.14]">History</a>
             <a href="#catalog-manager" className="rounded-2xl bg-white/[0.08] px-4 py-3 text-xs font-black text-white/75 hover:bg-white/[0.14]">Catalog</a>
             <a href="/admin/users" className="rounded-2xl bg-white/[0.08] px-4 py-3 text-xs font-black text-white/75 hover:bg-white/[0.14]">Users</a>
             <button onClick={loadDashboard} className="rounded-2xl bg-[#e50914] px-4 py-3 text-xs font-black text-white shadow-glow">Refresh</button>

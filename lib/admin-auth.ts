@@ -13,7 +13,7 @@ type ProfileRecord = {
   role?: string | null;
 };
 
-type AdminAccess =
+export type AdminAccess =
   | { ok: true; mode: 'session' | 'token'; user?: AuthUser; role?: string }
   | { ok: false; status: number; error: string };
 

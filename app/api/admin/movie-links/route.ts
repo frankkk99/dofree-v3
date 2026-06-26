@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { recordAdminAuditLog } from '@/lib/admin-audit';
 import { requireAdminAccess } from '@/lib/admin-auth';
 import { supabaseRest } from '@/lib/supabase-rest';
 
@@ -129,6 +130,22 @@ async function authError(request: Request) {
   const auth = await requireAdminAccess(request);
   if (auth.ok === true) return null;
   return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
+}
+
+async function fetchSavedMovieLinkByKey(tmdbId: number, mediaType: MediaType) {
+  const rows = await supabaseRest<AdminMovieLink[]>(
+    `admin_movie_links?tmdb_id=eq.${tmdbId}&media_type=eq.${encodeURIComponent(mediaType)}&select=id,tmdb_id,media_type,title,title_th,watch_url,trailer_url,provider,is_active,notes,section_slug,status,created_at,updated_at&limit=1`,
+    { mode: 'service' },
+  ).catch(() => []);
+  return rows[0] || null;
+}
+
+async function fetchSavedMovieLinkById(id: string) {
+  const rows = await supabaseRest<AdminMovieLink[]>(
+    `admin_movie_links?id=eq.${encodeURIComponent(id)}&select=id,tmdb_id,media_type,title,title_th,watch_url,trailer_url,provider,is_active,notes,section_slug,status,created_at,updated_at&limit=1`,
+    { mode: 'service' },
+  ).catch(() => []);
+  return rows[0] || null;
 }
 
 function linkKey(mediaType: MediaType, tmdbId: number) {
@@ -356,8 +373,8 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const errorResponse = await authError(request);
-  if (errorResponse) return errorResponse;
+  const auth = await requireAdminAccess(request);
+  if (auth.ok === false) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
 
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   const tmdbId = Number(body?.tmdb_id);
@@ -397,11 +414,23 @@ export async function POST(request: Request) {
   };
 
   try {
+    const before = await fetchSavedMovieLinkByKey(tmdbId, mediaType);
     const rows = await supabaseRest<AdminMovieLink[]>('admin_movie_links?on_conflict=tmdb_id,media_type', {
       method: 'POST',
       mode: 'service',
       prefer: 'resolution=merge-duplicates,return=representation',
       body: [record],
+    });
+
+    const saved = rows[0] || null;
+    await recordAdminAuditLog({
+      request,
+      actor: auth,
+      action: before ? 'movie_link.upsert.update' : 'movie_link.upsert.create',
+      entityType: 'admin_movie_links',
+      entityId: saved?.id || `${mediaType}-${tmdbId}`,
+      beforeData: before,
+      afterData: saved,
     });
 
     return NextResponse.json({ ok: true, link: rows[0] ? await fetchTmdbDetail(rows[0]) : rows[0] });
@@ -411,8 +440,8 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const errorResponse = await authError(request);
-  if (errorResponse) return errorResponse;
+  const auth = await requireAdminAccess(request);
+  if (auth.ok === false) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
 
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   const id = cleanText(body?.id);
@@ -450,11 +479,22 @@ export async function PATCH(request: Request) {
   if (notes !== undefined) patch.notes = notes;
 
   try {
+    const before = await fetchSavedMovieLinkById(id);
     const rows = await supabaseRest<AdminMovieLink[]>(`admin_movie_links?id=eq.${encodeURIComponent(id)}`, {
       method: 'PATCH',
       mode: 'service',
       prefer: 'return=representation',
       body: patch,
+    });
+
+    await recordAdminAuditLog({
+      request,
+      actor: auth,
+      action: 'movie_link.patch',
+      entityType: 'admin_movie_links',
+      entityId: id,
+      beforeData: before,
+      afterData: rows[0] || patch,
     });
 
     return NextResponse.json({ ok: true, link: rows[0] ? await fetchTmdbDetail(rows[0]) : rows[0] });
