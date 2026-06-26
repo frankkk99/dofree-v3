@@ -28,7 +28,7 @@ export default async function HomePage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
       <HomeRealtimeWrapper home={home} />
       <SearchBehaviorFix />
-      <FloatingGlassSearch />
+      <FloatingGlassSearch home={home} />
       <FloatingSearchPolish />
       <HomeCardLinkBridge home={home} />
       <FavoriteClickBridge home={home} />
