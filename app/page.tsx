@@ -4,6 +4,7 @@ import { HomeCardLinkBridge } from '@/components/home-card-link-bridge';
 import { HomeRealtimeWrapper } from '@/components/home-realtime-wrapper';
 import { ReliableHeroCarousel } from '@/components/reliable-hero-carousel';
 import { ReleaseWindowAutoCarousel } from '@/components/release-window-auto-carousel';
+import { SearchBehaviorFix } from '@/components/search-behavior-fix';
 import { WatchHistoryClickBridge } from '@/components/watch-history-click-bridge';
 import { getCatalogHomePayload } from '@/lib/catalog-home';
 
@@ -24,6 +25,7 @@ export default async function HomePage() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
       <HomeRealtimeWrapper home={home} />
+      <SearchBehaviorFix />
       <HomeCardLinkBridge home={home} />
       <FavoriteClickBridge home={home} />
       <WatchHistoryClickBridge home={home} />
