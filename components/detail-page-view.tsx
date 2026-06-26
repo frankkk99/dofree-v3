@@ -14,6 +14,10 @@ function mediaLabel(mediaType: string) {
   return mediaType === 'tv' ? 'Series' : 'Movie';
 }
 
+function personInitial(name: string) {
+  return name.trim().slice(0, 1).toUpperCase() || 'A';
+}
+
 function isExternalHref(href: string) {
   return /^https?:\/\//.test(href);
 }
@@ -22,8 +26,71 @@ function linkProps(href: string) {
   return isExternalHref(href) ? { target: '_blank', rel: 'noreferrer' } : {};
 }
 
-function personInitial(name: string) {
-  return name.trim().slice(0, 1).toUpperCase() || 'A';
+function youtubeEmbedUrl(url?: string) {
+  if (!url) return undefined;
+
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.replace('www.', '');
+
+    if (host === 'youtube.com' || host === 'm.youtube.com') {
+      if (parsed.pathname.startsWith('/embed/')) {
+        parsed.searchParams.set('autoplay', '0');
+        parsed.searchParams.set('rel', '0');
+        parsed.searchParams.set('playsinline', '1');
+        return parsed.toString();
+      }
+
+      if (parsed.pathname === '/watch') {
+        const videoId = parsed.searchParams.get('v');
+        return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0&playsinline=1` : undefined;
+      }
+
+      if (parsed.pathname.startsWith('/shorts/')) {
+        const videoId = parsed.pathname.split('/')[2];
+        return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0&playsinline=1` : undefined;
+      }
+    }
+
+    if (host === 'youtu.be') {
+      const videoId = parsed.pathname.replace('/', '');
+      return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0&playsinline=1` : undefined;
+    }
+  } catch {}
+
+  return undefined;
+}
+
+function TrailerCard({ title, trailerUrl, fallbackImage }: { title: string; trailerUrl?: string; fallbackImage: string }) {
+  const embedUrl = youtubeEmbedUrl(trailerUrl);
+
+  return (
+    <section className="rounded-[26px] border border-white/10 bg-white/[0.045] p-3 shadow-[0_28px_90px_rgba(0,0,0,0.62)] backdrop-blur-2xl md:rounded-[32px] md:p-4">
+      <p className="mb-3 text-[10px] font-black uppercase tracking-[0.28em] text-red-100/70 md:text-xs">TRAILER PREVIEW</p>
+      {embedUrl ? (
+        <div className="overflow-hidden rounded-[20px] bg-black shadow-[0_24px_80px_rgba(0,0,0,0.68)] md:rounded-[26px]">
+          <iframe
+            src={embedUrl}
+            title={`ตัวอย่าง ${title}`}
+            loading="lazy"
+            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+            allowFullScreen
+            referrerPolicy="no-referrer-when-downgrade"
+            className="aspect-video w-full border-0 bg-black"
+          />
+        </div>
+      ) : (
+        <div className="relative grid aspect-video place-items-center overflow-hidden rounded-[20px] bg-black/58 text-center shadow-[0_24px_80px_rgba(0,0,0,0.68)] md:rounded-[26px]">
+          {fallbackImage ? <img src={fallbackImage} alt={title} className="absolute inset-0 h-full w-full object-cover opacity-25 blur-[1px]" /> : null}
+          <div className="absolute inset-0 bg-black/68" />
+          <div className="relative z-10 px-6">
+            <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-white/[0.1] text-xl font-black text-white/58 shadow-[0_18px_50px_rgba(0,0,0,0.72)] backdrop-blur-xl md:h-16 md:w-16 md:text-2xl">▶</div>
+            <p className="mt-3 text-xs font-black text-white/70 md:text-sm">ยังไม่มีตัวอย่างที่ฝังในหน้านี้ได้</p>
+          </div>
+        </div>
+      )}
+    </section>
+  );
 }
 
 export function DetailPageView({ detail }: { detail: DetailPayload }) {
@@ -34,6 +101,7 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
   const primaryLabel = item.watchUrl ? 'รับชมในเว็บ' : effectiveTrailerUrl ? 'ดูตัวอย่าง' : 'ดูรายการพร้อมรับชม';
   const secondaryHref = effectiveTrailerUrl || primaryHref;
   const secondaryLabel = effectiveTrailerUrl ? 'Teaser / Trailer' : 'รายละเอียดเพิ่มเติม';
+  const fallbackImage = item.backdropUrl || item.posterUrl || '';
   const detailFacts = [
     item.year,
     `คะแนน ${item.rating.toFixed(1)}`,
@@ -68,130 +136,152 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
   };
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[#030303] text-white">
+    <main className="min-h-screen overflow-x-hidden bg-[#030303] px-2 py-4 text-white md:px-4 md:py-7">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
-      <section className="relative min-h-[660px] overflow-hidden border-b border-white/10 md:min-h-[720px]">
-        <div className="absolute inset-0 bg-cover bg-center opacity-80" style={{ backgroundImage: `url(${item.backdropUrl})` }} />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,#030303_0%,rgba(3,3,3,0.97)_22%,rgba(3,3,3,0.62)_58%,#030303_100%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.08),rgba(3,3,3,0.72)_64%,#030303_98%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_36%,rgba(229,9,20,0.22),transparent_24rem)]" />
+      <div className="fixed inset-0 -z-10 bg-[#030303]" />
+      <div className="fixed inset-0 -z-10 bg-cover bg-center opacity-28 blur-[1px]" style={{ backgroundImage: `url(${fallbackImage})` }} />
+      <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_18%_12%,rgba(229,9,20,0.22),transparent_24rem),linear-gradient(180deg,rgba(0,0,0,0.58),#030303_72%)]" />
 
-        <div className="relative z-10 mx-auto flex min-h-[660px] max-w-[1440px] items-center px-4 py-24 md:min-h-[720px] md:px-6 md:py-28">
-          <div className="grid w-full gap-7 md:grid-cols-[280px_1fr] md:items-center lg:grid-cols-[340px_1fr]">
-            <div className="mx-auto w-[190px] overflow-hidden rounded-[20px] border border-white/12 bg-white/[0.045] shadow-[0_35px_100px_rgba(0,0,0,0.86)] sm:w-[240px] md:w-full md:rounded-[26px]">
+      <article className="mx-auto w-full max-w-[940px] overflow-hidden rounded-[28px] bg-[#050505]/88 shadow-[0_42px_150px_rgba(0,0,0,0.94)] backdrop-blur-2xl md:rounded-[34px]">
+        <section className="relative bg-black/42 shadow-[inset_0_-80px_110px_rgba(0,0,0,0.55)] backdrop-blur-xl">
+          <div className="absolute inset-0 bg-cover bg-center opacity-24 blur-[1px]" style={{ backgroundImage: `url(${fallbackImage})` }} />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,5,5,0.42),rgba(5,5,5,0.86)_55%,rgba(5,5,5,0.98)_100%)] md:bg-[linear-gradient(90deg,rgba(5,5,5,0.98)_0%,rgba(5,5,5,0.86)_42%,rgba(5,5,5,0.48)_100%)]" />
+
+          <a href="/" className="absolute right-3 top-3 z-20 grid h-9 w-9 place-items-center rounded-full bg-black/62 text-xl font-black text-white/80 shadow-[0_14px_42px_rgba(0,0,0,0.72)] backdrop-blur-xl transition hover:bg-white/[0.12] md:right-4 md:top-4 md:h-11 md:w-11 md:text-2xl" aria-label="กลับหน้าแรก">
+            ×
+          </a>
+
+          <div className="relative z-10 grid gap-4 p-4 pt-5 md:grid-cols-[160px_1fr] md:gap-5 md:p-5 md:pb-4 lg:grid-cols-[190px_1fr]">
+            <div className="mx-auto w-[118px] overflow-hidden rounded-[18px] bg-black/40 shadow-[0_20px_55px_rgba(0,0,0,0.75)] ring-1 ring-white/14 backdrop-blur-md md:w-full md:rounded-[22px]">
               <img src={item.posterUrl} alt={item.title} className="aspect-[2/3] w-full object-cover" />
             </div>
 
-            <div className="max-w-4xl text-center md:text-left">
-              <a href="/" className="inline-flex rounded-full border border-white/10 bg-black/30 px-4 py-2 text-xs font-black text-red-100/75 backdrop-blur-xl transition hover:border-[#e50914]/60 hover:text-white">
+            <div className="min-w-0 pr-9 md:pr-11">
+              <a href="/" className="inline-flex rounded-full border border-white/10 bg-black/30 px-3 py-1.5 text-[10px] font-black text-red-100/75 backdrop-blur-xl transition hover:border-[#e50914]/60 hover:text-white md:text-xs">
                 กลับหน้าแรก
               </a>
-
-              <p className="mt-7 text-[10px] font-black uppercase tracking-[0.34em] text-[#e50914] md:text-xs">
+              <p className="mt-5 text-[9px] font-black uppercase tracking-[0.24em] text-[#e50914] md:text-[10px]">
                 {mediaLabel(item.mediaType)} Detail
               </p>
-
-              <h1 className="mt-3 text-[42px] font-black leading-[0.9] tracking-[-0.085em] text-white md:text-7xl lg:text-8xl">
+              <h1 className="modal-title mt-2 line-clamp-2 text-[32px] font-black leading-[0.92] tracking-[-0.075em] text-white md:text-[56px] lg:text-[68px]">
                 {item.title}
               </h1>
+              {item.titleEn && item.titleEn !== item.title ? <p className="mt-2 text-sm font-bold text-white/42 md:text-base">{item.titleEn}</p> : null}
 
-              {item.titleEn && item.titleEn !== item.title ? (
-                <p className="mt-3 text-sm font-bold text-white/40 md:text-lg">{item.titleEn}</p>
-              ) : null}
-
-              <div className="mt-5 flex flex-wrap justify-center gap-2 text-[11px] font-black text-white/72 md:justify-start md:text-xs">
+              <div className="mt-4 flex flex-wrap gap-1.5 text-[9px] font-black md:text-[11px]">
                 {detailFacts.map((fact) => (
-                  <span key={fact} className="rounded-full bg-white/10 px-3 py-1.5 backdrop-blur-xl">
+                  <span key={fact} className="rounded-full bg-white/[0.105] px-2.5 py-1 text-white/78 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md">
                     {fact}
                   </span>
                 ))}
               </div>
 
-              <p className="mx-auto mt-6 max-w-3xl text-sm leading-7 text-white/62 md:mx-0 md:text-lg md:leading-9">
+              <p className="mt-4 max-w-2xl text-[12px] font-medium leading-6 text-white/62 md:text-[14px] md:leading-7">
                 {item.overview || 'ยังไม่มีคำอธิบายเรื่องนี้ แต่ระบบเตรียมโครงหน้าไว้สำหรับแสดงรายละเอียด ตัวอย่าง นักแสดง และรายการแนะนำที่เกี่ยวข้อง'}
               </p>
 
               {item.genres?.length ? (
-                <div className="mt-6 flex flex-wrap justify-center gap-2 md:justify-start">
+                <div className="mt-4 flex flex-wrap gap-2">
                   {item.genres.map((genre) => (
-                    <span key={genre} className="rounded-full border border-white/10 bg-white/[0.055] px-4 py-2 text-xs font-bold text-white/58 backdrop-blur-xl">
+                    <span key={genre} className="rounded-full border border-white/10 bg-white/[0.055] px-3 py-1.5 text-[11px] font-bold text-white/58 backdrop-blur-xl">
                       {genre}
                     </span>
                   ))}
                 </div>
               ) : null}
 
-              <div className="mt-8 flex flex-wrap justify-center gap-3 md:justify-start md:gap-4">
-                <a {...linkProps(primaryHref)} href={primaryHref} className="inline-flex h-[52px] items-center justify-center gap-3 rounded-xl bg-[#e50914] px-7 text-sm font-black text-white shadow-glow transition hover:brightness-110 md:px-8">
+              <div className="mt-6 flex flex-wrap gap-2.5 md:gap-3">
+                <a {...linkProps(primaryHref)} href={primaryHref} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#e50914] px-5 text-xs font-black text-white shadow-glow transition hover:brightness-110 md:h-12 md:px-7 md:text-sm">
                   <span>▶</span>{primaryLabel}
                 </a>
-                <a {...linkProps(secondaryHref)} href={secondaryHref} className="inline-flex h-[52px] items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/[0.1] px-7 text-sm font-black text-white/85 transition hover:border-white/22 hover:bg-white/[0.15] md:px-8">
+                <a {...linkProps(secondaryHref)} href={secondaryHref} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/18 bg-white/[0.08] px-5 text-xs font-black text-white/85 transition hover:border-white/30 hover:bg-white/[0.13] md:h-12 md:px-7 md:text-sm">
                   <span>▷</span>{secondaryLabel}
                 </a>
-                <a href="/watch-ready" className="inline-flex h-[52px] items-center justify-center rounded-xl border border-[#e50914]/30 bg-[#e50914]/10 px-7 text-sm font-black text-red-100 transition hover:border-[#e50914]/60 hover:bg-[#e50914]/18 md:px-8">
+                <a href="/watch-ready" className="inline-flex h-11 items-center justify-center rounded-xl border border-[#e50914]/30 bg-[#e50914]/10 px-5 text-xs font-black text-red-100 transition hover:border-[#e50914]/60 hover:bg-[#e50914]/18 md:h-12 md:px-7 md:text-sm">
                   พร้อมรับชมทั้งหมด
                 </a>
               </div>
             </div>
           </div>
-        </div>
-      </section>
 
-      <section className="mx-auto max-w-[1440px] space-y-12 px-4 py-10 md:px-6 md:py-12">
-        <div>
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#e50914]/75">Cast</p>
-              <h2 className="mt-1 text-2xl font-black tracking-[-0.04em] md:text-3xl">นักแสดงหลัก</h2>
-            </div>
+          <div className="relative z-10 px-4 pb-4 md:px-5 md:pb-5">
+            <TrailerCard title={item.title} trailerUrl={effectiveTrailerUrl} fallbackImage={fallbackImage} />
           </div>
+        </section>
 
-          {cast.length ? (
-            <div className="movie-rail mt-5 flex gap-3 overflow-x-auto pb-3 md:gap-4">
-              {cast.map((person) => (
-                <div key={person.id} className="w-[138px] shrink-0 rounded-2xl border border-white/10 bg-white/[0.045] p-2.5 backdrop-blur-xl md:w-[160px] md:p-3">
-                  <div className="aspect-square overflow-hidden rounded-xl bg-white/10">
-                    {person.profileUrl ? (
-                      <img src={person.profileUrl} alt={person.name} className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="grid h-full place-items-center text-3xl font-black text-white/38">{personInitial(person.name)}</div>
-                    )}
+        <section className="sticky top-0 z-20 bg-black/62 px-3 shadow-[0_20px_60px_rgba(0,0,0,0.58)] backdrop-blur-2xl md:px-5">
+          <div className="movie-rail flex gap-1 overflow-x-auto py-2.5 md:gap-1.5 md:py-3">
+            {['นักแสดง', 'รายละเอียด', 'แนะนำ', 'รับชม'].map((label, index) => (
+              <a key={label} href={index === 0 ? '#cast' : index === 1 ? '#detail' : index === 2 ? '#recommend' : watchHref} className={`min-w-max rounded-md px-3 py-1.5 text-[10px] font-black shadow-[0_12px_32px_rgba(0,0,0,0.28)] backdrop-blur-xl transition md:px-4 md:py-2 md:text-xs ${index === 0 ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.07] text-white/55 hover:bg-white/[0.12] hover:text-white'}`}>
+                {label}
+              </a>
+            ))}
+          </div>
+        </section>
+
+        <section className="space-y-6 p-3 md:p-4">
+          <div id="cast" className="rounded-[22px] bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_22px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl md:p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]/75">Cast</p>
+                <h2 className="mt-1 text-xl font-black tracking-[-0.04em] md:text-2xl">นักแสดงหลัก</h2>
+              </div>
+              <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-black text-white/38 backdrop-blur-xl">TMDB</span>
+            </div>
+
+            {cast.length ? (
+              <div className="mt-4 grid grid-cols-3 gap-2 md:grid-cols-4 md:gap-3">
+                {cast.slice(0, 12).map((person, index) => (
+                  <div key={`${person.id || person.name}-${index}`} className="relative aspect-[2/3] overflow-hidden rounded-[12px] bg-white/[0.055] shadow-[0_16px_54px_rgba(0,0,0,0.55)] backdrop-blur-xl md:rounded-[16px]">
+                    {person.profileUrl ? <img src={person.profileUrl} alt={person.name} className="absolute inset-0 h-full w-full object-cover" /> : <div className="absolute inset-0 grid place-items-center bg-[radial-gradient(circle_at_50%_24%,#8a111b,#111_62%)] text-4xl font-black text-white/78 md:text-5xl">{personInitial(person.name)}</div>}
+                    <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.04)_0%,rgba(0,0,0,0.06)_44%,rgba(0,0,0,0.92)_100%)]" />
+                    <div className="absolute inset-x-0 bottom-0 p-2 md:p-3">
+                      <h3 className="line-clamp-2 text-[10px] font-black leading-tight text-white drop-shadow md:text-sm">{person.name}</h3>
+                      <p className="mt-1 line-clamp-2 text-[8px] font-bold leading-3 text-white/52 md:text-[10px] md:leading-4">{person.character || 'นักแสดง'}</p>
+                    </div>
                   </div>
-                  <h3 className="mt-3 line-clamp-1 text-sm font-black">{person.name}</h3>
-                  <p className="mt-1 line-clamp-1 text-xs text-white/45">{person.character || 'นักแสดง'}</p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="mt-5 rounded-3xl border border-white/10 bg-white/[0.04] p-6 text-sm font-semibold text-white/45">
-              ยังไม่มีข้อมูลนักแสดงสำหรับเรื่องนี้
-            </div>
-          )}
-        </div>
-
-        <div>
-          <div className="mb-5 flex items-center justify-between gap-4">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#e50914]/75">Recommended</p>
-              <h2 className="mt-1 text-2xl font-black tracking-[-0.04em] md:text-3xl">แนะนำสำหรับคุณ</h2>
-            </div>
-            <a href="/watch-ready" className="shrink-0 text-sm font-black text-white/45 hover:text-white">ดูทั้งหมด ›</a>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-4 rounded-2xl bg-black/28 p-4 text-center text-xs font-bold text-white/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] backdrop-blur-xl md:text-sm">ยังไม่มีข้อมูลนักแสดงสำหรับเรื่องนี้</div>
+            )}
           </div>
 
-          {recommendations.length ? (
-            <div className="movie-rail flex gap-3 overflow-x-auto pb-4 md:gap-5">
-              {recommendations.slice(0, 12).map((movie, index) => (
-                <MovieCard key={`${movie.mediaType}-${movie.id}-${index}`} item={movie} priorityBadge={index % 3 === 0 ? 'ใหม่' : undefined} />
-              ))}
+          <div id="detail" className="rounded-[22px] bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_22px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl md:p-5">
+            <h2 className="text-xl font-black tracking-[-0.04em] md:text-2xl">เกี่ยวกับเรื่องนี้</h2>
+            <div className="mt-3 grid gap-2 text-[11px] font-bold text-white/62 sm:grid-cols-2 md:mt-4 md:gap-3 md:text-sm">
+              <p>ประเภท: {(item.genres || []).join(', ') || 'ภาพยนตร์'}</p>
+              <p>ความยาว: {item.runtime ? `${item.runtime} นาที` : 'ยังไม่มีข้อมูล'}</p>
+              <p>วันฉาย: {item.year}</p>
+              <p>ภาษา: {item.language === 'th' ? 'ไทย' : item.language || 'ไม่ระบุ'}</p>
+              <p>สถานะ: {statusLabel(item.status, item.isWatchReady)}</p>
+              <p>คะแนน: {item.rating.toFixed(1)} / 10</p>
             </div>
-          ) : (
-            <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 text-sm font-semibold text-white/45">
-              ยังไม่มีรายการแนะนำเพิ่มเติม
+            <p className="mt-4 text-xs leading-6 text-white/58 md:text-sm md:leading-7">{item.overview}</p>
+          </div>
+
+          <div id="recommend" className="rounded-[22px] bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_22px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl md:p-5">
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]/75">Recommended</p>
+                <h2 className="mt-1 text-xl font-black tracking-[-0.04em] md:text-2xl">แนะนำสำหรับคุณ</h2>
+              </div>
+              <a href="/watch-ready" className="shrink-0 text-xs font-black text-white/45 hover:text-white md:text-sm">ดูทั้งหมด ›</a>
             </div>
-          )}
-        </div>
-      </section>
+
+            {recommendations.length ? (
+              <div className="grid grid-cols-3 gap-2 md:grid-cols-4 md:gap-3">
+                {recommendations.slice(0, 8).map((movie, index) => (
+                  <MovieCard key={`${movie.mediaType}-${movie.id}-${index}`} item={movie} grid compact priorityBadge={index % 2 === 0 ? 'แนะนำ' : undefined} />
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-2xl bg-black/28 p-4 text-center text-xs font-bold text-white/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] backdrop-blur-xl md:text-sm">ยังไม่มีรายการแนะนำเพิ่มเติม</div>
+            )}
+          </div>
+        </section>
+      </article>
     </main>
   );
 }
