@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdminAccess } from '@/lib/admin-auth';
 
 const posterBase = 'https://image.tmdb.org/t/p/w342';
 const backdropBase = 'https://image.tmdb.org/t/p/w780';
@@ -34,7 +35,7 @@ type WatchLinkRecord = {
 
 function getSupabaseConfig() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!url || !key) return null;
   return { url, key };
@@ -163,6 +164,9 @@ async function upsertWatchLink(payload: WatchLinkRecord) {
 }
 
 export async function GET(request: Request) {
+  const auth = await requireAdminAccess(request);
+  if (auth.ok === false) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   const { searchParams } = new URL(request.url);
   const mediaType = (searchParams.get('mediaType') === 'tv' ? 'tv' : 'movie') as MediaType;
   const query = searchParams.get('query')?.trim() || '';
@@ -200,6 +204,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireAdminAccess(request);
+  if (auth.ok === false) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
   try {
     const body = await request.json();
     const tmdbId = Number(body.tmdbId);
