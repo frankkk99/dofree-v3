@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireAdminToken } from '@/lib/admin-auth';
+import { requireAdminAccess } from '@/lib/admin-auth';
 import { supabaseRest } from '@/lib/supabase-rest';
 
 type MediaType = 'movie' | 'tv';
@@ -93,7 +93,7 @@ function statusMatch(item: ReturnType<typeof merge>, status: string) {
 }
 
 export async function GET(request: Request) {
-  const auth = requireAdminToken(request);
+  const auth = await requireAdminAccess(request);
   if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
 
   const params = new URL(request.url).searchParams;
