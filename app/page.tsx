@@ -4,6 +4,7 @@ import { FavoriteClickBridge } from '@/components/favorite-click-bridge';
 import { HomeCardLinkBridge } from '@/components/home-card-link-bridge';
 import { HomeRealtimeWrapper } from '@/components/home-realtime-wrapper';
 import { ReliableHeroCarousel } from '@/components/reliable-hero-carousel';
+import { ReleaseWindowAutoCarousel } from '@/components/release-window-auto-carousel';
 import { WatchHistoryClickBridge } from '@/components/watch-history-click-bridge';
 import { getCatalogHomePayload } from '@/lib/catalog-home';
 
@@ -30,6 +31,7 @@ export default async function HomePage() {
       <AdminLinkVisibilityGuard />
       <CleanHamburgerMenu />
       <ReliableHeroCarousel home={home} />
+      <ReleaseWindowAutoCarousel />
     </>
   );
 }
