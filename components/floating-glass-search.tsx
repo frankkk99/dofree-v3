@@ -10,6 +10,8 @@ import type { HomePayload, MovieItem } from '@/lib/tmdb';
 const STORAGE_KEY = 'dofree-floating-search-position';
 const DOCK_SIZE = 62;
 const EDGE_GAP = 12;
+const PANEL_WIDTH = 430;
+const PANEL_GAP = 14;
 const SEARCH_PLACEHOLDER = 'ค้นหาหนัง ซีรีส์ หมวดหมู่ หรือเลือกชิปด้านล่าง';
 
 type DockPosition = {
@@ -20,6 +22,11 @@ type DockPosition = {
 type SearchState = {
   query: string;
   categories: string[];
+};
+
+type ViewportSize = {
+  width: number;
+  height: number;
 };
 
 function clamp(value: number, min: number, max: number) {
@@ -141,11 +148,13 @@ function hiddenSearchSection() {
 }
 
 export function FloatingGlassSearch({ home }: { home: HomePayload }) {
-  const [open, setOpen] = useState(false);
+  const [panelMounted, setPanelMounted] = useState(false);
+  const [panelVisible, setPanelVisible] = useState(false);
   const [query, setQuery] = useState('');
   const [activeChips, setActiveChips] = useState<string[]>([]);
   const [searchState, setSearchState] = useState<SearchState | null>(null);
   const [sectionsHost, setSectionsHost] = useState<HTMLElement | null>(null);
+  const [viewport, setViewport] = useState<ViewportSize>({ width: 0, height: 0 });
   const [position, setPosition] = useState<DockPosition>(() => defaultPosition());
   const [dragging, setDragging] = useState(false);
   const [moved, setMoved] = useState(false);
@@ -154,9 +163,11 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
   const dragRef = useRef({ pointerId: 0, startX: 0, startY: 0, originX: 0, originY: 0 });
   const latestPositionRef = useRef(position);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const closeTimerRef = useRef<number | null>(null);
 
   const chips = useMemo(() => categoryChips.filter((chip) => chip !== 'ทั้งหมด').slice(0, 18), []);
   const hasFilter = Boolean(query.trim()) || activeChips.length > 0 || Boolean(searchState);
+  const isDesktop = viewport.width >= 768;
 
   const allItems = useMemo(
     () => uniqueMovies([
@@ -174,13 +185,38 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
       .sort((a, b) => b.rating - a.rating || a.title.localeCompare(b.title, 'th'));
   }, [allItems, searchState]);
 
+  const panelPlacement = useMemo(() => {
+    if (!isDesktop || !viewport.width || !viewport.height) return null;
+
+    const panelWidth = Math.min(PANEL_WIDTH, Math.max(320, viewport.width - 24));
+    const opensRight = position.x + DOCK_SIZE / 2 < viewport.width / 2;
+    const rawLeft = opensRight ? position.x + DOCK_SIZE + PANEL_GAP : position.x - panelWidth - PANEL_GAP;
+    const left = clamp(rawLeft, 12, Math.max(12, viewport.width - panelWidth - 12));
+    const top = clamp(position.y - 42, 72, Math.max(72, viewport.height - 560));
+
+    return {
+      left,
+      top,
+      width: panelWidth,
+      transformOrigin: opensRight ? 'left 62px' : 'right 62px',
+    };
+  }, [isDesktop, position.x, position.y, viewport.height, viewport.width]);
+
   useEffect(() => {
     latestPositionRef.current = position;
   }, [position]);
 
   useEffect(() => {
+    function syncViewport() {
+      setViewport({ width: window.innerWidth, height: window.innerHeight });
+    }
+
     setPosition(readStoredPosition());
     setSectionsHost(document.getElementById('sections'));
+    syncViewport();
+
+    window.addEventListener('resize', syncViewport);
+    return () => window.removeEventListener('resize', syncViewport);
   }, []);
 
   useEffect(() => {
@@ -223,10 +259,26 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
   }, []);
 
   useEffect(() => {
-    if (!open) return;
+    if (!panelVisible) return;
     const timer = window.setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 180);
     return () => window.clearTimeout(timer);
-  }, [open]);
+  }, [panelVisible]);
+
+  useEffect(() => () => {
+    if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+  }, []);
+
+  function openPanel() {
+    if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+    setPanelMounted(true);
+    window.requestAnimationFrame(() => setPanelVisible(true));
+  }
+
+  function closePanel() {
+    setPanelVisible(false);
+    if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+    closeTimerRef.current = window.setTimeout(() => setPanelMounted(false), 240);
+  }
 
   function submitSearch(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault();
@@ -241,7 +293,7 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
       document.getElementById('sections')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
 
-    setOpen(false);
+    closePanel();
     setSettling(true);
     window.setTimeout(() => setSettling(false), 950);
   }
@@ -250,7 +302,7 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
     setQuery('');
     setActiveChips([]);
     setSearchState(null);
-    setOpen(false);
+    closePanel();
     setSettling(true);
     window.setTimeout(() => setSettling(false), 850);
   }
@@ -262,7 +314,7 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
   }
 
   function startDrag(event: ReactPointerEvent<HTMLButtonElement>) {
-    if (open) return;
+    if (panelMounted) return;
     setDragging(true);
     setSnapping(false);
     setMoved(false);
@@ -304,7 +356,11 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
 
   function toggleDock() {
     if (moved) return;
-    setOpen((value) => !value);
+    if (panelMounted && panelVisible) {
+      closePanel();
+    } else {
+      openPanel();
+    }
   }
 
   const resultTitle = searchState
@@ -314,6 +370,15 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
         ? `หมวด: ${searchState.categories.join(' / ')}`
         : 'ผลลัพธ์ทั้งหมด'
     : '';
+
+  const panelStyle = isDesktop && panelPlacement
+    ? {
+      left: panelPlacement.left,
+      top: panelPlacement.top,
+      width: panelPlacement.width,
+      transformOrigin: panelPlacement.transformOrigin,
+    }
+    : undefined;
 
   const resultsPortal = sectionsHost && searchState
     ? createPortal(
@@ -360,6 +425,7 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
       <button
         type="button"
         aria-label="เปิดค้นหา"
+        aria-expanded={panelVisible}
         onClick={toggleDock}
         onPointerDown={startDrag}
         onPointerMove={moveDrag}
@@ -373,18 +439,22 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
         {hasFilter ? <span className="absolute -right-1 -top-1 h-4 w-4 rounded-full border border-black/40 bg-[#e50914] shadow-glow" /> : null}
       </button>
 
-      {open ? (
-        <div className="fixed inset-0 z-[90] bg-black/28 px-3 pt-[calc(env(safe-area-inset-top)+82px)] text-white backdrop-blur-[2px]" onMouseDown={() => setOpen(false)}>
+      {panelMounted ? (
+        <div
+          className={`fixed inset-0 z-[90] px-3 pt-[calc(env(safe-area-inset-top)+82px)] text-white transition-[background-color,backdrop-filter,opacity] duration-300 ${panelVisible ? 'bg-black/36 opacity-100 backdrop-blur-[3px]' : 'bg-black/0 opacity-0 backdrop-blur-0'} md:bg-transparent md:backdrop-blur-0`}
+          onMouseDown={closePanel}
+        >
           <div
-            className="ml-auto mr-1 max-h-[calc(100dvh-118px)] w-full max-w-[430px] overflow-y-auto rounded-[30px] border border-white/18 bg-black/88 p-4 shadow-[0_34px_120px_rgba(0,0,0,0.88),inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-2xl md:mr-7 md:mt-3"
+            className={`${isDesktop ? 'fixed max-h-[min(620px,calc(100dvh-92px))]' : 'ml-auto mr-1 max-h-[calc(100dvh-118px)] w-full max-w-[430px]'} overflow-y-auto rounded-[30px] border border-white/14 bg-black/90 p-4 shadow-[0_34px_120px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl transition-[opacity,transform,left,top] duration-300 ease-[cubic-bezier(0.2,0.85,0.2,1)] ${panelVisible ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-2 scale-[0.96] opacity-0'} md:mr-0 md:bg-black/88`}
+            style={panelStyle}
             onMouseDown={(event) => event.stopPropagation()}
           >
             <div className="flex justify-end">
-              <button type="button" onClick={() => setOpen(false)} className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/[0.10] text-lg font-black text-white/80 hover:bg-[#e50914]">×</button>
+              <button type="button" onClick={closePanel} className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/[0.10] text-lg font-black text-white/80 hover:bg-[#e50914]">×</button>
             </div>
 
-            <form onSubmit={submitSearch} className="mt-3 rounded-[24px] border border-white/16 bg-black/74 p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.09)] backdrop-blur-2xl">
-              <div className="flex h-12 items-center gap-2 rounded-[18px] bg-black/62 px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+            <form onSubmit={submitSearch} className="mt-3 rounded-[24px] border border-white/14 bg-black/82 p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl">
+              <div className="flex h-12 items-center gap-2 rounded-[18px] bg-black/70 px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
                 <span className="text-lg text-white/68">⌕</span>
                 <input
                   ref={inputRef}
@@ -404,7 +474,7 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
               </div>
             </form>
 
-            <div className="mt-4 rounded-[24px] border border-white/12 bg-black/64 p-3 backdrop-blur-2xl">
+            <div className="mt-4 rounded-[24px] border border-white/12 bg-black/72 p-3 backdrop-blur-2xl">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/58">Quick Filters</p>
                 {activeChips.length ? <p className="text-[10px] font-black text-[#e50914]">เลือก {activeChips.length}</p> : null}
