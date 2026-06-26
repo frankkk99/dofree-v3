@@ -6,6 +6,8 @@ import { categoryChips } from '@/lib/catalog';
 
 const STORAGE_KEY = 'dofree-floating-search-position';
 const DOCK_SIZE = 62;
+const EDGE_GAP = 12;
+const SEARCH_PLACEHOLDER = 'ค้นหาหนัง ซีรีส์ หมวดหมู่ หรือเลือกชิปด้านล่าง';
 
 type DockPosition = {
   x: number;
@@ -16,12 +18,25 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
+function snapToNearestEdge(position: DockPosition) {
+  if (typeof window === 'undefined') return position;
+
+  const leftX = EDGE_GAP;
+  const rightX = Math.max(EDGE_GAP, window.innerWidth - DOCK_SIZE - EDGE_GAP);
+  const center = position.x + DOCK_SIZE / 2;
+
+  return {
+    x: center < window.innerWidth / 2 ? leftX : rightX,
+    y: clamp(position.y, 84, window.innerHeight - DOCK_SIZE - 24),
+  };
+}
+
 function defaultPosition() {
   if (typeof window === 'undefined') return { x: 24, y: 140 };
-  return {
+  return snapToNearestEdge({
     x: Math.max(16, window.innerWidth - DOCK_SIZE - 18),
     y: Math.max(100, Math.min(window.innerHeight * 0.34, 220)),
-  };
+  });
 }
 
 function readStoredPosition() {
@@ -33,10 +48,10 @@ function readStoredPosition() {
     const parsed = JSON.parse(raw) as Partial<DockPosition>;
     if (typeof parsed.x !== 'number' || typeof parsed.y !== 'number') return defaultPosition();
 
-    return {
-      x: clamp(parsed.x, 10, window.innerWidth - DOCK_SIZE - 10),
+    return snapToNearestEdge({
+      x: clamp(parsed.x, EDGE_GAP, window.innerWidth - DOCK_SIZE - EDGE_GAP),
       y: clamp(parsed.y, 84, window.innerHeight - DOCK_SIZE - 24),
-    };
+    });
   } catch {
     return defaultPosition();
   }
@@ -70,17 +85,6 @@ function clickHiddenChip(label: string) {
   return false;
 }
 
-function clickVisibleClearButton() {
-  const sections = document.getElementById('sections');
-  const buttons = Array.from(sections?.querySelectorAll('button') || []);
-  const clearButton = buttons.find((button) => button.textContent?.trim() === 'ล้างค่า');
-  if (clearButton instanceof HTMLButtonElement) {
-    clearButton.click();
-    return true;
-  }
-  return false;
-}
-
 export function FloatingGlassSearch() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -89,11 +93,17 @@ export function FloatingGlassSearch() {
   const [dragging, setDragging] = useState(false);
   const [moved, setMoved] = useState(false);
   const [settling, setSettling] = useState(false);
+  const [snapping, setSnapping] = useState(false);
   const dragRef = useRef({ pointerId: 0, startX: 0, startY: 0, originX: 0, originY: 0 });
+  const latestPositionRef = useRef(position);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const chips = useMemo(() => categoryChips.filter((chip) => chip !== 'ทั้งหมด').slice(0, 18), []);
   const hasFilter = Boolean(query.trim()) || Boolean(activeChip);
+
+  useEffect(() => {
+    latestPositionRef.current = position;
+  }, [position]);
 
   useEffect(() => {
     setPosition(readStoredPosition());
@@ -117,10 +127,7 @@ export function FloatingGlassSearch() {
   useEffect(() => {
     function onResize() {
       setPosition((current) => {
-        const next = {
-          x: clamp(current.x, 10, window.innerWidth - DOCK_SIZE - 10),
-          y: clamp(current.y, 84, window.innerHeight - DOCK_SIZE - 24),
-        };
+        const next = snapToNearestEdge(current);
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
         return next;
       });
@@ -154,33 +161,17 @@ export function FloatingGlassSearch() {
     window.setTimeout(() => setSettling(false), 950);
   }
 
-  function clearSearch() {
-    setQuery('');
-    setActiveChip(null);
-
-    const input = hiddenSearchInput();
-    if (input) setNativeInputValue(input, '');
-
-    if (!clickVisibleClearButton()) {
-      const form = hiddenSearchForm();
-      form?.requestSubmit();
-    }
-
-    setOpen(false);
-    setSettling(true);
-    window.setTimeout(() => setSettling(false), 850);
-  }
-
   function startDrag(event: ReactPointerEvent<HTMLButtonElement>) {
     if (open) return;
     setDragging(true);
+    setSnapping(false);
     setMoved(false);
     dragRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
-      originX: position.x,
-      originY: position.y,
+      originX: latestPositionRef.current.x,
+      originY: latestPositionRef.current.y,
     };
     event.currentTarget.setPointerCapture(event.pointerId);
   }
@@ -193,7 +184,7 @@ export function FloatingGlassSearch() {
     if (Math.abs(dx) + Math.abs(dy) > 5) setMoved(true);
 
     setPosition({
-      x: clamp(dragRef.current.originX + dx, 10, window.innerWidth - DOCK_SIZE - 10),
+      x: clamp(dragRef.current.originX + dx, EDGE_GAP, window.innerWidth - DOCK_SIZE - EDGE_GAP),
       y: clamp(dragRef.current.originY + dy, 84, window.innerHeight - DOCK_SIZE - 24),
     });
   }
@@ -201,14 +192,14 @@ export function FloatingGlassSearch() {
   function endDrag(event: ReactPointerEvent<HTMLButtonElement>) {
     if (!dragging || event.pointerId !== dragRef.current.pointerId) return;
     setDragging(false);
+    setSnapping(true);
 
-    const next = {
-      x: clamp(position.x, 10, window.innerWidth - DOCK_SIZE - 10),
-      y: clamp(position.y, 84, window.innerHeight - DOCK_SIZE - 24),
-    };
+    const next = snapToNearestEdge(latestPositionRef.current);
+    setPosition(next);
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
 
-    window.setTimeout(() => setMoved(false), 40);
+    window.setTimeout(() => setSnapping(false), 360);
+    window.setTimeout(() => setMoved(false), 60);
   }
 
   function toggleDock() {
@@ -226,7 +217,7 @@ export function FloatingGlassSearch() {
         onPointerMove={moveDrag}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
-        className={`fixed z-[75] grid h-[62px] w-[62px] place-items-center rounded-[24px] border border-white/20 bg-white/[0.105] text-white shadow-[0_20px_70px_rgba(0,0,0,0.72),inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-2xl transition ${dragging ? 'cursor-grabbing scale-105' : 'cursor-grab'} ${settling ? 'scale-90 opacity-70' : 'floating-search-wiggle'}`}
+        className={`fixed z-[75] grid h-[62px] w-[62px] place-items-center rounded-[24px] border border-white/20 bg-white/[0.105] text-white shadow-[0_20px_70px_rgba(0,0,0,0.72),inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-2xl ${dragging ? 'cursor-grabbing scale-105 transition-transform' : 'cursor-grab'} ${snapping ? 'transition-[left,top,transform,opacity] duration-300 ease-out' : 'transition-transform'} ${settling ? 'scale-90 opacity-70' : 'floating-search-wiggle'}`}
         style={{ left: position.x, top: position.y, touchAction: 'none' }}
       >
         <span className="absolute inset-0 rounded-[24px] bg-[radial-gradient(circle_at_30%_18%,rgba(255,255,255,0.22),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.16),rgba(255,255,255,0.04))]" />
@@ -240,23 +231,18 @@ export function FloatingGlassSearch() {
             className="ml-auto mr-1 max-h-[calc(100dvh-118px)] w-full max-w-[430px] overflow-y-auto rounded-[30px] border border-white/18 bg-[#0a0a0a]/58 p-4 shadow-[0_34px_120px_rgba(0,0,0,0.82),inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-2xl md:mr-7 md:mt-3"
             onMouseDown={(event) => event.stopPropagation()}
           >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#e50914]/90">Glass Search</p>
-                <h2 className="mt-1 text-[25px] font-black tracking-[-0.06em]">ค้นหาเร็ว</h2>
-                <p className="mt-1 text-[11px] font-semibold leading-5 text-white/44">ค้นหาหนัง ซีรีส์ หมวดหมู่ หรือเลือกชิปด้านล่าง</p>
-              </div>
+            <div className="flex justify-end">
               <button type="button" onClick={() => setOpen(false)} className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/[0.10] text-lg font-black text-white/80 hover:bg-[#e50914]">×</button>
             </div>
 
-            <form onSubmit={submitSearch} className="mt-4 rounded-[24px] border border-white/14 bg-white/[0.10] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-2xl">
+            <form onSubmit={submitSearch} className="mt-3 rounded-[24px] border border-white/14 bg-white/[0.10] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-2xl">
               <div className="flex h-12 items-center gap-2 rounded-[18px] bg-black/26 px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
                 <span className="text-lg text-white/68">⌕</span>
                 <input
                   ref={inputRef}
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="พิมพ์ชื่อหนัง หรือคำค้นหา"
+                  placeholder={SEARCH_PLACEHOLDER}
                   className="min-w-0 flex-1 bg-transparent text-[14px] font-bold text-white outline-none placeholder:text-white/42"
                 />
                 {query ? (
@@ -266,7 +252,6 @@ export function FloatingGlassSearch() {
 
               <div className="mt-3 flex gap-2">
                 <button type="submit" className="h-11 flex-1 rounded-[17px] bg-[#e50914] text-xs font-black text-white shadow-[0_16px_45px_rgba(229,9,20,0.36)]">ค้นหา</button>
-                <button type="button" onClick={clearSearch} className="h-11 rounded-[17px] border border-white/12 bg-white/[0.08] px-4 text-xs font-black text-white/70">ล้าง</button>
               </div>
             </form>
 
