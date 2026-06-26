@@ -2,6 +2,15 @@
 
 import { useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
+import { getStoredSession } from '@/lib/supabase-auth-browser';
+
+function importHeaders() {
+  const session = getStoredSession();
+  if (session?.access_token) return { Authorization: `Bearer ${session.access_token}` };
+
+  const saved = (window.localStorage.getItem('dofree_admin_token') || '').trim();
+  return saved ? { 'x-admin-token': saved } : null;
+}
 
 export function AdminImportBar() {
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -13,9 +22,9 @@ export function AdminImportBar() {
     event.target.value = '';
     if (!file) return;
 
-    const saved = (window.localStorage.getItem('dofree_admin_token') || '').trim();
-    if (!saved) {
-      setNotice('กรุณาใส่ Admin Token แล้วกดค้นหาก่อน จากนั้นค่อย Import');
+    const headers = importHeaders();
+    if (!headers) {
+      setNotice('กรุณาเข้าสู่ระบบแอดมิน หรือใส่ Admin Token แล้วกดค้นหาก่อน จากนั้นค่อย Import');
       return;
     }
 
@@ -26,7 +35,7 @@ export function AdminImportBar() {
       body.append('file', file);
       const res = await fetch('/api/admin/import-missing-links', {
         method: 'POST',
-        headers: { 'x-admin-token': saved },
+        headers,
         body,
       });
       const data = await res.json();
@@ -46,7 +55,7 @@ export function AdminImportBar() {
         <button type="button" onClick={() => inputRef.current?.click()} disabled={busy} className="h-11 rounded-xl bg-emerald-500 px-5 text-sm font-black text-black disabled:opacity-50">
           {busy ? 'Import...' : 'Import Excel'}
         </button>
-        <p className="text-[11px] font-bold leading-4 text-white/55">เติม Watch URL แล้ว Save เป็น CSV ก่อนนำเข้า</p>
+        <p className="text-[11px] font-bold leading-4 text-white/55">เติม Watch URL แล้ว Save เป็น CSV ก่อนนำเข้า ระบบจะบันทึก audit log ให้อัตโนมัติ</p>
       </div>
       {notice ? <p className="mt-2 rounded-xl bg-white/10 px-3 py-2 text-xs font-bold text-white/80">{notice}</p> : null}
     </div>
