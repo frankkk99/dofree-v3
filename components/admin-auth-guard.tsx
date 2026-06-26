@@ -26,7 +26,7 @@ export function AdminAuthGuard({ children }: { children: ReactNode }) {
       if (!token) {
         if (!active) return;
         setIsAdmin(false);
-        setMessage('เข้าสู่ระบบด้วยบัญชีดูดีดีที่มีสิทธิ์ดูแลระบบ');
+        setMessage('เข้าสู่ระบบเพื่อดำเนินการต่อ');
         setLoading(false);
         return;
       }
@@ -40,7 +40,7 @@ export function AdminAuthGuard({ children }: { children: ReactNode }) {
         if (!active) return;
 
         setIsAdmin(Boolean(response.ok && payload.ok && payload.isAdmin));
-        setMessage(payload.isAdmin ? 'พร้อมใช้งาน' : 'บัญชีนี้ไม่มีสิทธิ์ดูแลระบบ');
+        setMessage(payload.isAdmin ? 'พร้อมใช้งาน' : 'บัญชีนี้ไม่มีสิทธิ์เข้าพื้นที่นี้');
       } catch {
         if (!active) return;
         setIsAdmin(false);
@@ -76,12 +76,12 @@ export function AdminAuthGuard({ children }: { children: ReactNode }) {
   if (!isAdmin) {
     return (
       <main className="grid min-h-screen place-items-center bg-[#030303] px-4 text-white">
-        <section className="w-full max-w-lg rounded-[32px] border border-[#e50914]/28 bg-[#170203]/70 p-6 text-center shadow-[0_0_70px_rgba(229,9,20,0.14)]">
-          <p className="text-[11px] font-black uppercase tracking-[0.26em] text-[#e50914]">Protected Area</p>
-          <h1 className="mt-3 text-3xl font-black tracking-[-0.06em]">ต้องใช้บัญชีที่มีสิทธิ์</h1>
+        <section className="w-full max-w-lg rounded-[32px] border border-white/10 bg-white/[0.045] p-6 text-center shadow-[0_0_70px_rgba(0,0,0,0.36)]">
+          <p className="text-[11px] font-black uppercase tracking-[0.26em] text-[#e50914]">Secure Access</p>
+          <h1 className="mt-3 text-3xl font-black tracking-[-0.06em]">ต้องเข้าสู่ระบบก่อน</h1>
           <p className="mt-3 text-sm font-semibold leading-6 text-white/50">{message}</p>
           <div className="mt-6 flex justify-center gap-3">
-            <a href="/auth?mode=signin" className="rounded-2xl bg-[#e50914] px-5 py-3 text-sm font-black text-white shadow-glow">
+            <a href="/auth?mode=signin&next=/admin" className="rounded-2xl bg-[#e50914] px-5 py-3 text-sm font-black text-white shadow-glow">
               เข้าสู่ระบบ
             </a>
             <a href="/" className="rounded-2xl bg-white/[0.08] px-5 py-3 text-sm font-black text-white/72">
