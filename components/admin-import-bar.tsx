@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
+import { adminSessionHeaders } from '@/lib/admin-session-browser';
 
 export function AdminImportBar() {
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -13,12 +14,6 @@ export function AdminImportBar() {
     event.target.value = '';
     if (!file) return;
 
-    const saved = (window.localStorage.getItem('dofree_admin_token') || '').trim();
-    if (!saved) {
-      setNotice('กรุณาใส่ Admin Token แล้วกดค้นหาก่อน จากนั้นค่อย Import');
-      return;
-    }
-
     setBusy(true);
     setNotice('');
     try {
@@ -26,7 +21,7 @@ export function AdminImportBar() {
       body.append('file', file);
       const res = await fetch('/api/admin/import-missing-links', {
         method: 'POST',
-        headers: { 'x-admin-token': saved },
+        headers: adminSessionHeaders(),
         body,
       });
       const data = await res.json();

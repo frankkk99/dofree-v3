@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireAdminToken } from '@/lib/admin-auth';
+import { requireAdminAccess } from '@/lib/admin-auth';
 import { supabaseRest } from '@/lib/supabase-rest';
 
 type MediaType = 'movie' | 'tv';
@@ -181,8 +181,8 @@ async function readBody(request: Request): Promise<SyncBody> {
 }
 
 export async function POST(request: Request) {
-  const auth = requireAdminToken(request);
-  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
+  const auth = await requireAdminAccess(request);
+  if (auth.ok === false) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
 
   const body = await readBody(request);
   const allTasks = tasks();

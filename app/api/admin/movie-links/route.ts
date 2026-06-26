@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireAdminToken } from '@/lib/admin-auth';
+import { requireAdminAccess } from '@/lib/admin-auth';
 import { supabaseRest } from '@/lib/supabase-rest';
 
 type MediaType = 'movie' | 'tv';
@@ -125,9 +125,9 @@ function playableStatus(requested: MovieStatus, watchUrl?: string) {
   return requested;
 }
 
-function authError(request: Request) {
-  const auth = requireAdminToken(request);
-  if (auth.ok) return null;
+async function authError(request: Request) {
+  const auth = await requireAdminAccess(request);
+  if (auth.ok === true) return null;
   return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
 }
 
@@ -333,7 +333,7 @@ async function buildAdminLinks(savedLinks: AdminMovieLink[]) {
 }
 
 export async function GET(request: Request) {
-  const errorResponse = authError(request);
+  const errorResponse = await authError(request);
   if (errorResponse) return errorResponse;
 
   try {
@@ -356,7 +356,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const errorResponse = authError(request);
+  const errorResponse = await authError(request);
   if (errorResponse) return errorResponse;
 
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
@@ -411,7 +411,7 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const errorResponse = authError(request);
+  const errorResponse = await authError(request);
   if (errorResponse) return errorResponse;
 
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;

@@ -1,4 +1,3 @@
-import { AdminLinkVisibilityGuard } from '@/components/admin-link-visibility-guard';
 import { CleanHamburgerMenu } from '@/components/clean-hamburger-menu';
 import { FavoriteClickBridge } from '@/components/favorite-click-bridge';
 import { HomeCardLinkBridge } from '@/components/home-card-link-bridge';
@@ -28,7 +27,6 @@ export default async function HomePage() {
       <HomeCardLinkBridge home={home} />
       <FavoriteClickBridge home={home} />
       <WatchHistoryClickBridge home={home} />
-      <AdminLinkVisibilityGuard />
       <CleanHamburgerMenu />
       <ReliableHeroCarousel home={home} />
       <ReleaseWindowAutoCarousel />

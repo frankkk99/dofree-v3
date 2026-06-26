@@ -81,14 +81,15 @@ export async function GET(request: Request) {
 
     const profile = data[0] || null;
     const role = profile?.role || 'viewer';
+    const isAdmin = role === 'admin' || role === 'super_admin';
 
     return NextResponse.json({
       ok: true,
       user,
       profile,
       role,
-      isAdmin: role === 'admin',
-      isPremium: role === 'premium' || role === 'admin',
+      isAdmin,
+      isPremium: role === 'premium' || isAdmin,
     });
   } catch (error) {
     return jsonError(error instanceof Error ? error.message : 'Cannot load profile', 500);

@@ -204,11 +204,8 @@ function HeaderAccountMenuPortal() {
     }
 
     function findHost() {
-      const adminLink = document.querySelector('header a[href="/admin"]') as HTMLElement | null;
-      const parent = adminLink?.parentElement;
-      if (!adminLink || !parent) return;
-      adminLink.style.display = 'none';
-      setHost(parent);
+      const menuHost = document.querySelector('[data-dofree-menu-host="true"]') as HTMLElement | null;
+      if (menuHost) setHost(menuHost);
     }
 
     syncAuth();
@@ -259,7 +256,8 @@ function HeaderAccountMenuPortal() {
     <div ref={menuRef} className="relative">
       <button
         type="button"
-        aria-label="เปิดเมนูบัญชี"
+        aria-label="เปิดเมนู"
+        data-dofree-menu-button="true"
         onClick={() => setOpen((value) => !value)}
         className={`grid h-9 w-9 place-items-center rounded-full border text-white shadow-[0_0_28px_rgba(229,9,20,0.28)] transition md:h-12 md:w-12 ${open ? 'border-[#e50914]/80 bg-[#170203]' : 'border-white/12 bg-white/[0.08] hover:border-[#e50914]/70 hover:bg-[#170203]'}`}
       >
@@ -359,10 +357,6 @@ function HeaderAccountMenuPortal() {
           </>
         ) : null}
 
-        <a href="/admin" className="mt-4 flex items-center justify-between rounded-2xl border border-[#e50914]/42 bg-[#170203] px-4 py-3 text-sm font-black text-red-100 shadow-[0_0_28px_rgba(229,9,20,0.20)]">
-          <span>Admin login</span>
-          <span>›</span>
-        </a>
       </aside>
     </div>,
     bodyHost
