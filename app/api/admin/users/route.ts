@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { recordAdminAuditLog } from '@/lib/admin-audit';
 import { supabaseRest } from '@/lib/supabase-rest';
 
 type AuthUser = {
@@ -133,6 +134,10 @@ export async function PATCH(request: Request) {
     if (!allowedRoles.includes(role as 'viewer' | 'admin')) return jsonError('Invalid role');
     if (userId === admin.user.id) return jsonError('ไม่อนุญาตให้เปลี่ยน role ของบัญชีตัวเองจากหน้านี้', 403);
 
+    const before = await supabaseRest<ProfileRecord[]>(
+      `profiles?id=eq.${encodeURIComponent(userId)}&select=id,display_name,avatar_url,role,created_at,updated_at&limit=1`,
+    ).then((rows) => rows[0] || null).catch(() => null);
+
     const updated = await supabaseRest<ProfileRecord[]>(
       `profiles?id=eq.${encodeURIComponent(userId)}`,
       {
@@ -141,6 +146,16 @@ export async function PATCH(request: Request) {
         prefer: 'return=representation',
       },
     );
+
+    await recordAdminAuditLog({
+      request,
+      actor: { ok: true, mode: 'session', user: admin.user, role: admin.role },
+      action: 'user.role_update',
+      entityType: 'profiles',
+      entityId: userId,
+      beforeData: before,
+      afterData: updated?.[0] || { id: userId, role },
+    });
 
     return NextResponse.json({ ok: true, user: updated?.[0] || null });
   } catch (error) {

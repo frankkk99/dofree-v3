@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { recordAdminAuditLog } from '@/lib/admin-audit';
 import { supabaseRest } from '@/lib/supabase-rest';
 
 type AuthUser = {
@@ -123,7 +124,7 @@ export async function PATCH(request: Request) {
   try {
     const token = bearer(request);
     if (!token) return jsonError('Login required', 401);
-    await requireAdmin(token);
+    const admin = await requireAdmin(token);
 
     const body = await request.json().catch(() => null) as {
       userId?: string;
@@ -145,6 +146,10 @@ export async function PATCH(request: Request) {
     const expiresAt = normalizeDate(body?.expiresAt) || (status === 'active' ? defaultExpiry(Number(body?.durationDays || 30)) : null);
     const startedAt = status === 'active' ? new Date().toISOString() : null;
 
+    const before = await supabaseRest<MembershipRecord[]>(
+      `memberships?user_id=eq.${encodeURIComponent(userId)}&select=id,user_id,plan,status,slip_url,started_at,expires_at,created_at,updated_at&limit=1`,
+    ).then((rows) => rows[0] || null).catch(() => null);
+
     const updated = await supabaseRest<MembershipRecord[]>(
       'memberships?on_conflict=user_id',
       {
@@ -161,6 +166,16 @@ export async function PATCH(request: Request) {
         },
       },
     );
+
+    await recordAdminAuditLog({
+      request,
+      actor: { ok: true, mode: 'session', user: admin.user, role: admin.role },
+      action: 'membership.update',
+      entityType: 'memberships',
+      entityId: userId,
+      beforeData: before,
+      afterData: updated?.[0] || { user_id: userId, plan, status, expires_at: expiresAt },
+    });
 
     return NextResponse.json({ ok: true, membership: updated?.[0] || null });
   } catch (error) {
