@@ -242,6 +242,23 @@ function WatchCta({ hasLink, onClick }: { hasLink: boolean; onClick: () => void 
   );
 }
 
+function ProtectedWatchLaunch({ item, fallbackImage }: { item: MovieItem; fallbackImage: string }) {
+  if (!item.watchUrl) return <PlayerEmpty title={item.title} fallbackImage={fallbackImage} label="ยังไม่มีลิงก์รับชม" />;
+
+  return (
+    <div className="relative grid aspect-video place-items-center overflow-hidden rounded-[20px] bg-black/58 text-center shadow-[0_24px_90px_rgba(0,0,0,0.72)] backdrop-blur-md md:rounded-[26px]">
+      {fallbackImage ? <img src={fallbackImage} alt={item.title} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover opacity-25 blur-[1px]" /> : null}
+      <div className="absolute inset-0 bg-black/66" />
+      <div className="relative z-10 px-6">
+        <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]">Protected Player</p>
+        <h4 className="mt-3 text-xl font-black tracking-[-0.04em] text-white md:text-3xl">เปิดในหน้าเล่นที่ป้องกันลิงก์</h4>
+        <p className="mx-auto mt-2 max-w-md text-xs font-semibold leading-5 text-white/48 md:text-sm">ระบบจะสร้างลิงก์ชั่วคราวเฉพาะตอนเปิดหน้าเล่น เพื่อลดการเห็นลิงก์ต้นทางในหน้าเว็บและ modal</p>
+        <a href={item.watchUrl} className="mt-5 inline-flex h-11 items-center rounded-xl bg-[#e50914] px-5 text-xs font-black text-white shadow-glow md:h-12 md:px-6 md:text-sm">▶ รับชมในหน้าเล่น</a>
+      </div>
+    </div>
+  );
+}
+
 export function SearchWindow({ query, setQuery, items, onClose, onSelect }: { query: string; setQuery: (value: string) => void; items: MovieItem[]; onClose: () => void; onSelect: (item: MovieItem) => void }) {
   const normalizedQuery = query.trim().toLowerCase();
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -444,7 +461,7 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
             {activeTab === 'watch' && (
               <div>
                 <div className="flex items-center justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.22em] text-red-100/70 md:text-xs">WATCH READY</p><h3 className="mt-1 text-lg font-black md:text-2xl">{displayItem.watchUrl ? 'รับชม' : 'ยังไม่มีลิงก์รับชม'}</h3></div></div>
-                <div className="mt-3"><InlinePlayer url={displayItem.watchUrl} title={`รับชม ${displayItem.title}`} fallbackImage={fallbackImage} emptyLabel="ยังไม่มีลิงก์รับชม" /></div>
+                <div className="mt-3"><ProtectedWatchLaunch item={displayItem} fallbackImage={fallbackImage} /></div>
                 <div className="mt-3 flex justify-end"><button onClick={reportIssue} className="h-9 rounded-xl bg-black/35 px-4 text-xs font-black text-white/70 shadow-[0_12px_34px_rgba(0,0,0,0.32)] backdrop-blur-xl md:h-10">แจ้งลิงก์เสีย</button></div>
                 {reported ? <p className="mt-3 rounded-2xl bg-green-400/[0.09] p-3 text-xs font-bold text-green-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl md:text-sm">รับรายงานแล้ว ทีมแอดมินจะตรวจสอบลิงก์นี้</p> : null}
               </div>

@@ -37,6 +37,10 @@ function key(mediaType: MediaType, id: number) {
   return `${mediaType}-${id}`;
 }
 
+function publicWatchUrl(mediaType: MediaType, id: number) {
+  return `/watch/${mediaType}/${id}`;
+}
+
 function normalizeDrivePreviewUrl(value?: string | null) {
   const url = value?.trim();
   if (!url) return undefined;
@@ -59,7 +63,7 @@ function rowToItem(row: CatalogRow, link: LinkRow | undefined, today: string): M
   const rating = Number(row.rating || 0);
   const releaseDate = row.release_date || undefined;
   const isUpcoming = Boolean(releaseDate && releaseDate > today);
-  const watchUrl = normalizeDrivePreviewUrl(link?.watch_url);
+  const hasWatchUrl = Boolean(normalizeDrivePreviewUrl(link?.watch_url));
   const item: MovieItem & { releaseDate?: string } = {
     id: row.tmdb_id,
     mediaType: row.media_type,
@@ -73,12 +77,12 @@ function rowToItem(row: CatalogRow, link: LinkRow | undefined, today: string): M
     genres: row.genres || [],
     runtime: row.runtime || undefined,
     language: row.language || undefined,
-    status: watchUrl ? 'published' : 'review',
-    isWatchReady: Boolean(watchUrl),
-    watchUrl,
+    status: hasWatchUrl ? 'published' : 'review',
+    isWatchReady: hasWatchUrl,
+    watchUrl: hasWatchUrl ? publicWatchUrl(row.media_type, row.tmdb_id) : undefined,
     trailerUrl: normalizeDrivePreviewUrl(link?.trailer_url),
     label: isUpcoming ? 'กำลังจะเข้า' : 'เข้าใหม่',
-    badges: badges(isUpcoming, Boolean(watchUrl), rating),
+    badges: badges(isUpcoming, hasWatchUrl, rating),
     releaseDate,
   };
   return item;

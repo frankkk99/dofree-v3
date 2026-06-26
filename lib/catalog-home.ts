@@ -84,6 +84,10 @@ function watchKey(mediaType: MediaType, id: number) {
   return `${mediaType}-${id}`;
 }
 
+function publicWatchUrl(item: Pick<MovieItem, 'mediaType' | 'id'>) {
+  return `/watch/${item.mediaType}/${item.id}`;
+}
+
 function badges(item: Pick<MovieItem, 'rating' | 'language' | 'isWatchReady'>, index: number) {
   const items: string[] = [];
   if (item.isWatchReady) items.push('พร้อมดู');
@@ -192,7 +196,7 @@ function applyWatch(item: MovieItem, links: Map<string, WatchLinkRecord>, index:
     ...item,
     title: link.title || item.titleEn || item.title,
     titleEn: link.title || item.titleEn,
-    watchUrl: normalizeDrivePreviewUrl(link.watch_url),
+    watchUrl: normalizeDrivePreviewUrl(link.watch_url) ? publicWatchUrl(item) : undefined,
     trailerUrl: normalizeDrivePreviewUrl(link.trailer_url) || item.trailerUrl,
     isWatchReady: true,
     status: 'published',
