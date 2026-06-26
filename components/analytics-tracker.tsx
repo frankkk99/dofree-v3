@@ -82,18 +82,17 @@ function parseMediaPath(pathname: string) {
   return null;
 }
 
+function mediaPayload(pathname: string): Pick<AnalyticsEvent, 'mediaType' | 'mediaId'> {
+  return parseMediaPath(pathname) || {};
+}
+
 function titleFromElement(element: Element | null) {
   const text = element?.textContent?.replace(/\s+/g, ' ').trim();
   return text ? text.slice(0, 180) : undefined;
 }
 
 function trackPageView() {
-  const payload = currentPayload('page_view');
-  const media = parseMediaPath(window.location.pathname);
-  if (media) {
-    payload.mediaType = media.mediaType;
-    payload.mediaId = media.mediaId;
-  }
+  const payload = { ...currentPayload('page_view'), ...mediaPayload(window.location.pathname) };
 
   const searchQuery = new URLSearchParams(window.location.search).get('q') || undefined;
   if (window.location.pathname === '/search' && searchQuery) {
@@ -133,8 +132,7 @@ function trackClick(event: MouseEvent) {
   if (!label) return;
 
   if (label.includes('รับชม')) {
-    const media = parseMediaPath(window.location.pathname) || undefined;
-    postAnalytics({ ...currentPayload('watch_click'), ...media, title: document.title, metadata: { label } });
+    postAnalytics({ ...currentPayload('watch_click'), ...mediaPayload(window.location.pathname), title: document.title, metadata: { label } });
     return;
   }
 
