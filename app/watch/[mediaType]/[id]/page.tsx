@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { MovieCard } from '@/components/movie-card';
+import { WatchOverviewClamp } from '@/components/watch-overview-clamp';
 import { getDetailPayload, getWatchSourceUrl, type MediaType } from '@/lib/tmdb';
 import { createWatchSourceToken } from '@/lib/watch-source-token';
 
@@ -98,7 +99,7 @@ export default async function WatchPage({ params }: PageProps) {
             </a>
           </div>
 
-          <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_390px]">
+          <div className="mt-4 grid gap-5">
             <div>
               <div className="overflow-hidden rounded-[22px] border border-white/10 bg-black shadow-[0_35px_120px_rgba(0,0,0,0.86)] md:rounded-[30px]">
                 <div className="relative aspect-video bg-black">
@@ -132,29 +133,16 @@ export default async function WatchPage({ params }: PageProps) {
                   <span className="rounded-full bg-white/10 px-3 py-1.5">★ {item.rating.toFixed(1)}</span>
                   {item.isWatchReady ? <span className="rounded-full bg-[#e50914] px-3 py-1.5 text-white">พร้อมรับชม</span> : null}
                 </div>
-                <p className="mt-4 max-w-4xl text-sm leading-7 text-white/58 md:text-base md:leading-8">{item.overview}</p>
-
-                <div className="mt-5 flex flex-wrap gap-3">
-                  <a href="/watch-ready" className="inline-flex h-[44px] items-center rounded-xl border border-[#e50914]/30 bg-[#e50914]/10 px-5 text-xs font-black text-red-100 transition hover:border-[#e50914]/60 hover:bg-[#e50914]/18">
-                    พร้อมรับชมทั้งหมด
-                  </a>
-                  <a href={`/${item.mediaType}/${item.id}`} className="inline-flex h-[44px] items-center rounded-xl border border-white/10 bg-black/30 px-5 text-xs font-black text-white/62 transition hover:bg-white/[0.08] hover:text-white">
-                    รายละเอียดเรื่องนี้
-                  </a>
-                </div>
-
-                <p className="mt-5 rounded-2xl border border-white/8 bg-black/28 px-4 py-3 text-[11px] font-semibold leading-5 text-white/38">
-                  ใช้ player นี้สำหรับคอนเทนต์ที่มีสิทธิ์เผยแพร่เท่านั้น เช่น ไฟล์ของลูกค้า หนังสั้น คอร์ส วิดีโอองค์กร หรือสื่อที่ได้รับอนุญาต
-                </p>
+                <WatchOverviewClamp text={item.overview} />
               </div>
             </div>
 
-            <aside className="rounded-[24px] border border-white/10 bg-white/[0.04] p-3 backdrop-blur-xl md:p-4 lg:sticky lg:top-5 lg:max-h-[calc(100vh-40px)] lg:overflow-y-auto">
+            <aside className="rounded-[24px] border border-white/10 bg-white/[0.04] p-3 backdrop-blur-xl md:p-4">
               <p className="px-1 text-[10px] font-black uppercase tracking-[0.3em] text-[#e50914]/80">Up Next</p>
               <h2 className="px-1 pt-1 text-2xl font-black tracking-[-0.05em]">แนะนำต่อ</h2>
 
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-2">
-                {recommendations.slice(0, 10).map((movie, index) => (
+              <div className="mt-4 grid grid-cols-4 gap-2 sm:gap-3 md:gap-4 xl:gap-5">
+                {recommendations.slice(0, 12).map((movie, index) => (
                   <MovieCard key={`${movie.mediaType}-${movie.id}-${index}`} item={movie} compact priorityBadge={index === 0 ? 'ต่อไป' : undefined} />
                 ))}
               </div>
