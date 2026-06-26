@@ -1,5 +1,6 @@
 import { CleanHamburgerMenu } from '@/components/clean-hamburger-menu';
 import { FavoriteClickBridge } from '@/components/favorite-click-bridge';
+import { FloatingGlassSearch } from '@/components/floating-glass-search';
 import { HomeCardLinkBridge } from '@/components/home-card-link-bridge';
 import { HomeRealtimeWrapper } from '@/components/home-realtime-wrapper';
 import { ReliableHeroCarousel } from '@/components/reliable-hero-carousel';
@@ -26,6 +27,7 @@ export default async function HomePage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
       <HomeRealtimeWrapper home={home} />
       <SearchBehaviorFix />
+      <FloatingGlassSearch />
       <HomeCardLinkBridge home={home} />
       <FavoriteClickBridge home={home} />
       <WatchHistoryClickBridge home={home} />
