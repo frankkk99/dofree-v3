@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 
 const TARGET_TITLE = 'หนังเข้าใหม่ / กำลังจะเข้า';
 const AUTO_SPEED = 72;
-const RESUME_DELAY = 1200;
+const RESUME_DELAY = 3000;
 
 function nearestRailFromHeading(heading: Element) {
   const blocks = [
@@ -49,12 +49,36 @@ export function ReleaseWindowAutoCarousel() {
       rail.setAttribute('aria-label', 'หนังเข้าใหม่ / กำลังจะเข้า เลื่อนอัตโนมัติ');
       rail.style.scrollBehavior = 'auto';
 
-      let pausedUntil = 0;
+      let hoverPaused = false;
+      let interactionPausedUntil = 0;
       let frame = 0;
       let lastFrame = 0;
+      let lastAutoScrollLeft = rail.scrollLeft;
+      let internalScroll = false;
 
-      function pauseBriefly() {
-        pausedUntil = performance.now() + RESUME_DELAY;
+      function pauseAfterInteraction() {
+        interactionPausedUntil = performance.now() + RESUME_DELAY;
+      }
+
+      function onPointerDown(event: PointerEvent) {
+        pauseAfterInteraction();
+        if (event.pointerType === 'mouse') return;
+        hoverPaused = false;
+      }
+
+      function onMouseEnter() {
+        hoverPaused = true;
+      }
+
+      function onMouseLeave() {
+        hoverPaused = false;
+        pauseAfterInteraction();
+      }
+
+      function onUserScroll() {
+        if (internalScroll) return;
+        if (Math.abs(rail.scrollLeft - lastAutoScrollLeft) < 2) return;
+        pauseAfterInteraction();
       }
 
       function tick(now: number) {
@@ -63,29 +87,48 @@ export function ReleaseWindowAutoCarousel() {
         lastFrame = now;
 
         const canScroll = rail.scrollWidth > rail.clientWidth + 8;
-        const isPaused = now < pausedUntil;
+        const interactionPaused = now < interactionPausedUntil;
 
-        if (canScroll && !isPaused) {
+        if (canScroll && !hoverPaused && !interactionPaused) {
+          internalScroll = true;
           rail.scrollLeft += (AUTO_SPEED * delta) / 1000;
           const maxScroll = rail.scrollWidth - rail.clientWidth;
           if (rail.scrollLeft >= maxScroll - 4) {
             rail.scrollLeft = 0;
           }
+          lastAutoScrollLeft = rail.scrollLeft;
+          window.setTimeout(() => {
+            internalScroll = false;
+          }, 0);
         }
 
         frame = window.requestAnimationFrame(tick);
       }
 
-      rail.addEventListener('pointerdown', pauseBriefly, { passive: true });
-      rail.addEventListener('touchstart', pauseBriefly, { passive: true });
-      rail.addEventListener('wheel', pauseBriefly, { passive: true });
+      rail.addEventListener('pointerdown', onPointerDown, { passive: true });
+      rail.addEventListener('pointerup', pauseAfterInteraction, { passive: true });
+      rail.addEventListener('pointercancel', pauseAfterInteraction, { passive: true });
+      rail.addEventListener('touchstart', pauseAfterInteraction, { passive: true });
+      rail.addEventListener('touchmove', pauseAfterInteraction, { passive: true });
+      rail.addEventListener('touchend', pauseAfterInteraction, { passive: true });
+      rail.addEventListener('wheel', pauseAfterInteraction, { passive: true });
+      rail.addEventListener('scroll', onUserScroll, { passive: true });
+      rail.addEventListener('mouseenter', onMouseEnter, { passive: true });
+      rail.addEventListener('mouseleave', onMouseLeave, { passive: true });
       frame = window.requestAnimationFrame(tick);
 
       cleanupMap.set(rail, () => {
         window.cancelAnimationFrame(frame);
-        rail.removeEventListener('pointerdown', pauseBriefly);
-        rail.removeEventListener('touchstart', pauseBriefly);
-        rail.removeEventListener('wheel', pauseBriefly);
+        rail.removeEventListener('pointerdown', onPointerDown);
+        rail.removeEventListener('pointerup', pauseAfterInteraction);
+        rail.removeEventListener('pointercancel', pauseAfterInteraction);
+        rail.removeEventListener('touchstart', pauseAfterInteraction);
+        rail.removeEventListener('touchmove', pauseAfterInteraction);
+        rail.removeEventListener('touchend', pauseAfterInteraction);
+        rail.removeEventListener('wheel', pauseAfterInteraction);
+        rail.removeEventListener('scroll', onUserScroll);
+        rail.removeEventListener('mouseenter', onMouseEnter);
+        rail.removeEventListener('mouseleave', onMouseLeave);
         rail.style.scrollBehavior = '';
         delete rail.dataset.releaseWindowAutoCarousel;
       });
