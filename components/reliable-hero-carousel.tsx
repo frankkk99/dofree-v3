@@ -95,10 +95,7 @@ export function ReliableHeroCarousel({ home }: { home: HomePayload }) {
           <h1 className="hero-title max-w-[92vw] text-[42px] font-black leading-[0.88] tracking-[-0.085em] text-white md:whitespace-nowrap md:text-[92px] lg:text-[112px] xl:text-[120px]">
             {shortTitle(item)}
           </h1>
-          <h2 className="mt-3 max-w-[92vw] text-[16px] font-black tracking-[-0.04em] text-white md:mt-6 md:text-[28px]">
-            Auto Carousel • เรื่องที่ {index + 1} / {items.length}
-          </h2>
-          <p className="mt-2 line-clamp-3 max-w-[92vw] text-[12px] leading-5 text-white/56 md:mt-3 md:max-w-[620px] md:text-[18px] md:leading-7">
+          <p className="mt-3 line-clamp-3 max-w-[92vw] text-[12px] leading-5 text-white/56 md:mt-6 md:max-w-[620px] md:text-[18px] md:leading-7">
             {item.overview}
           </p>
 
