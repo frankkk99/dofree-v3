@@ -7,6 +7,9 @@ import type { HomePayload, MovieItem, MovieSection } from '@/lib/tmdb';
 import { MovieCard } from '@/components/movie-card';
 import { DetailWindow } from '@/components/window-system';
 
+const RAIL_LOAD_STEP = 6;
+const RAIL_LOAD_THRESHOLD = 360;
+
 function uniqueMovies(items: MovieItem[]) {
   const map = new Map<string, MovieItem>();
   for (const item of items) map.set(`${item.mediaType}-${item.id}`, item);
@@ -85,37 +88,26 @@ function matchCategory(item: MovieItem, category: string | null) {
   switch (category) {
     case 'หนังไทย':
       return language === 'th' || genres.includes('ไทย');
-
     case 'หนังฝรั่ง':
       return language === 'en' || language === 'us';
-
     case 'พากย์ไทย':
       return language === 'th' || badges.includes('พากย์ไทย') || label.includes('พากย์ไทย');
-
     case 'ซับไทย':
       return badges.includes('ซับไทย') || label.includes('ซับไทย') || (language !== 'th' && Boolean(language));
-
     case 'พร้อมดู':
       return Boolean(item.isWatchReady || item.watchUrl || status === 'published');
-
     case 'คะแนนสูง':
       return item.rating >= 8;
-
     case 'หนังใหม่':
       return badges.includes('ใหม่') || label.includes('ใหม่') || year >= currentYear - 1;
-
     case 'HD':
       return badges.includes('hd') || label.includes('hd');
-
     case 'ZOOM':
       return badges.includes('zoom') || label.includes('zoom') || status === 'review';
-
     case 'ภาพยนตร์':
       return item.mediaType === 'movie';
-
     case 'ซีรีส์':
       return item.mediaType === 'tv';
-
     default:
       return (item.genres || []).some((genre) => genre.includes(category) || category.includes(genre));
   }
@@ -143,11 +135,10 @@ function useLazyMount(initiallyMounted = false, rootMargin = '420px') {
           observer.disconnect();
         }
       },
-      { rootMargin }
+      { rootMargin },
     );
 
     observer.observe(node);
-
     return () => observer.disconnect();
   }, [mounted, rootMargin]);
 
@@ -178,6 +169,8 @@ function LazyMovieRail({
 }) {
   const initiallyMounted = sectionIndex === 0;
   const { ref, mounted } = useLazyMount(initiallyMounted, '520px');
+  const railRef = useRef<HTMLDivElement | null>(null);
+  const loadGuardRef = useRef(false);
   const initialCount = initiallyMounted ? 16 : 10;
   const [visibleCount, setVisibleCount] = useState(initialCount);
 
@@ -189,13 +182,40 @@ function LazyMovieRail({
     setVisibleCount(initialCount);
   }, [initialCount, section.items]);
 
+  useEffect(() => {
+    const rail = railRef.current;
+    if (!mounted || !rail) return;
+
+    function loadNextBatch() {
+      if (loadGuardRef.current) return;
+      if (visibleCount >= section.items.length) return;
+
+      loadGuardRef.current = true;
+      setVisibleCount((count) => Math.min(count + RAIL_LOAD_STEP, section.items.length));
+      window.setTimeout(() => {
+        loadGuardRef.current = false;
+      }, 220);
+    }
+
+    function maybeLoadMore() {
+      const remaining = rail.scrollWidth - rail.clientWidth - rail.scrollLeft;
+      const threshold = Math.max(RAIL_LOAD_THRESHOLD, rail.clientWidth * 0.38);
+      if (remaining <= threshold) loadNextBatch();
+    }
+
+    rail.addEventListener('scroll', maybeLoadMore, { passive: true });
+    window.setTimeout(maybeLoadMore, 120);
+
+    return () => rail.removeEventListener('scroll', maybeLoadMore);
+  }, [mounted, section.items.length, visibleCount]);
+
   const visibleItems = mounted ? section.items.slice(0, visibleCount) : [];
   const hasMore = mounted && visibleCount < section.items.length;
 
   return (
     <div ref={ref} style={{ contentVisibility: 'auto', containIntrinsicSize: '340px 1000px' }}>
       {mounted ? (
-        <div className="movie-rail flex gap-2.5 overflow-x-auto pb-3 sm:gap-3 md:gap-5 md:pb-4">
+        <div ref={railRef} className="movie-rail flex gap-2.5 overflow-x-auto pb-3 sm:gap-3 md:gap-5 md:pb-4">
           {visibleItems.map((item, index) => (
             <MovieCard
               key={`${section.slug}-${item.id}-${index}`}
@@ -207,13 +227,9 @@ function LazyMovieRail({
           ))}
 
           {hasMore ? (
-            <button
-              type="button"
-              onClick={() => setVisibleCount((count) => count + 16)}
-              className="grid h-[176px] w-[92px] shrink-0 place-items-center rounded-[8px] border border-white/8 bg-white/[0.035] px-3 text-center text-[10px] font-black text-white/55 backdrop-blur-xl sm:h-[220px] md:h-[280px] md:w-[120px] md:text-xs xl:h-[300px]"
-            >
-              โหลดเพิ่ม
-            </button>
+            <div className="grid h-[176px] w-[92px] shrink-0 place-items-center rounded-[8px] border border-white/8 bg-white/[0.025] px-3 text-center text-[10px] font-black text-white/38 backdrop-blur-xl sm:h-[220px] md:h-[280px] md:w-[120px] md:text-xs xl:h-[300px]" aria-live="polite">
+              กำลังโหลดอีก 6 เรื่อง...
+            </div>
           ) : null}
         </div>
       ) : (
@@ -238,7 +254,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
 
   const allItems = useMemo(
     () => uniqueMovies([...heroItems, ...randomizedSections.flatMap((section) => section.items)]),
-    [heroItems, randomizedSections]
+    [heroItems, randomizedSections],
   );
 
   const [heroIndex, setHeroIndex] = useState(0);
@@ -254,12 +270,12 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
 
   const filteredItems = useMemo(
     () => allItems.filter((item) => matchQuery(item, query) && matchCategory(item, activeCategory)),
-    [activeCategory, allItems, query]
+    [activeCategory, allItems, query],
   );
 
   const visibleFilteredItems = useMemo(
     () => filteredItems.slice(0, visibleFilterCount),
-    [filteredItems, visibleFilterCount]
+    [filteredItems, visibleFilterCount],
   );
 
   const recommendations = selected
@@ -288,14 +304,13 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setVisibleFilterCount((count) => Math.min(count + 24, filteredItems.length));
+          setVisibleFilterCount((count) => Math.min(count + RAIL_LOAD_STEP, filteredItems.length));
         }
       },
-      { rootMargin: '520px' }
+      { rootMargin: '520px' },
     );
 
     observer.observe(node);
-
     return () => observer.disconnect();
   }, [filterMode, filteredItems.length, visibleFilterCount]);
 
@@ -318,7 +333,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
     window.requestAnimationFrame(() => {
       window.requestAnimationFrame(() => {
         const watchTab = Array.from(document.querySelectorAll('button')).find(
-          (button) => button.textContent?.trim() === 'รับชม'
+          (button) => button.textContent?.trim() === 'รับชม',
         );
 
         watchTab?.click();
@@ -524,7 +539,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
 
                 {visibleFilteredItems.length < filteredItems.length ? (
                   <div ref={filterLoadRef} className="py-6 text-center text-[11px] font-black text-white/38">
-                    กำลังโหลดเพิ่ม...
+                    กำลังโหลดเพิ่มอีก 6 เรื่อง...
                   </div>
                 ) : null}
               </>
