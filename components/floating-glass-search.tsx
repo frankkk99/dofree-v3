@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent, PointerEvent as ReactPointerEvent } from 'react';
+import { createPortal } from 'react-dom';
+import { MovieCard } from '@/components/movie-card';
 import { categoryChips } from '@/lib/catalog';
+import type { HomePayload, MovieItem } from '@/lib/tmdb';
 
 const STORAGE_KEY = 'dofree-floating-search-position';
 const DOCK_SIZE = 62;
@@ -14,8 +17,84 @@ type DockPosition = {
   y: number;
 };
 
+type SearchState = {
+  query: string;
+  categories: string[];
+};
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
+}
+
+function uniqueMovies(items: MovieItem[]) {
+  const map = new Map<string, MovieItem>();
+  for (const item of items) map.set(`${item.mediaType}-${item.id}`, item);
+  return [...map.values()];
+}
+
+function itemSearchText(item: MovieItem) {
+  return [
+    item.title,
+    item.titleEn,
+    item.year,
+    item.language,
+    item.mediaType,
+    item.status,
+    item.label,
+    ...(item.genres || []),
+    ...(item.badges || []),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+}
+
+function matchQuery(item: MovieItem, query: string) {
+  const keyword = query.trim().toLowerCase();
+  if (!keyword) return true;
+  return itemSearchText(item).includes(keyword);
+}
+
+function matchCategory(item: MovieItem, category: string) {
+  const genres = (item.genres || []).join(' ').toLowerCase();
+  const badges = (item.badges || []).join(' ').toLowerCase();
+  const status = (item.status || '').toLowerCase();
+  const label = (item.label || '').toLowerCase();
+  const language = (item.language || '').toLowerCase();
+  const year = Number(item.year);
+  const currentYear = new Date().getFullYear();
+
+  switch (category) {
+    case 'หนังไทย':
+      return language === 'th' || genres.includes('ไทย');
+    case 'หนังฝรั่ง':
+      return language === 'en' || language === 'us';
+    case 'พากย์ไทย':
+      return language === 'th' || badges.includes('พากย์ไทย') || label.includes('พากย์ไทย');
+    case 'ซับไทย':
+      return badges.includes('ซับไทย') || label.includes('ซับไทย') || (language !== 'th' && Boolean(language));
+    case 'พร้อมดู':
+      return Boolean(item.isWatchReady || item.watchUrl || status === 'published');
+    case 'คะแนนสูง':
+      return item.rating >= 8;
+    case 'หนังใหม่':
+      return badges.includes('ใหม่') || label.includes('ใหม่') || year >= currentYear - 1;
+    case 'HD':
+      return badges.includes('hd') || label.includes('hd');
+    case 'ZOOM':
+      return badges.includes('zoom') || label.includes('zoom') || status === 'review';
+    case 'ภาพยนตร์':
+      return item.mediaType === 'movie';
+    case 'ซีรีส์':
+      return item.mediaType === 'tv';
+    default:
+      return (item.genres || []).some((genre) => genre.includes(category) || category.includes(genre));
+  }
+}
+
+function matchCategories(item: MovieItem, categories: string[]) {
+  if (!categories.length) return true;
+  return categories.some((category) => matchCategory(item, category));
 }
 
 function snapToNearestEdge(position: DockPosition) {
@@ -61,34 +140,12 @@ function hiddenSearchSection() {
   return document.querySelector('main section.sticky') as HTMLElement | null;
 }
 
-function hiddenSearchInput() {
-  return document.querySelector('main section.sticky form input') as HTMLInputElement | null;
-}
-
-function hiddenSearchForm() {
-  return document.querySelector('main section.sticky form') as HTMLFormElement | null;
-}
-
-function setNativeInputValue(input: HTMLInputElement, value: string) {
-  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
-  setter?.call(input, value);
-  input.dispatchEvent(new Event('input', { bubbles: true }));
-}
-
-function clickHiddenChip(label: string) {
-  const buttons = Array.from(document.querySelectorAll('main section.sticky button'));
-  const target = buttons.find((button) => button.textContent?.trim() === label);
-  if (target instanceof HTMLButtonElement) {
-    target.click();
-    return true;
-  }
-  return false;
-}
-
-export function FloatingGlassSearch() {
+export function FloatingGlassSearch({ home }: { home: HomePayload }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const [activeChip, setActiveChip] = useState<string | null>(null);
+  const [activeChips, setActiveChips] = useState<string[]>([]);
+  const [searchState, setSearchState] = useState<SearchState | null>(null);
+  const [sectionsHost, setSectionsHost] = useState<HTMLElement | null>(null);
   const [position, setPosition] = useState<DockPosition>(() => defaultPosition());
   const [dragging, setDragging] = useState(false);
   const [moved, setMoved] = useState(false);
@@ -99,7 +156,23 @@ export function FloatingGlassSearch() {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const chips = useMemo(() => categoryChips.filter((chip) => chip !== 'ทั้งหมด').slice(0, 18), []);
-  const hasFilter = Boolean(query.trim()) || Boolean(activeChip);
+  const hasFilter = Boolean(query.trim()) || activeChips.length > 0 || Boolean(searchState);
+
+  const allItems = useMemo(
+    () => uniqueMovies([
+      home.hero,
+      ...(home.heroItems || []),
+      ...home.sections.flatMap((section) => section.items),
+    ]),
+    [home],
+  );
+
+  const resultItems = useMemo(() => {
+    if (!searchState) return [];
+    return allItems
+      .filter((item) => matchQuery(item, searchState.query) && matchCategories(item, searchState.categories))
+      .sort((a, b) => b.rating - a.rating || a.title.localeCompare(b.title, 'th'));
+  }, [allItems, searchState]);
 
   useEffect(() => {
     latestPositionRef.current = position;
@@ -107,6 +180,7 @@ export function FloatingGlassSearch() {
 
   useEffect(() => {
     setPosition(readStoredPosition());
+    setSectionsHost(document.getElementById('sections'));
   }, []);
 
   useEffect(() => {
@@ -123,6 +197,17 @@ export function FloatingGlassSearch() {
       section.style.pointerEvents = previousPointerEvents;
     };
   }, []);
+
+  useEffect(() => {
+    const sections = document.getElementById('sections');
+    if (!sections) return;
+
+    if (searchState) {
+      sections.setAttribute('data-floating-search-active', 'true');
+    } else {
+      sections.removeAttribute('data-floating-search-active');
+    }
+  }, [searchState]);
 
   useEffect(() => {
     function onResize() {
@@ -146,19 +231,34 @@ export function FloatingGlassSearch() {
   function submitSearch(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault();
 
-    const input = hiddenSearchInput();
-    const form = hiddenSearchForm();
-    if (input) setNativeInputValue(input, query);
+    const nextState = {
+      query: query.trim(),
+      categories: activeChips,
+    };
+    setSearchState(nextState);
 
-    if (activeChip) {
-      clickHiddenChip(activeChip);
-    } else if (form) {
-      form.requestSubmit();
-    }
+    window.requestAnimationFrame(() => {
+      document.getElementById('sections')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
 
     setOpen(false);
     setSettling(true);
     window.setTimeout(() => setSettling(false), 950);
+  }
+
+  function clearSearch() {
+    setQuery('');
+    setActiveChips([]);
+    setSearchState(null);
+    setOpen(false);
+    setSettling(true);
+    window.setTimeout(() => setSettling(false), 850);
+  }
+
+  function toggleChip(chip: string) {
+    setActiveChips((current) => (
+      current.includes(chip) ? current.filter((item) => item !== chip) : [...current, chip]
+    ));
   }
 
   function startDrag(event: ReactPointerEvent<HTMLButtonElement>) {
@@ -207,6 +307,54 @@ export function FloatingGlassSearch() {
     setOpen((value) => !value);
   }
 
+  const resultTitle = searchState
+    ? searchState.query
+      ? `ค้นหา “${searchState.query}”`
+      : searchState.categories.length
+        ? `หมวด: ${searchState.categories.join(' / ')}`
+        : 'ผลลัพธ์ทั้งหมด'
+    : '';
+
+  const resultsPortal = sectionsHost && searchState
+    ? createPortal(
+      <div data-floating-search-results="true" className="relative z-10 bg-black px-0 py-1">
+        <style jsx global>{`
+          #sections[data-floating-search-active='true'] > :not([data-floating-search-results='true']) {
+            display: none !important;
+          }
+        `}</style>
+        <div className="mb-4 flex items-end justify-between gap-3 md:mb-6">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#e50914]/80">ผลลัพธ์</p>
+            <h2 className="mt-1 text-[21px] font-black tracking-[-0.05em] md:text-[34px]">{resultTitle}</h2>
+            <p className="mt-1 text-[11px] font-semibold text-white/44">พบ {resultItems.length} เรื่อง • เรียงคะแนนสูงก่อน</p>
+          </div>
+          <button type="button" onClick={clearSearch} className="rounded-full border border-white/12 bg-white/[0.08] px-3 py-2 text-[11px] font-black text-white/72 backdrop-blur-xl hover:bg-[#e50914] hover:text-white">
+            ล้างค่า
+          </button>
+        </div>
+
+        {resultItems.length ? (
+          <div className="flex flex-wrap gap-2.5 pb-3 sm:gap-3 md:gap-5 md:pb-4">
+            {resultItems.map((item, index) => (
+              <MovieCard
+                key={`floating-search-${item.mediaType}-${item.id}-${index}`}
+                item={item}
+                priority={index < 8}
+                priorityBadge={searchState.categories[0] || undefined}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-6 text-center text-sm font-bold text-white/58">
+            ไม่พบหนังที่ตรงกับเงื่อนไขนี้
+          </div>
+        )}
+      </div>,
+      sectionsHost,
+    )
+    : null;
+
   return (
     <>
       <button
@@ -226,17 +374,17 @@ export function FloatingGlassSearch() {
       </button>
 
       {open ? (
-        <div className="fixed inset-0 z-[90] bg-black/18 px-3 pt-[calc(env(safe-area-inset-top)+82px)] text-white backdrop-blur-[2px]" onMouseDown={() => setOpen(false)}>
+        <div className="fixed inset-0 z-[90] bg-black/28 px-3 pt-[calc(env(safe-area-inset-top)+82px)] text-white backdrop-blur-[2px]" onMouseDown={() => setOpen(false)}>
           <div
-            className="ml-auto mr-1 max-h-[calc(100dvh-118px)] w-full max-w-[430px] overflow-y-auto rounded-[30px] border border-white/18 bg-[#0a0a0a]/58 p-4 shadow-[0_34px_120px_rgba(0,0,0,0.82),inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-2xl md:mr-7 md:mt-3"
+            className="ml-auto mr-1 max-h-[calc(100dvh-118px)] w-full max-w-[430px] overflow-y-auto rounded-[30px] border border-white/18 bg-black/88 p-4 shadow-[0_34px_120px_rgba(0,0,0,0.88),inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-2xl md:mr-7 md:mt-3"
             onMouseDown={(event) => event.stopPropagation()}
           >
             <div className="flex justify-end">
               <button type="button" onClick={() => setOpen(false)} className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/[0.10] text-lg font-black text-white/80 hover:bg-[#e50914]">×</button>
             </div>
 
-            <form onSubmit={submitSearch} className="mt-3 rounded-[24px] border border-white/14 bg-white/[0.10] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-2xl">
-              <div className="flex h-12 items-center gap-2 rounded-[18px] bg-black/26 px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+            <form onSubmit={submitSearch} className="mt-3 rounded-[24px] border border-white/16 bg-black/74 p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.09)] backdrop-blur-2xl">
+              <div className="flex h-12 items-center gap-2 rounded-[18px] bg-black/62 px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
                 <span className="text-lg text-white/68">⌕</span>
                 <input
                   ref={inputRef}
@@ -252,23 +400,24 @@ export function FloatingGlassSearch() {
 
               <div className="mt-3 flex gap-2">
                 <button type="submit" className="h-11 flex-1 rounded-[17px] bg-[#e50914] text-xs font-black text-white shadow-[0_16px_45px_rgba(229,9,20,0.36)]">ค้นหา</button>
+                <button type="button" onClick={clearSearch} className="h-11 w-[78px] shrink-0 rounded-[17px] border border-white/12 bg-white/[0.08] text-xs font-black text-white/72 backdrop-blur-xl hover:bg-white/[0.14] hover:text-white">ล้าง</button>
               </div>
             </form>
 
-            <div className="mt-4 rounded-[24px] border border-white/10 bg-white/[0.06] p-3 backdrop-blur-2xl">
+            <div className="mt-4 rounded-[24px] border border-white/12 bg-black/64 p-3 backdrop-blur-2xl">
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/38">Quick Filters</p>
-                {activeChip ? <p className="text-[10px] font-black text-[#e50914]">{activeChip}</p> : null}
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/58">Quick Filters</p>
+                {activeChips.length ? <p className="text-[10px] font-black text-[#e50914]">เลือก {activeChips.length}</p> : null}
               </div>
               <div className="flex max-h-[148px] flex-wrap gap-1.5 overflow-y-auto pr-1">
                 {chips.map((chip) => {
-                  const active = activeChip === chip;
+                  const active = activeChips.includes(chip);
                   return (
                     <button
                       key={chip}
                       type="button"
-                      onClick={() => setActiveChip((value) => (value === chip ? null : chip))}
-                      className={`h-8 rounded-full px-3 text-[10px] font-black transition ${active ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.08] text-white/68 hover:bg-white/[0.14] hover:text-white'}`}
+                      onClick={() => toggleChip(chip)}
+                      className={`h-8 rounded-full px-3 text-[10px] font-black transition ${active ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.08] text-white/74 hover:bg-white/[0.14] hover:text-white'}`}
                     >
                       {chip}
                     </button>
@@ -277,10 +426,12 @@ export function FloatingGlassSearch() {
               </div>
             </div>
 
-            <p className="mt-3 text-center text-[10px] font-bold text-white/32">ลากปุ่มค้นหาเพื่อย้ายตำแหน่งได้</p>
+            <p className="mt-3 text-center text-[10px] font-bold text-white/34">ลากปุ่มค้นหาเพื่อย้ายตำแหน่งได้</p>
           </div>
         </div>
       ) : null}
+
+      {resultsPortal}
 
       <style jsx global>{`
         @keyframes floating-search-wiggle {
