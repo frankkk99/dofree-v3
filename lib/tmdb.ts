@@ -205,6 +205,10 @@ function watchLinkKey(mediaType: MediaType, id: number) {
   return `${mediaType}-${id}`;
 }
 
+function publicWatchUrl(item: Pick<MovieItem, 'mediaType' | 'id'>) {
+  return `/watch/${item.mediaType}/${item.id}`;
+}
+
 function normalizeDrivePreviewUrl(value?: string | null) {
   const url = value?.trim();
   if (!url) return undefined;
@@ -328,7 +332,7 @@ function applyWatchLink(item: MovieItem, links: WatchLinkLookup, index: number):
     ...item,
     title: link.title_th || item.title,
     titleEn: link.title || item.titleEn,
-    watchUrl,
+    watchUrl: watchUrl ? publicWatchUrl(item) : undefined,
     trailerUrl,
     isWatchReady: Boolean(watchUrl),
     status: watchUrl ? 'published' : item.status,
@@ -450,6 +454,15 @@ export async function getDetailPayload(mediaType: MediaType, id: string): Promis
 export async function getWatchReadyItems() {
   const home = await getHomePayload();
   return uniqueItems(home.sections.flatMap((section) => section.items)).filter((item) => item.isWatchReady && item.watchUrl && item.rating >= minTmdbRating);
+}
+
+export async function getWatchSourceUrl(mediaType: MediaType, id: string | number) {
+  const numericId = Number(id);
+  if (!numericId) return undefined;
+
+  const links = await fetchActiveWatchLinks();
+  const link = links.get(watchLinkKey(mediaType, numericId));
+  return normalizeDrivePreviewUrl(link?.watch_url);
 }
 
 export async function searchMovies(query: string) {

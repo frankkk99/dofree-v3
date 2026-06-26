@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { MovieCard } from '@/components/movie-card';
-import { getDetailPayload, type MediaType } from '@/lib/tmdb';
+import { getDetailPayload, getWatchSourceUrl, type MediaType } from '@/lib/tmdb';
+import { createWatchSourceToken } from '@/lib/watch-source-token';
 
 const siteName = 'ดูดีดี';
 const allowedMediaTypes = new Set(['movie', 'tv']);
@@ -44,9 +45,14 @@ function toEmbedUrl(value?: string) {
   }
 }
 
-function linkProps(href?: string) {
-  if (!href || !/^https?:\/\//.test(href)) return {};
-  return { target: '_blank', rel: 'noreferrer' };
+function protectedWatchUrl(sourceUrl: string | undefined, mediaType: MediaType, id: number) {
+  if (!sourceUrl) return undefined;
+  try {
+    const token = createWatchSourceToken({ url: sourceUrl, mediaType, id });
+    return `/api/watch/source?token=${encodeURIComponent(token)}`;
+  } catch {
+    return undefined;
+  }
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -70,9 +76,10 @@ export default async function WatchPage({ params }: PageProps) {
   const detail = await getDetailPayload(parseMediaType(mediaType), id);
   const { item, trailerUrl, recommendations } = detail;
   const effectiveTrailerUrl = item.trailerUrl || trailerUrl;
-  const sourceUrl = item.watchUrl || effectiveTrailerUrl;
+  const watchSourceUrl = await getWatchSourceUrl(item.mediaType, item.id);
+  const sourceUrl = protectedWatchUrl(watchSourceUrl, item.mediaType, item.id) || effectiveTrailerUrl;
   const embedUrl = toEmbedUrl(sourceUrl);
-  const sourceLabel = item.watchUrl ? 'Watch Source' : effectiveTrailerUrl ? 'Trailer Preview' : 'No Source';
+  const sourceLabel = watchSourceUrl ? 'Protected Watch Source' : effectiveTrailerUrl ? 'Trailer Preview' : 'No Source';
 
   return (
     <main className="min-h-screen bg-[#030303] text-white">
@@ -101,6 +108,7 @@ export default async function WatchPage({ params }: PageProps) {
                       title={`รับชม ${item.title}`}
                       className="absolute inset-0 h-full w-full"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerPolicy="no-referrer"
                       allowFullScreen
                     />
                   ) : (
@@ -127,11 +135,6 @@ export default async function WatchPage({ params }: PageProps) {
                 <p className="mt-4 max-w-4xl text-sm leading-7 text-white/58 md:text-base md:leading-8">{item.overview}</p>
 
                 <div className="mt-5 flex flex-wrap gap-3">
-                  {sourceUrl ? (
-                    <a {...linkProps(sourceUrl)} href={sourceUrl} className="inline-flex h-[44px] items-center rounded-xl border border-white/10 bg-white/[0.08] px-5 text-xs font-black text-white/76 transition hover:border-white/20 hover:bg-white/[0.13]">
-                      เปิดลิงก์ต้นฉบับ
-                    </a>
-                  ) : null}
                   <a href="/watch-ready" className="inline-flex h-[44px] items-center rounded-xl border border-[#e50914]/30 bg-[#e50914]/10 px-5 text-xs font-black text-red-100 transition hover:border-[#e50914]/60 hover:bg-[#e50914]/18">
                     พร้อมรับชมทั้งหมด
                   </a>
