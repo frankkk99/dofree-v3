@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter, Noto_Sans_Thai } from 'next/font/google';
 import { AnalyticsTracker } from '@/components/analytics-tracker';
+import { BunnyEmbedFix } from '@/components/bunny-embed-fix';
 import './globals.css';
 
 const inter = Inter({
@@ -58,6 +59,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         {children}
         <AnalyticsTracker />
+        <BunnyEmbedFix />
       </body>
     </html>
   );
