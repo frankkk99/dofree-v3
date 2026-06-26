@@ -1,4 +1,5 @@
 import { AdminLinkVisibilityGuard } from '@/components/admin-link-visibility-guard';
+import { CleanHamburgerMenu } from '@/components/clean-hamburger-menu';
 import { FavoriteClickBridge } from '@/components/favorite-click-bridge';
 import { HomeCardLinkBridge } from '@/components/home-card-link-bridge';
 import { HomeRealtimeWrapper } from '@/components/home-realtime-wrapper';
@@ -6,12 +7,13 @@ import { WatchHistoryClickBridge } from '@/components/watch-history-click-bridge
 import { getCatalogHomePayload } from '@/lib/catalog-home';
 
 const siteName = 'ดูดีดี';
+const englishSiteName = 'DodeedeeV3';
 const siteUrl = 'https://www.xn--l3caa5kbu.online/';
 const websiteJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
   name: siteName,
-  alternateName: ['ดูดีดีออนไลน์', 'DooDeeDee'],
+  alternateName: ['ดูดีดีออนไลน์', englishSiteName, 'Dodeedee', 'DooDeeDee'],
   url: siteUrl,
 };
 
@@ -25,6 +27,7 @@ export default async function HomePage() {
       <FavoriteClickBridge home={home} />
       <WatchHistoryClickBridge home={home} />
       <AdminLinkVisibilityGuard />
+      <CleanHamburgerMenu />
     </>
   );
 }
