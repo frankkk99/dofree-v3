@@ -107,24 +107,6 @@ export function ReliableHeroCarousel({ home }: { home: HomePayload }) {
               ⓘ รายละเอียด
             </a>
           </div>
-
-          <div className="mt-5 flex gap-1.5">
-            {items.slice(0, 8).map((dot, dotIndex) => (
-              <button
-                key={`${dot.mediaType}-${dot.id}-${dotIndex}`}
-                type="button"
-                aria-label={`ไปยังเรื่องที่ ${dotIndex + 1}`}
-                onClick={() => {
-                  setVisible(false);
-                  window.setTimeout(() => {
-                    setIndex(dotIndex);
-                    setVisible(true);
-                  }, 180);
-                }}
-                className={`h-1.5 rounded-full transition-all ${dotIndex === index ? 'w-8 bg-[#e50914]' : 'w-3 bg-white/24 hover:bg-white/50'}`}
-              />
-            ))}
-          </div>
         </div>
       </div>
     </div>,
