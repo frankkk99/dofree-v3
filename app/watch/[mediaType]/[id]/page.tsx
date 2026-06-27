@@ -80,7 +80,7 @@ export default async function WatchPage({ params }: PageProps) {
   const watchSourceUrl = await getWatchSourceUrl(item.mediaType, item.id);
   const sourceUrl = protectedWatchUrl(watchSourceUrl, item.mediaType, item.id) || effectiveTrailerUrl;
   const embedUrl = toEmbedUrl(sourceUrl);
-  const sourceLabel = watchSourceUrl ? 'Protected Watch Source' : effectiveTrailerUrl ? 'Trailer Preview' : 'No Source';
+  const sourceLabel = watchSourceUrl ? 'พร้อมรับชม' : effectiveTrailerUrl ? 'ตัวอย่าง' : 'ยังไม่มีวิดีโอ';
 
   return (
     <main className="min-h-screen bg-[#030303] text-white">
