@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { DetailPayload } from '@/lib/tmdb';
 import { DetailRecommendationCarousel } from '@/components/detail-recommendation-carousel';
 
@@ -61,7 +62,7 @@ function youtubeEmbedUrl(url?: string) {
   return undefined;
 }
 
-function StatusBadge({ children, active = false }: { children: React.ReactNode; active?: boolean }) {
+function StatusBadge({ children, active = false }: { children: ReactNode; active?: boolean }) {
   return (
     <span className={`rounded-full px-2.5 py-1 text-[9px] font-black shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md md:text-[11px] ${active ? 'bg-[#e50914]/22 text-red-100' : 'bg-white/[0.105] text-white/78'}`}>
       {children}
