@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseRest } from '@/lib/supabase-rest';
+import { supabaseRest, supabaseRestCount } from '@/lib/supabase-rest';
 
 type AuthUser = {
   id: string;
@@ -116,8 +116,7 @@ async function requireAdmin(token: string) {
 
 async function countRows(path: string) {
   try {
-    const rows = await supabaseRest<unknown[]>(path, { cache: 'no-store' });
-    return Array.isArray(rows) ? rows.length : 0;
+    return await supabaseRestCount(path, { cache: 'no-store' });
   } catch {
     return 0;
   }
@@ -246,18 +245,18 @@ export async function GET(request: Request) {
       categories,
       events7d,
     ] = await Promise.all([
-      countRows('tmdb_catalog?select=tmdb_id&limit=10000'),
-      countRows('admin_movie_links?watch_url=not.is.null&select=tmdb_id&limit=10000'),
-      countRows('admin_movie_links?status=eq.broken&select=tmdb_id&limit=10000'),
-      countRows('profiles?select=id&limit=10000'),
-      countRows('favorites?select=id&limit=10000'),
-      countRows('watch_history?select=id&limit=10000'),
-      countRows('memberships?select=id&limit=10000'),
-      countRows('memberships?status=eq.active&select=id&limit=10000'),
-      countRows('link_reports?select=id&limit=10000'),
-      countRows(`link_reports?created_at=gte.${encodeURIComponent(since7d)}&select=id&limit=10000`),
-      countRows('admin_sections?select=id&limit=10000'),
-      countRows('admin_categories?select=id&limit=10000'),
+      countRows('tmdb_catalog?select=tmdb_id'),
+      countRows('admin_movie_links?watch_url=not.is.null&select=tmdb_id'),
+      countRows('admin_movie_links?status=eq.broken&select=tmdb_id'),
+      countRows('profiles?select=id'),
+      countRows('favorites?select=id'),
+      countRows('watch_history?select=id'),
+      countRows('memberships?select=id'),
+      countRows('memberships?status=eq.active&select=id'),
+      countRows('link_reports?select=id'),
+      countRows(`link_reports?created_at=gte.${encodeURIComponent(since7d)}&select=id`),
+      countRows('admin_sections?select=id'),
+      countRows('admin_categories?select=id'),
       getRows<AnalyticsEvent>(`analytics_events?select=event_name,page_path,media_type,media_id,title,search_query,visitor_id,user_id,device,created_at&created_at=gte.${encodeURIComponent(since7d)}&order=created_at.desc&limit=10000`),
     ]);
 
