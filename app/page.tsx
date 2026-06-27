@@ -4,6 +4,7 @@ import { FloatingGlassSearch } from '@/components/floating-glass-search';
 import { FloatingSearchPolish } from '@/components/floating-search-polish';
 import { HomeCardLinkBridge } from '@/components/home-card-link-bridge';
 import { HomeRealtimeWrapper } from '@/components/home-realtime-wrapper';
+import { ModalRecommendationDefault } from '@/components/modal-recommendation-default';
 import { ReliableHeroCarousel } from '@/components/reliable-hero-carousel';
 import { ReleaseWindowAutoCarousel } from '@/components/release-window-auto-carousel';
 import { SearchBehaviorFix } from '@/components/search-behavior-fix';
@@ -30,6 +31,7 @@ export default async function HomePage() {
       <SearchBehaviorFix />
       <FloatingGlassSearch home={home} />
       <FloatingSearchPolish />
+      <ModalRecommendationDefault />
       <HomeCardLinkBridge home={home} />
       <FavoriteClickBridge home={home} />
       <WatchHistoryClickBridge home={home} />
