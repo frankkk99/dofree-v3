@@ -143,7 +143,7 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
       <div className="fixed inset-0 -z-10 bg-cover bg-center opacity-28 blur-[1px]" style={{ backgroundImage: `url(${fallbackImage})` }} />
       <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_18%_12%,rgba(229,9,20,0.22),transparent_24rem),linear-gradient(180deg,rgba(0,0,0,0.58),#030303_72%)]" />
 
-      <article className="mx-auto w-full max-w-[940px] overflow-hidden rounded-[28px] bg-[#050505]/88 shadow-[0_42px_150px_rgba(0,0,0,0.94)] backdrop-blur-2xl md:rounded-[34px]">
+      <article className="mx-auto w-full max-w-[860px] overflow-hidden rounded-[28px] bg-[#050505]/88 shadow-[0_42px_150px_rgba(0,0,0,0.94)] backdrop-blur-2xl md:rounded-[34px]">
         <section className="relative bg-black/42 shadow-[inset_0_-80px_110px_rgba(0,0,0,0.55)] backdrop-blur-xl">
           <div className="absolute inset-0 bg-cover bg-center opacity-24 blur-[1px]" style={{ backgroundImage: `url(${fallbackImage})` }} />
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,5,5,0.42),rgba(5,5,5,0.86)_55%,rgba(5,5,5,0.98)_100%)] md:bg-[linear-gradient(90deg,rgba(5,5,5,0.98)_0%,rgba(5,5,5,0.86)_42%,rgba(5,5,5,0.48)_100%)]" />
@@ -152,9 +152,9 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
             ×
           </a>
 
-          <div className="relative z-10 grid gap-4 p-4 pt-5 md:grid-cols-[160px_1fr] md:gap-5 md:p-5 md:pb-4 lg:grid-cols-[190px_1fr]">
-            <div className="mx-auto w-[118px] overflow-hidden rounded-[18px] bg-black/40 shadow-[0_20px_55px_rgba(0,0,0,0.75)] ring-1 ring-white/14 backdrop-blur-md md:w-full md:rounded-[22px]">
-              <img src={item.posterUrl} alt={item.title} className="aspect-[2/3] w-full object-cover" />
+          <div className="relative z-10 grid grid-cols-[88px_1fr] gap-3 p-4 pt-5 md:grid-cols-[118px_1fr] md:gap-4 md:p-5 md:pb-4">
+            <div className="overflow-hidden rounded-[16px] bg-black/40 shadow-[0_20px_55px_rgba(0,0,0,0.75)] ring-1 ring-white/14 backdrop-blur-md md:rounded-[20px]">
+              <img src={item.posterUrl} alt={item.title} loading="lazy" decoding="async" className="h-[132px] w-full object-cover md:h-[176px]" />
             </div>
 
             <div className="min-w-0 pr-9 md:pr-11">
@@ -164,7 +164,7 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
               <p className="mt-5 text-[9px] font-black uppercase tracking-[0.24em] text-[#e50914] md:text-[10px]">
                 {mediaLabel(item.mediaType)} Detail
               </p>
-              <h1 className="modal-title mt-2 line-clamp-2 text-[32px] font-black leading-[0.92] tracking-[-0.075em] text-white md:text-[56px] lg:text-[68px]">
+              <h1 className="modal-title mt-1.5 line-clamp-2 text-[21px] font-black leading-[0.98] tracking-[-0.06em] text-white md:text-[31px]">
                 {item.title}
               </h1>
               {item.titleEn && item.titleEn !== item.title ? <p className="mt-2 text-sm font-bold text-white/42 md:text-base">{item.titleEn}</p> : null}
@@ -177,7 +177,7 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
                 ))}
               </div>
 
-              <p className="mt-4 max-w-2xl text-[12px] font-medium leading-6 text-white/62 md:text-[14px] md:leading-7">
+              <p className="mt-3 line-clamp-3 max-w-2xl text-[11px] font-medium leading-4 text-white/58 md:text-[13px] md:leading-5">
                 {item.overview || 'ยังไม่มีคำอธิบายเรื่องนี้ แต่ระบบเตรียมโครงหน้าไว้สำหรับแสดงรายละเอียด ตัวอย่าง นักแสดง และรายการแนะนำที่เกี่ยวข้อง'}
               </p>
 
@@ -212,16 +212,22 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
 
         <section className="sticky top-0 z-20 bg-black/62 px-3 shadow-[0_20px_60px_rgba(0,0,0,0.58)] backdrop-blur-2xl md:px-5">
           <div className="movie-rail flex gap-1 overflow-x-auto py-2.5 md:gap-1.5 md:py-3">
-            {['นักแสดง', 'รายละเอียด', 'แนะนำ', 'รับชม'].map((label, index) => (
-              <a key={label} href={index === 0 ? '#cast' : index === 1 ? '#detail' : index === 2 ? '#recommend' : watchHref} className={`min-w-max rounded-md px-3 py-1.5 text-[10px] font-black shadow-[0_12px_32px_rgba(0,0,0,0.28)] backdrop-blur-xl transition md:px-4 md:py-2 md:text-xs ${index === 0 ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.07] text-white/55 hover:bg-white/[0.12] hover:text-white'}`}>
-                {label}
+            {[
+              { label: 'แนะนำ', href: '#recommend' },
+              { label: 'นักแสดง', href: '#cast' },
+              { label: 'รายละเอียด', href: '#detail' },
+              { label: 'สปอยหนัง', href: '#spoiler' },
+              { label: 'รับชม', href: watchHref },
+            ].map((tab, index) => (
+              <a key={tab.label} href={tab.href} className={`min-w-max rounded-md px-3 py-1.5 text-[10px] font-black shadow-[0_12px_32px_rgba(0,0,0,0.28)] backdrop-blur-xl transition md:px-4 md:py-2 md:text-xs ${index === 0 ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.07] text-white/55 hover:bg-white/[0.12] hover:text-white'}`}>
+                {tab.label}
               </a>
             ))}
           </div>
         </section>
 
-        <section className="space-y-6 p-3 md:p-4">
-          <div id="cast" className="rounded-[22px] bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_22px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl md:p-5">
+        <section className="flex flex-col gap-6 p-3 md:p-4">
+          <div id="cast" className="order-2 rounded-[22px] bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_22px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl md:p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]/75">Cast</p>
@@ -248,7 +254,7 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
             )}
           </div>
 
-          <div id="detail" className="rounded-[22px] bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_22px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl md:p-5">
+          <div id="detail" className="order-3 rounded-[22px] bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_22px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl md:p-5">
             <h2 className="text-xl font-black tracking-[-0.04em] md:text-2xl">เกี่ยวกับเรื่องนี้</h2>
             <div className="mt-3 grid gap-2 text-[11px] font-bold text-white/62 sm:grid-cols-2 md:mt-4 md:gap-3 md:text-sm">
               <p>ประเภท: {(item.genres || []).join(', ') || 'ภาพยนตร์'}</p>
@@ -261,7 +267,14 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
             <p className="mt-4 text-xs leading-6 text-white/58 md:text-sm md:leading-7">{item.overview}</p>
           </div>
 
-          <div id="recommend" className="rounded-[22px] bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_22px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl md:p-5">
+          <div id="spoiler" className="order-4 rounded-[22px] bg-yellow-300/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_22px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl md:p-5">
+            <h2 className="text-xl font-black tracking-[-0.04em] md:text-2xl">สปอยหนัง</h2>
+            <div className="mt-3 rounded-2xl bg-black/28 p-3 text-xs leading-6 text-yellow-50/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] md:text-sm md:leading-7">
+              {item.overview || 'ยังไม่มีสปอยสำหรับเรื่องนี้'}
+            </div>
+          </div>
+
+          <div id="recommend" className="order-1 rounded-[22px] bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_22px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl md:p-5">
             <div className="mb-4 flex items-center justify-between gap-4">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]/75">Recommended</p>

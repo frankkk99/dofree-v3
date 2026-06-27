@@ -6,9 +6,9 @@ import type { MovieItem } from '@/lib/tmdb';
 import { MovieCard } from '@/components/movie-card';
 
 const modalTabs = [
+  { id: 'recommend', label: 'แนะนำ' },
   { id: 'cast', label: 'นักแสดง' },
   { id: 'detail', label: 'รายละเอียด' },
-  { id: 'recommend', label: 'แนะนำ' },
   { id: 'spoiler', label: 'สปอยหนัง' },
 ] as const;
 
@@ -330,7 +330,7 @@ export function SearchWindow({ query, setQuery, items, onClose, onSelect }: { qu
 
 export function DetailWindow({ item, recommendations, onClose, onSelect }: { item: MovieItem; recommendations: MovieItem[]; onClose: () => void; onSelect: (item: MovieItem) => void }) {
   const [reported, setReported] = useState(false);
-  const [activeTab, setActiveTab] = useState<ModalTab>('cast');
+  const [activeTab, setActiveTab] = useState<ModalTab>('recommend');
   const [expanded, setExpanded] = useState(false);
   const [visibleRecCount, setVisibleRecCount] = useState(8);
   const [detailItem, setDetailItem] = useState<MovieItem>(item);
@@ -348,7 +348,7 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
   useEffect(() => {
     let cancelled = false;
     const controller = new AbortController();
-    setActiveTab('cast');
+    setActiveTab('recommend');
     setExpanded(false);
     setReported(false);
     setVisibleRecCount(8);
@@ -477,7 +477,7 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
             {activeTab === 'recommend' && (
               <div>
                 <h3 className="text-base font-black md:text-xl">แนะนำสำหรับคุณ</h3>
-                <div className="mt-3 grid grid-cols-3 gap-2 md:grid-cols-4 md:gap-3">{visibleRecommendations.map((movie, index) => <MovieCard key={`modal-rec-${movie.mediaType}-${movie.id}-${index}`} item={movie} grid compact onSelect={(nextItem) => { onSelect(nextItem); setActiveTab('cast'); setExpanded(false); }} priorityBadge={index % 2 === 0 ? 'แนะนำ' : undefined} />)}</div>
+                <div className="mt-3 grid grid-cols-3 gap-2 md:grid-cols-4 md:gap-3">{visibleRecommendations.map((movie, index) => <MovieCard key={`modal-rec-${movie.mediaType}-${movie.id}-${index}`} item={movie} grid compact onSelect={(nextItem) => { onSelect(nextItem); setActiveTab('recommend'); setExpanded(false); }} priorityBadge={index % 2 === 0 ? 'แนะนำ' : undefined} />)}</div>
                 {visibleRecommendations.length < detailRecommendations.length ? <div ref={recLoadRef} className="py-4 text-center text-[10px] font-black text-white/35">กำลังโหลดเพิ่ม...</div> : null}
               </div>
             )}
