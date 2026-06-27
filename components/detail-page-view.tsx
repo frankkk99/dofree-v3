@@ -1,5 +1,5 @@
 import type { DetailPayload } from '@/lib/tmdb';
-import { MovieCard } from '@/components/movie-card';
+import { DetailRecommendationCarousel } from '@/components/detail-recommendation-carousel';
 
 function statusLabel(status?: string, isWatchReady?: boolean) {
   if (isWatchReady || status === 'published') return 'พร้อมรับชม';
@@ -283,15 +283,7 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
               <a href="/watch-ready" className="shrink-0 text-xs font-black text-white/45 hover:text-white md:text-sm">ดูทั้งหมด ›</a>
             </div>
 
-            {recommendations.length ? (
-              <div className="grid grid-cols-3 gap-2 md:grid-cols-4 md:gap-3">
-                {recommendations.slice(0, 8).map((movie, index) => (
-                  <MovieCard key={`${movie.mediaType}-${movie.id}-${index}`} item={movie} grid compact priorityBadge={index % 2 === 0 ? 'แนะนำ' : undefined} />
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-2xl bg-black/28 p-4 text-center text-xs font-bold text-white/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] backdrop-blur-xl md:text-sm">ยังไม่มีรายการแนะนำเพิ่มเติม</div>
-            )}
+            <DetailRecommendationCarousel current={item} items={recommendations} />
           </div>
         </section>
       </article>

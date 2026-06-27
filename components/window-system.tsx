@@ -338,6 +338,10 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
   const [detailRecommendations, setDetailRecommendations] = useState<MovieItem[]>(recommendations);
   const [detailLoading, setDetailLoading] = useState(false);
   const recLoadRef = useRef<HTMLDivElement | null>(null);
+  const recRailRef = useRef<HTMLDivElement | null>(null);
+  const recFrameRef = useRef<number | null>(null);
+  const recLastFrameRef = useRef(0);
+  const recPausedUntilRef = useRef(0);
   const watchSectionRef = useRef<HTMLDivElement | null>(null);
 
   const displayItem = detailItem;
@@ -389,6 +393,48 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
     observer.observe(node);
     return () => observer.disconnect();
   }, [activeTab, detailRecommendations.length, visibleRecCount]);
+
+  useEffect(() => {
+    const rail = recRailRef.current;
+    if (activeTab !== 'recommend' || !rail || visibleRecommendations.length < 4) return;
+
+    function pauseAfterInteraction() {
+      recPausedUntilRef.current = performance.now() + 2600;
+    }
+
+    function tick(now: number) {
+      const currentRail = recRailRef.current;
+      if (!currentRail) return;
+      const last = recLastFrameRef.current || now;
+      const delta = Math.min(now - last, 64);
+      recLastFrameRef.current = now;
+      const canScroll = currentRail.scrollWidth > currentRail.clientWidth + 8;
+      if (canScroll && now >= recPausedUntilRef.current) {
+        currentRail.scrollLeft += (42 * delta) / 1000;
+        const maxScroll = currentRail.scrollWidth - currentRail.clientWidth;
+        if (currentRail.scrollLeft >= maxScroll - 4) currentRail.scrollLeft = 0;
+      }
+      recFrameRef.current = window.requestAnimationFrame(tick);
+    }
+
+    rail.addEventListener('pointerdown', pauseAfterInteraction, { passive: true });
+    rail.addEventListener('pointerup', pauseAfterInteraction, { passive: true });
+    rail.addEventListener('touchstart', pauseAfterInteraction, { passive: true });
+    rail.addEventListener('touchmove', pauseAfterInteraction, { passive: true });
+    rail.addEventListener('wheel', pauseAfterInteraction, { passive: true });
+    recFrameRef.current = window.requestAnimationFrame(tick);
+
+    return () => {
+      if (recFrameRef.current) window.cancelAnimationFrame(recFrameRef.current);
+      recFrameRef.current = null;
+      recLastFrameRef.current = 0;
+      rail.removeEventListener('pointerdown', pauseAfterInteraction);
+      rail.removeEventListener('pointerup', pauseAfterInteraction);
+      rail.removeEventListener('touchstart', pauseAfterInteraction);
+      rail.removeEventListener('touchmove', pauseAfterInteraction);
+      rail.removeEventListener('wheel', pauseAfterInteraction);
+    };
+  }, [activeTab, visibleRecommendations.length]);
 
   async function reportIssue() {
     setReported(true);
@@ -477,7 +523,7 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
             {activeTab === 'recommend' && (
               <div>
                 <h3 className="text-base font-black md:text-xl">แนะนำสำหรับคุณ</h3>
-                <div className="mt-3 grid grid-cols-3 gap-2 md:grid-cols-4 md:gap-3">{visibleRecommendations.map((movie, index) => <MovieCard key={`modal-rec-${movie.mediaType}-${movie.id}-${index}`} item={movie} grid compact onSelect={(nextItem) => { onSelect(nextItem); setActiveTab('recommend'); setExpanded(false); }} priorityBadge={index % 2 === 0 ? 'แนะนำ' : undefined} />)}</div>
+                <div ref={recRailRef} className="movie-rail mt-3 flex gap-2 overflow-x-auto pb-2 md:gap-3">{visibleRecommendations.map((movie, index) => <MovieCard key={`modal-rec-${movie.mediaType}-${movie.id}-${index}`} item={movie} compact onSelect={(nextItem) => { onSelect(nextItem); setActiveTab('recommend'); setExpanded(false); }} priorityBadge={index % 2 === 0 ? 'แนะนำ' : undefined} />)}</div>
                 {visibleRecommendations.length < detailRecommendations.length ? <div ref={recLoadRef} className="py-4 text-center text-[10px] font-black text-white/35">กำลังโหลดเพิ่ม...</div> : null}
               </div>
             )}
