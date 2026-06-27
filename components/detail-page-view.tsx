@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import type { DetailPayload } from '@/lib/tmdb';
 import { DetailRecommendationCarousel } from '@/components/detail-recommendation-carousel';
 
+const DETAIL_LAYOUT_VERSION = 'modal-card-v3';
+
 function statusLabel(status?: string, isWatchReady?: boolean) {
   if (isWatchReady || status === 'published') return 'พร้อมรับชม';
   if (status === 'review') return 'กำลังตรวจสอบ';
@@ -144,7 +146,7 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
       <div className="fixed inset-0 -z-10 bg-cover bg-center opacity-28 blur-[1px]" style={{ backgroundImage: `url(${fallbackImage})` }} />
       <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_18%_12%,rgba(229,9,20,0.22),transparent_24rem),linear-gradient(180deg,rgba(0,0,0,0.58),#030303_72%)]" />
 
-      <article className="mx-auto w-full max-w-[860px] overflow-hidden rounded-[28px] bg-[#050505]/88 shadow-[0_42px_150px_rgba(0,0,0,0.94)] backdrop-blur-2xl md:rounded-[34px]">
+      <article data-detail-layout={DETAIL_LAYOUT_VERSION} className="mx-auto w-full max-w-[860px] overflow-hidden rounded-[28px] bg-[#050505]/88 shadow-[0_42px_150px_rgba(0,0,0,0.94)] backdrop-blur-2xl md:rounded-[34px]">
         <section className="relative bg-black/42 shadow-[inset_0_-80px_110px_rgba(0,0,0,0.55)] backdrop-blur-xl">
           <div className="absolute inset-0 bg-cover bg-center opacity-24 blur-[1px]" style={{ backgroundImage: `url(${fallbackImage})` }} />
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,5,5,0.42),rgba(5,5,5,0.86)_55%,rgba(5,5,5,0.98)_100%)] md:bg-[linear-gradient(90deg,rgba(5,5,5,0.98)_0%,rgba(5,5,5,0.86)_42%,rgba(5,5,5,0.48)_100%)]" />
