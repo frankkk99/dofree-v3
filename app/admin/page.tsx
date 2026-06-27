@@ -3,6 +3,7 @@ import { AdminAuditLogPanel } from '@/components/admin-audit-log-panel';
 import { AdminAuthGuard } from '@/components/admin-auth-guard';
 import { AdminCatalogBrowser } from '@/components/admin-catalog-browser';
 import { AdminDashboard } from '@/components/admin-dashboard';
+import { AdminSeriesBulkManager } from '@/components/admin-series-bulk-manager';
 
 export const metadata: Metadata = {
   title: 'DodeedeeV3 Admin Dashboard',
@@ -24,6 +25,9 @@ export default function AdminPage() {
             <h2 className="mt-2 text-2xl font-black tracking-[-0.05em]">ลงซีรีส์หลายตอนในหน้าเดียว</h2>
             <p className="mt-2 text-sm font-semibold leading-6 text-white/48">เพิ่ม S1 E1-E16 หรือหลายซีซันได้จากการวางรายการหลายบรรทัด แล้วบันทึกเข้าระบบตอนของซีรีส์อัตโนมัติ</p>
           </a>
+        </section>
+        <section id="series-bulk-manager" className="border-y border-white/10 bg-black/20">
+          <AdminSeriesBulkManager />
         </section>
         <AdminAuditLogPanel />
         <section id="catalog-manager" className="border-t border-white/10">
