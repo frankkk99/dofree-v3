@@ -10,9 +10,12 @@ import { ModalRecommendationDefault } from '@/components/modal-recommendation-de
 import { ReliableHeroCarousel } from '@/components/reliable-hero-carousel';
 import { WatchHistoryClickBridge } from '@/components/watch-history-click-bridge';
 import { getCatalogHomePayload } from '@/lib/catalog-home';
+import type { HomePayload } from '@/lib/tmdb';
 
 export const revalidate = 300;
 
+const HOME_SECTION_LIMIT = 9;
+const HERO_ITEM_LIMIT = 12;
 const siteName = 'ดูดีดี';
 const englishSiteName = 'DodeedeeV3';
 const siteUrl = 'https://www.xn--l3caa5kbu.online/';
@@ -24,8 +27,19 @@ const websiteJsonLd = {
   url: siteUrl,
 };
 
+function trimHomePayload(home: HomePayload): HomePayload {
+  return {
+    ...home,
+    heroItems: (home.heroItems || []).slice(0, HERO_ITEM_LIMIT),
+    sections: home.sections.map((section) => ({
+      ...section,
+      items: section.items.slice(0, HOME_SECTION_LIMIT),
+    })),
+  };
+}
+
 export default async function HomePage() {
-  const home = await getCatalogHomePayload();
+  const home = trimHomePayload(await getCatalogHomePayload());
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
