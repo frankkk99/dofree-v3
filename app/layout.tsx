@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter, Noto_Sans_Thai } from 'next/font/google';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import { AnalyticsTracker } from '@/components/analytics-tracker';
 import { BunnyEmbedFix } from '@/components/bunny-embed-fix';
 import './globals.css';
@@ -60,6 +61,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         {children}
         <AnalyticsTracker />
         <BunnyEmbedFix />
+        <SpeedInsights />
       </body>
     </html>
   );
