@@ -18,6 +18,7 @@ export type MovieItem = {
   isWatchReady?: boolean;
   watchUrl?: string;
   trailerUrl?: string;
+  episodeCount?: number;
   label?: string;
   badges?: string[];
 };

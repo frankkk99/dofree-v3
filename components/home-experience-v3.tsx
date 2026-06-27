@@ -170,6 +170,7 @@ function LazyMovieRail({
   const initiallyMounted = sectionIndex === 0;
   const { ref, mounted } = useLazyMount(initiallyMounted, '520px');
   const railRef = useRef<HTMLDivElement | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const loadGuardRef = useRef(false);
   const initialCount = initiallyMounted ? 16 : 10;
   const [visibleCount, setVisibleCount] = useState(initialCount);
@@ -212,6 +213,29 @@ function LazyMovieRail({
     return () => rail.removeEventListener('scroll', maybeLoadMore);
   }, [mounted, section.items.length, visibleCount]);
 
+  useEffect(() => {
+    const rail = railRef.current;
+    const sentinel = loadMoreRef.current;
+    if (!mounted || !rail || !sentinel || visibleCount >= section.items.length) return;
+
+    if (typeof IntersectionObserver === 'undefined') return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting || loadGuardRef.current) return;
+        loadGuardRef.current = true;
+        setVisibleCount((count) => Math.min(count + RAIL_LOAD_STEP, section.items.length));
+        window.setTimeout(() => {
+          loadGuardRef.current = false;
+        }, 220);
+      },
+      { root: rail, rootMargin: '0px 420px 0px 0px', threshold: 0.1 },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [mounted, section.items.length, visibleCount]);
+
   const visibleItems = mounted ? section.items.slice(0, visibleCount) : [];
   const hasMore = mounted && visibleCount < section.items.length;
 
@@ -230,7 +254,7 @@ function LazyMovieRail({
           ))}
 
           {hasMore ? (
-            <div className="grid h-[176px] w-[92px] shrink-0 place-items-center rounded-[8px] border border-white/8 bg-white/[0.025] px-3 text-center text-[10px] font-black text-white/38 backdrop-blur-xl sm:h-[220px] md:h-[280px] md:w-[120px] md:text-xs xl:h-[300px]" aria-live="polite">
+            <div ref={loadMoreRef} className="grid h-[176px] w-[92px] shrink-0 place-items-center rounded-[8px] border border-white/8 bg-white/[0.025] px-3 text-center text-[10px] font-black text-white/38 backdrop-blur-xl sm:h-[220px] md:h-[280px] md:w-[120px] md:text-xs xl:h-[300px]" aria-live="polite">
               กำลังโหลดอีก 6 เรื่อง...
             </div>
           ) : null}

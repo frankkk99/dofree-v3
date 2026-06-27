@@ -1,4 +1,5 @@
 import { supabaseRest } from './supabase-rest';
+import { episodeWatchHref, getSeriesEpisodeSummaries } from './series-episodes';
 import { getHomePayload as getTmdbHomePayload, type HomePayload, type MediaType, type MovieItem, type MovieSection } from './tmdb';
 
 type CatalogRow = {
@@ -38,6 +39,8 @@ type SectionDef = {
   limit: number;
   offset: number;
 };
+
+type EpisodeSummaryLookup = Awaited<ReturnType<typeof getSeriesEpisodeSummaries>>;
 
 const minRating = 6.5;
 const fallbackImage = 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1400&q=80';
@@ -187,17 +190,19 @@ function rowToMovie(row: CatalogRow, index: number): MovieItem {
   return { ...base, badges: [...badges(base, index), searchText, ...hiddenSearchAliases(searchText)] };
 }
 
-function applyWatch(item: MovieItem, links: Map<string, WatchLinkRecord>, index: number): MovieItem {
+function applyWatch(item: MovieItem, links: Map<string, WatchLinkRecord>, index: number, episodeSummaries?: EpisodeSummaryLookup): MovieItem {
   const link = links.get(watchKey(item.mediaType, item.id));
-  if (!link) return { ...item, isWatchReady: false, watchUrl: undefined, badges: item.badges || badges({ ...item, isWatchReady: false }, index) };
+  const episodeSummary = item.mediaType === 'tv' ? episodeSummaries?.get(item.id) : undefined;
+  if (!link && !episodeSummary?.firstWatchUrl) return { ...item, isWatchReady: false, watchUrl: undefined, episodeCount: episodeSummary?.episodeCount, badges: item.badges || badges({ ...item, isWatchReady: false }, index) };
 
-  const searchText = `${(item as MovieItem & { searchText?: string }).searchText || ''} ${link.title || ''} ${link.title_th || ''}`;
+  const searchText = `${(item as MovieItem & { searchText?: string }).searchText || ''} ${link?.title || ''} ${link?.title_th || ''}`;
   const next: MovieItem = {
     ...item,
-    title: link.title || item.titleEn || item.title,
-    titleEn: link.title || item.titleEn,
-    watchUrl: normalizeDrivePreviewUrl(link.watch_url) ? publicWatchUrl(item) : undefined,
-    trailerUrl: normalizeDrivePreviewUrl(link.trailer_url) || item.trailerUrl,
+    title: link?.title || item.titleEn || item.title,
+    titleEn: link?.title || item.titleEn,
+    watchUrl: normalizeDrivePreviewUrl(link?.watch_url) ? publicWatchUrl(item) : episodeSummary?.firstWatchUrl ? episodeWatchHref(item.mediaType, item.id) : undefined,
+    trailerUrl: normalizeDrivePreviewUrl(link?.trailer_url) || item.trailerUrl,
+    episodeCount: episodeSummary?.episodeCount,
     isWatchReady: true,
     status: 'published',
     label: 'พร้อมดู',
@@ -254,6 +259,8 @@ export async function getCatalogHomePayload(): Promise<HomePayload> {
     rowsForRecentHero(),
     Promise.all(sectionDefs.map((section) => rowsForBucket(section.slug, section.limit))),
   ]);
+  const allRows = [...recentRows, ...rowsByBucket.flat()];
+  const episodeSummaries = await getSeriesEpisodeSummaries(allRows.filter((row) => row.media_type === 'tv').map((row) => row.tmdb_id));
 
   const sections: MovieSection[] = sectionDefs
     .map((section, sectionIndex) => ({
@@ -261,14 +268,14 @@ export async function getCatalogHomePayload(): Promise<HomePayload> {
       eyebrow: section.eyebrow,
       title: section.title,
       description: section.description,
-      items: rowsByBucket[sectionIndex].map((row, rowIndex) => applyWatch(rowToMovie(row, section.offset + rowIndex), links, section.offset + rowIndex)),
+      items: rowsByBucket[sectionIndex].map((row, rowIndex) => applyWatch(rowToMovie(row, section.offset + rowIndex), links, section.offset + rowIndex, episodeSummaries)),
     }))
     .filter((section) => section.items.length);
 
   if (!sections.length) return getTmdbHomePayload();
 
   const allItems = unique(sections.flatMap((section) => section.items));
-  const recentHeroItems = sortRecentHeroItems(unique(recentRows.map((row, index) => applyWatch(rowToMovie(row, index), links, index))).filter((item) => item.backdropUrl && item.rating >= minRating));
+  const recentHeroItems = sortRecentHeroItems(unique(recentRows.map((row, index) => applyWatch(rowToMovie(row, index), links, index, episodeSummaries))).filter((item) => item.backdropUrl && item.rating >= minRating));
   const fallbackHeroItems = allItems.filter((item) => item.backdropUrl && item.rating >= minRating).slice(0, 18);
   const heroItems = recentHeroItems.length ? recentHeroItems.slice(0, 18) : fallbackHeroItems;
   const readyItems = allItems.filter((item) => item.isWatchReady && item.watchUrl && item.rating >= minRating);
