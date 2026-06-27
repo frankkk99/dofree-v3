@@ -29,14 +29,7 @@ function syncMovieModalRecommendations() {
     if (!(rail instanceof HTMLElement)) continue;
 
     const buttons = Array.from(rail.querySelectorAll('button')).filter((button): button is HTMLButtonElement => button instanceof HTMLButtonElement);
-    const castButton = buttons.find((button) => tabText(button) === 'นักแสดง');
     const recommendButton = buttons.find((button) => tabText(button) === 'แนะนำ');
-
-    if (castButton) {
-      castButton.style.display = 'none';
-      castButton.setAttribute('aria-hidden', 'true');
-      castButton.tabIndex = -1;
-    }
 
     if (!recommendButton) continue;
 
