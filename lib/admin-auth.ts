@@ -1,5 +1,17 @@
+import { createHash, timingSafeEqual } from 'node:crypto';
+
 function normalizeAdminToken(value?: string | null) {
   return value?.trim().replace(/^DOFREE_ADMIN_TOKEN\s*=\s*/i, '').trim();
+}
+
+function safeTokenEqual(a?: string | null, b?: string | null) {
+  const left = normalizeAdminToken(a);
+  const right = normalizeAdminToken(b);
+  if (!left || !right) return false;
+
+  const leftDigest = createHash('sha256').update(left).digest();
+  const rightDigest = createHash('sha256').update(right).digest();
+  return timingSafeEqual(leftDigest, rightDigest);
 }
 
 type AuthUser = {
@@ -83,7 +95,7 @@ export function requireAdminToken(request: Request) {
   const headerToken = request.headers.get('x-admin-token')?.trim();
   const suppliedToken = normalizeAdminToken(headerToken || bearerToken);
 
-  if (suppliedToken !== configuredToken) {
+  if (!safeTokenEqual(suppliedToken, configuredToken)) {
     return {
       ok: false as const,
       status: 401,
@@ -100,7 +112,7 @@ export async function requireAdminAccess(request: Request): Promise<AdminAccess>
   const suppliedBearer = bearerToken(request);
   const suppliedBearerAsAdminToken = normalizeAdminToken(suppliedBearer);
 
-  if (configuredToken && (suppliedHeaderToken === configuredToken || suppliedBearerAsAdminToken === configuredToken)) {
+  if (configuredToken && (safeTokenEqual(suppliedHeaderToken, configuredToken) || safeTokenEqual(suppliedBearerAsAdminToken, configuredToken))) {
     return { ok: true, mode: 'token' };
   }
 
