@@ -10,7 +10,6 @@ const modalTabs = [
   { id: 'detail', label: 'รายละเอียด' },
   { id: 'recommend', label: 'แนะนำ' },
   { id: 'spoiler', label: 'สปอยหนัง' },
-  { id: 'watch', label: 'รับชม' },
 ] as const;
 
 type ModalTab = (typeof modalTabs)[number]['id'];
@@ -232,30 +231,53 @@ function ActorCard({ person }: { person: CastPerson }) {
   );
 }
 
-function WatchCta({ hasLink, onClick }: { hasLink: boolean; onClick: () => void }) {
-  return (
-    <div className="mt-5">
-      <button type="button" onClick={hasLink ? onClick : undefined} disabled={!hasLink} className={`watch-pulse-btn flex h-12 w-full items-center justify-center rounded-2xl text-sm font-black shadow-[0_18px_60px_rgba(0,0,0,0.48)] backdrop-blur-xl transition md:h-14 md:text-base ${hasLink ? 'bg-[#e50914] text-white shadow-[0_18px_60px_rgba(229,9,20,0.42)] hover:scale-[1.01]' : 'cursor-not-allowed bg-white/[0.075] text-white/38'}`}>
-        {hasLink ? '▶ รับชมเรื่องนี้' : 'ยังไม่มีลิงก์รับชม'}
-      </button>
-    </div>
-  );
-}
+function ModalWatchSection({
+  item,
+  fallbackImage,
+  onReport,
+  reported,
+}: {
+  item: MovieItem;
+  fallbackImage: string;
+  onReport: () => void;
+  reported: boolean;
+}) {
+  const hasLink = Boolean(item.watchUrl);
 
-function ProtectedWatchLaunch({ item, fallbackImage }: { item: MovieItem; fallbackImage: string }) {
-  if (!item.watchUrl) return <PlayerEmpty title={item.title} fallbackImage={fallbackImage} label="ยังไม่มีลิงก์รับชม" />;
-
   return (
-    <div className="relative grid aspect-video place-items-center overflow-hidden rounded-[20px] bg-black/58 text-center shadow-[0_24px_90px_rgba(0,0,0,0.72)] backdrop-blur-md md:rounded-[26px]">
-      {fallbackImage ? <img src={fallbackImage} alt={item.title} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover opacity-25 blur-[1px]" /> : null}
-      <div className="absolute inset-0 bg-black/66" />
-      <div className="relative z-10 px-6">
-        <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]">Protected Player</p>
-        <h4 className="mt-3 text-xl font-black tracking-[-0.04em] text-white md:text-3xl">เปิดในหน้าเล่นที่ป้องกันลิงก์</h4>
-        <p className="mx-auto mt-2 max-w-md text-xs font-semibold leading-5 text-white/48 md:text-sm">ระบบจะสร้างลิงก์ชั่วคราวเฉพาะตอนเปิดหน้าเล่น เพื่อลดการเห็นลิงก์ต้นทางในหน้าเว็บและ modal</p>
-        <a href={item.watchUrl} className="mt-5 inline-flex h-11 items-center rounded-xl bg-[#e50914] px-5 text-xs font-black text-white shadow-glow md:h-12 md:px-6 md:text-sm">▶ รับชมในหน้าเล่น</a>
+    <section className="mt-5 overflow-hidden rounded-[22px] border border-[#e50914]/18 bg-[linear-gradient(135deg,rgba(229,9,20,0.16),rgba(255,255,255,0.045))] shadow-[0_24px_90px_rgba(0,0,0,0.56)] backdrop-blur-xl">
+      <div className="relative min-h-[132px] p-4 md:min-h-[148px] md:p-5">
+        {fallbackImage ? <img src={fallbackImage} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover opacity-14" /> : null}
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,5,5,0.96),rgba(5,5,5,0.76)_58%,rgba(5,5,5,0.58))]" />
+        <div className="relative z-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-red-100/70">WATCH READY</p>
+            <h3 className="mt-1 text-xl font-black tracking-[-0.04em] text-white md:text-2xl">
+              {hasLink ? 'พร้อมรับชม' : 'ยังไม่มีลิงก์รับชม'}
+            </h3>
+            <p className="mt-2 max-w-xl text-xs font-semibold leading-5 text-white/55 md:text-sm md:leading-6">
+              {hasLink ? 'กดเพื่อเปิดหน้าเล่นในแท็บใหม่ แล้วกลับมาดูข้อมูลเรื่องนี้ต่อได้เลย' : 'เรื่องนี้ยังไม่พร้อมรับชมตอนนี้ เก็บไว้ก่อนหรือแจ้งแอดมินให้ตรวจสอบได้'}
+            </p>
+          </div>
+
+          <div className="flex shrink-0 flex-wrap gap-2">
+            {hasLink ? (
+              <a href={item.watchUrl} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center justify-center rounded-2xl bg-[#e50914] px-5 text-sm font-black text-white shadow-glow transition hover:scale-[1.01] md:h-12 md:px-6">
+                ▶ เปิดหน้าเล่น
+              </a>
+            ) : (
+              <button type="button" disabled className="inline-flex h-11 cursor-not-allowed items-center justify-center rounded-2xl bg-white/[0.08] px-5 text-sm font-black text-white/38 md:h-12 md:px-6">
+                ยังไม่พร้อม
+              </button>
+            )}
+            <button onClick={onReport} className="h-11 rounded-2xl bg-black/35 px-4 text-xs font-black text-white/70 shadow-[0_12px_34px_rgba(0,0,0,0.32)] backdrop-blur-xl hover:bg-white/[0.08] md:h-12">
+              แจ้งลิงก์เสีย
+            </button>
+          </div>
+        </div>
+        {reported ? <p className="relative z-10 mt-4 rounded-2xl bg-green-400/[0.09] p-3 text-xs font-bold text-green-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl md:text-sm">รับรายงานแล้ว ทีมแอดมินจะตรวจสอบลิงก์นี้</p> : null}
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -316,6 +338,7 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
   const [detailRecommendations, setDetailRecommendations] = useState<MovieItem[]>(recommendations);
   const [detailLoading, setDetailLoading] = useState(false);
   const recLoadRef = useRef<HTMLDivElement | null>(null);
+  const watchSectionRef = useRef<HTMLDivElement | null>(null);
 
   const displayItem = detailItem;
   const cast = realCast.length ? realCast : fallbackCast(displayItem);
@@ -378,6 +401,10 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
     } catch {}
   }
 
+  function scrollToWatchSection() {
+    watchSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
   return (
     <div onClick={onClose} className="fixed inset-0 z-[90] overflow-y-auto bg-black/70 px-2 py-4 text-white backdrop-blur-2xl md:bg-black/78 md:px-4 md:py-7" role="dialog" aria-modal="true">
       <div onClick={(event) => event.stopPropagation()} className="mx-auto w-full max-w-[860px] overflow-hidden rounded-[28px] bg-[#050505]/88 shadow-[0_42px_150px_rgba(0,0,0,0.94)] backdrop-blur-2xl md:rounded-[34px]">
@@ -402,7 +429,7 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
               <p className={`${expanded ? '' : 'line-clamp-3'} mt-2 text-[11px] font-medium leading-4 text-white/58 md:text-[13px] md:leading-5`}>{displayItem.overview}</p>
               <button onClick={() => setExpanded((value) => !value)} className="mt-1 text-[10px] font-black text-red-200/80 hover:text-red-100 md:text-xs">{expanded ? 'ย่อ' : 'ดูเพิ่มเติม'}</button>
               <div className="mt-3 flex flex-wrap gap-2">
-                <button onClick={() => displayItem.watchUrl && setActiveTab('watch')} disabled={!displayItem.watchUrl} className={`inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-[11px] font-black text-white shadow-[0_14px_36px_rgba(0,0,0,0.42)] backdrop-blur-xl md:h-9 md:px-4 md:text-xs ${displayItem.watchUrl ? 'bg-[#e50914]' : 'bg-white/[0.09] text-white/40'}`}>▶ รับชม</button>
+                <button onClick={scrollToWatchSection} disabled={!displayItem.watchUrl} className={`inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-[11px] font-black text-white shadow-[0_14px_36px_rgba(0,0,0,0.42)] backdrop-blur-xl md:h-9 md:px-4 md:text-xs ${displayItem.watchUrl ? 'bg-[#e50914]' : 'bg-white/[0.09] text-white/40'}`}>▶ รับชม</button>
                 <button onClick={() => setActiveTab('recommend')} className="inline-flex h-8 items-center rounded-lg bg-white/[0.1] px-3 text-[11px] font-black text-white/82 shadow-[0_14px_36px_rgba(0,0,0,0.32)] backdrop-blur-xl hover:bg-white/[0.16] md:h-9 md:px-4 md:text-xs">+ รายการโปรด</button>
               </div>
             </div>
@@ -429,7 +456,6 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
                   <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-black text-white/38 backdrop-blur-xl">{realCast.length ? 'TMDB' : 'สำรอง'}</span>
                 </div>
                 <div className="mt-3 grid grid-cols-3 gap-2 md:grid-cols-4 md:gap-3">{cast.map((person, index) => <ActorCard key={`${person.id || person.name}-${index}`} person={person} />)}</div>
-                <WatchCta hasLink={Boolean(displayItem.watchUrl)} onClick={() => setActiveTab('watch')} />
               </div>
             )}
 
@@ -458,14 +484,9 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
 
             {activeTab === 'spoiler' && <div><h3 className="text-base font-black md:text-xl">สปอยหนัง</h3><div className="mt-3 rounded-2xl bg-yellow-300/[0.08] p-3 text-xs leading-5 text-yellow-50/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl md:text-sm md:leading-6">{displayItem.overview}</div></div>}
 
-            {activeTab === 'watch' && (
-              <div>
-                <div className="flex items-center justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.22em] text-red-100/70 md:text-xs">WATCH READY</p><h3 className="mt-1 text-lg font-black md:text-2xl">{displayItem.watchUrl ? 'รับชม' : 'ยังไม่มีลิงก์รับชม'}</h3></div></div>
-                <div className="mt-3"><ProtectedWatchLaunch item={displayItem} fallbackImage={fallbackImage} /></div>
-                <div className="mt-3 flex justify-end"><button onClick={reportIssue} className="h-9 rounded-xl bg-black/35 px-4 text-xs font-black text-white/70 shadow-[0_12px_34px_rgba(0,0,0,0.32)] backdrop-blur-xl md:h-10">แจ้งลิงก์เสีย</button></div>
-                {reported ? <p className="mt-3 rounded-2xl bg-green-400/[0.09] p-3 text-xs font-bold text-green-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl md:text-sm">รับรายงานแล้ว ทีมแอดมินจะตรวจสอบลิงก์นี้</p> : null}
-              </div>
-            )}
+            <div ref={watchSectionRef}>
+              <ModalWatchSection item={displayItem} fallbackImage={fallbackImage} onReport={reportIssue} reported={reported} />
+            </div>
           </Surface>
         </div>
       </div>

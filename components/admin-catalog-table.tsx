@@ -60,6 +60,7 @@ type Form = {
 
 type FilterPreset = {
   label: string;
+  q?: string;
   status?: string;
   source?: string;
   media?: string;
