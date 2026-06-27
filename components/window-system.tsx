@@ -30,6 +30,13 @@ type DetailResponse = {
   recommendations?: MovieItem[];
 };
 
+type PublicEpisode = {
+  seasonNumber: number;
+  episodeNumber: number;
+  title?: string | null;
+  href: string;
+};
+
 type PlayerKind = 'iframe' | 'video' | 'empty' | 'unsupported';
 
 type PlayerSource = {
@@ -236,13 +243,20 @@ function ModalWatchSection({
   fallbackImage,
   onReport,
   reported,
+  episodes,
+  episodeLoading,
 }: {
   item: MovieItem;
   fallbackImage: string;
   onReport: () => void;
   reported: boolean;
+  episodes?: PublicEpisode[];
+  episodeLoading?: boolean;
 }) {
-  const hasLink = Boolean(item.watchUrl);
+  const readyEpisodes = episodes || [];
+  const firstEpisodeHref = readyEpisodes[0]?.href;
+  const watchHref = item.watchUrl || firstEpisodeHref;
+  const hasLink = Boolean(watchHref);
 
   return (
     <section className="mt-5 overflow-hidden rounded-[22px] border border-[#e50914]/18 bg-[linear-gradient(135deg,rgba(229,9,20,0.16),rgba(255,255,255,0.045))] shadow-[0_24px_90px_rgba(0,0,0,0.56)] backdrop-blur-xl">
@@ -253,16 +267,16 @@ function ModalWatchSection({
           <div className="min-w-0">
             <p className="text-[10px] font-black uppercase tracking-[0.24em] text-red-100/70">WATCH READY</p>
             <h3 className="mt-1 text-xl font-black tracking-[-0.04em] text-white md:text-2xl">
-              {hasLink ? 'พร้อมรับชม' : 'ยังไม่มีลิงก์รับชม'}
+              {hasLink ? readyEpisodes.length ? `พร้อมรับชม ${readyEpisodes.length} ตอน` : 'พร้อมรับชม' : 'ยังไม่มีลิงก์รับชม'}
             </h3>
             <p className="mt-2 max-w-xl text-xs font-semibold leading-5 text-white/55 md:text-sm md:leading-6">
-              {hasLink ? 'กดเพื่อเปิดหน้าเล่นในแท็บใหม่ แล้วกลับมาดูข้อมูลเรื่องนี้ต่อได้เลย' : 'เรื่องนี้ยังไม่พร้อมรับชมตอนนี้ เก็บไว้ก่อนหรือแจ้งแอดมินให้ตรวจสอบได้'}
+              {hasLink ? readyEpisodes.length ? 'เลือกตอนที่ต้องการ หรือเปิดตอนแรกในแท็บใหม่เพื่อรับชมได้ทันที' : 'กดเพื่อเปิดหน้าเล่นในแท็บใหม่ แล้วกลับมาดูข้อมูลเรื่องนี้ต่อได้เลย' : 'เรื่องนี้ยังไม่พร้อมรับชมตอนนี้ เก็บไว้ก่อนหรือแจ้งแอดมินให้ตรวจสอบได้'}
             </p>
           </div>
 
           <div className="flex shrink-0 flex-wrap gap-2">
             {hasLink ? (
-              <a href={item.watchUrl} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center justify-center rounded-2xl bg-[#e50914] px-5 text-sm font-black text-white shadow-glow transition hover:scale-[1.01] md:h-12 md:px-6">
+              <a href={watchHref} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center justify-center rounded-2xl bg-[#e50914] px-5 text-sm font-black text-white shadow-glow transition hover:scale-[1.01] md:h-12 md:px-6">
                 ▶ เปิดหน้าเล่น
               </a>
             ) : (
@@ -275,6 +289,22 @@ function ModalWatchSection({
             </button>
           </div>
         </div>
+        {episodeLoading ? <p className="relative z-10 mt-4 rounded-2xl bg-white/[0.06] p-3 text-xs font-bold text-white/45">กำลังโหลดตอน...</p> : null}
+        {readyEpisodes.length ? (
+          <div className="relative z-10 mt-4 rounded-2xl border border-white/10 bg-black/34 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/48">Episodes</p>
+              <span className="text-[10px] font-black text-white/35">{readyEpisodes.length} ตอน</span>
+            </div>
+            <div className="grid max-h-28 grid-cols-3 gap-2 overflow-y-auto pr-1 sm:grid-cols-4 md:grid-cols-6">
+              {readyEpisodes.map((episode) => (
+                <a key={`${episode.seasonNumber}-${episode.episodeNumber}`} href={episode.href} target="_blank" rel="noreferrer" title={episode.title || `EP ${episode.episodeNumber}`} className="rounded-xl border border-white/10 bg-white/[0.07] px-2.5 py-2 text-center text-[11px] font-black text-white/76 transition hover:border-[#e50914]/70 hover:bg-[#e50914] hover:text-white">
+                  S{episode.seasonNumber}E{episode.episodeNumber}
+                </a>
+              ))}
+            </div>
+          </div>
+        ) : null}
         {reported ? <p className="relative z-10 mt-4 rounded-2xl bg-green-400/[0.09] p-3 text-xs font-bold text-green-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl md:text-sm">รับรายงานแล้ว ทีมแอดมินจะตรวจสอบลิงก์นี้</p> : null}
       </div>
     </section>
@@ -337,6 +367,8 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
   const [realCast, setRealCast] = useState<CastPerson[]>([]);
   const [detailRecommendations, setDetailRecommendations] = useState<MovieItem[]>(recommendations);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [seriesEpisodes, setSeriesEpisodes] = useState<PublicEpisode[]>([]);
+  const [seriesEpisodesLoading, setSeriesEpisodesLoading] = useState(false);
   const recLoadRef = useRef<HTMLDivElement | null>(null);
   const recRailRef = useRef<HTMLDivElement | null>(null);
   const recFrameRef = useRef<number | null>(null);
@@ -360,6 +392,8 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
     setRealCast([]);
     setDetailRecommendations(recommendations);
     setDetailLoading(true);
+    setSeriesEpisodes([]);
+    setSeriesEpisodesLoading(item.mediaType === 'tv');
 
     async function loadDetail() {
       try {
@@ -376,7 +410,21 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
       }
     }
 
+    async function loadEpisodes() {
+      if (item.mediaType !== 'tv') return;
+      try {
+        const response = await fetch(`/api/series-episodes?tmdbId=${item.id}`, { signal: controller.signal, cache: 'no-store' });
+        if (!response.ok) return;
+        const payload = (await response.json()) as { ok?: boolean; episodes?: PublicEpisode[] };
+        if (!cancelled) setSeriesEpisodes(payload.episodes || []);
+      } catch {
+      } finally {
+        if (!cancelled) setSeriesEpisodesLoading(false);
+      }
+    }
+
     loadDetail();
+    loadEpisodes();
     return () => {
       cancelled = true;
       controller.abort();
@@ -475,7 +523,7 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
               <p className={`${expanded ? '' : 'line-clamp-3'} mt-2 text-[11px] font-medium leading-4 text-white/58 md:text-[13px] md:leading-5`}>{displayItem.overview}</p>
               <button onClick={() => setExpanded((value) => !value)} className="mt-1 text-[10px] font-black text-red-200/80 hover:text-red-100 md:text-xs">{expanded ? 'ย่อ' : 'ดูเพิ่มเติม'}</button>
               <div className="mt-3 flex flex-wrap gap-2">
-                <button onClick={scrollToWatchSection} disabled={!displayItem.watchUrl} className={`inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-[11px] font-black text-white shadow-[0_14px_36px_rgba(0,0,0,0.42)] backdrop-blur-xl md:h-9 md:px-4 md:text-xs ${displayItem.watchUrl ? 'bg-[#e50914]' : 'bg-white/[0.09] text-white/40'}`}>▶ รับชม</button>
+                <button onClick={scrollToWatchSection} disabled={!displayItem.watchUrl && !seriesEpisodes.length} className={`inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-[11px] font-black text-white shadow-[0_14px_36px_rgba(0,0,0,0.42)] backdrop-blur-xl md:h-9 md:px-4 md:text-xs ${displayItem.watchUrl || seriesEpisodes.length ? 'bg-[#e50914]' : 'bg-white/[0.09] text-white/40'}`}>▶ รับชม</button>
                 <button onClick={() => setActiveTab('recommend')} className="inline-flex h-8 items-center rounded-lg bg-white/[0.1] px-3 text-[11px] font-black text-white/82 shadow-[0_14px_36px_rgba(0,0,0,0.32)] backdrop-blur-xl hover:bg-white/[0.16] md:h-9 md:px-4 md:text-xs">+ รายการโปรด</button>
               </div>
             </div>
@@ -531,7 +579,7 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
             {activeTab === 'spoiler' && <div><h3 className="text-base font-black md:text-xl">สปอยหนัง</h3><div className="mt-3 rounded-2xl bg-yellow-300/[0.08] p-3 text-xs leading-5 text-yellow-50/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl md:text-sm md:leading-6">{displayItem.overview}</div></div>}
 
             <div ref={watchSectionRef}>
-              <ModalWatchSection item={displayItem} fallbackImage={fallbackImage} onReport={reportIssue} reported={reported} />
+              <ModalWatchSection item={displayItem} fallbackImage={fallbackImage} onReport={reportIssue} reported={reported} episodes={seriesEpisodes} episodeLoading={seriesEpisodesLoading} />
             </div>
           </Surface>
         </div>

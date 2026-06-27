@@ -82,6 +82,17 @@ type EpisodeForm = {
   status: Status;
 };
 
+type EpisodeDraft = {
+  season_number: number;
+  episode_number: number;
+  episode_title: string;
+  watch_url: string;
+  trailer_url: string;
+  provider: string;
+  notes: string;
+  status: Status;
+};
+
 type FilterPreset = {
   label: string;
   q?: string;
@@ -222,6 +233,64 @@ function episodeToForm(episode: SeriesEpisode): EpisodeForm {
   };
 }
 
+function parseEpisodeLine(line: string, index: number, provider: string): EpisodeDraft | null {
+  const raw = line.trim();
+  if (!raw) return null;
+  const parts = raw.split('|').map((part) => part.trim());
+  const first = parts[0] || '';
+  const seasonEpisode = first.match(/^s?(\d+)\s*e(\d+)$/i);
+  let seasonNumber = 1;
+  let episodeNumber = index + 1;
+  let titleIndex = 0;
+
+  if (seasonEpisode) {
+    seasonNumber = Number(seasonEpisode[1]);
+    episodeNumber = Number(seasonEpisode[2]);
+    titleIndex = 1;
+  } else if (parts.length >= 3 && /^\d+$/.test(parts[0]) && /^\d+$/.test(parts[1])) {
+    seasonNumber = Number(parts[0]);
+    episodeNumber = Number(parts[1]);
+    titleIndex = 2;
+  } else if (/^\d+$/.test(parts[0])) {
+    episodeNumber = Number(parts[0]);
+    titleIndex = 1;
+  }
+
+  const title = parts[titleIndex] || `EP ${episodeNumber}`;
+  const watchUrl = parts[titleIndex + 1] || (raw.startsWith('http') ? raw : '');
+  const trailerUrl = parts[titleIndex + 2] || '';
+  const nextProvider = parts[titleIndex + 3] || provider || 'admin';
+  const status = (parts[titleIndex + 4] as Status) || (watchUrl ? 'published' : 'draft');
+  const notes = parts.slice(titleIndex + 5).join(' | ');
+
+  if (!Number.isInteger(seasonNumber) || seasonNumber <= 0 || !Number.isInteger(episodeNumber) || episodeNumber <= 0) return null;
+
+  return {
+    season_number: seasonNumber,
+    episode_number: episodeNumber,
+    episode_title: title,
+    watch_url: watchUrl,
+    trailer_url: trailerUrl,
+    provider: nextProvider,
+    notes,
+    status: ['draft', 'review', 'published', 'broken', 'hidden'].includes(status) ? status : watchUrl ? 'published' : 'draft',
+  };
+}
+
+function parseEpisodeBulk(text: string, provider: string) {
+  const seen = new Set<string>();
+  return text
+    .split(/\r?\n/)
+    .map((line, index) => parseEpisodeLine(line, index, provider))
+    .filter((episode): episode is EpisodeDraft => Boolean(episode))
+    .filter((episode) => {
+      const key = `${episode.season_number}-${episode.episode_number}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
 function statusLabel(item: Item) {
   if (item.watch_url) return 'พร้อมดู';
   if (item.status === 'broken') return 'ลิงก์เสีย';
@@ -240,7 +309,11 @@ function Edit({
   episodes,
   episodeForm,
   setEpisodeForm,
+  episodeBulkText,
+  setEpisodeBulkText,
+  episodeBulkDrafts,
   onSaveEpisode,
+  onSaveBulkEpisodes,
   episodeSaving,
   episodeLoading,
   onEditEpisode,
@@ -254,7 +327,11 @@ function Edit({
   episodes: SeriesEpisode[];
   episodeForm: EpisodeForm;
   setEpisodeForm: (form: EpisodeForm) => void;
+  episodeBulkText: string;
+  setEpisodeBulkText: (value: string) => void;
+  episodeBulkDrafts: EpisodeDraft[];
   onSaveEpisode: () => void;
+  onSaveBulkEpisodes: () => void;
   episodeSaving: boolean;
   episodeLoading: boolean;
   onEditEpisode: (episode: SeriesEpisode) => void;
@@ -323,29 +400,59 @@ function Edit({
               <p className="mt-3 rounded-xl bg-black/28 px-3 py-2 text-xs font-bold text-white/36">ยังไม่มีตอนในระบบ เริ่มจาก S1 E1 ได้เลย</p>
             )}
 
-            <div className="mt-4 grid gap-3 md:grid-cols-[90px_90px_1fr]">
-              <input value={episodeForm.season_number} onChange={(event) => setEpisodeForm({ ...episodeForm, season_number: event.target.value })} placeholder="Season" inputMode="numeric" className={cls} />
-              <input value={episodeForm.episode_number} onChange={(event) => setEpisodeForm({ ...episodeForm, episode_number: event.target.value })} placeholder="Episode" inputMode="numeric" className={cls} />
-              <input value={episodeForm.episode_title} onChange={(event) => setEpisodeForm({ ...episodeForm, episode_title: event.target.value })} placeholder="ชื่อตอน เช่น ตอนที่ 1" className={cls} />
+            <div className="mt-4 rounded-2xl border border-[#e50914]/20 bg-black/26 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h4 className="text-sm font-black">เพิ่มหลายตอนในครั้งเดียว</h4>
+                  <p className="mt-1 text-[11px] font-bold text-white/38">ใส่ 1 บรรทัดต่อ 1 ตอน เช่น 1 | ตอนที่ 1 | ลิงก์รับชม หรือ S1E2 | ตอนที่ 2 | ลิงก์รับชม</p>
+                </div>
+                <button type="button" onClick={onSaveBulkEpisodes} disabled={episodeSaving || !episodeBulkDrafts.length} className="rounded-xl bg-[#e50914] px-4 py-2 text-xs font-black text-white disabled:opacity-45">
+                  {episodeSaving ? 'Saving...' : `บันทึก ${episodeBulkDrafts.length || 0} ตอน`}
+                </button>
+              </div>
+              <textarea
+                value={episodeBulkText}
+                onChange={(event) => setEpisodeBulkText(event.target.value)}
+                placeholder={'1 | ตอนที่ 1 | https://...\n2 | ตอนที่ 2 | https://...\n3 | ตอนที่ 3 | https://...'}
+                className="mt-3 min-h-28 w-full rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-xs font-semibold leading-5 text-white outline-none placeholder:text-white/28 focus:border-[#e50914]"
+              />
+              {episodeBulkDrafts.length ? (
+                <div className="mt-3 flex max-h-24 flex-wrap gap-2 overflow-y-auto pr-1">
+                  {episodeBulkDrafts.map((episode) => (
+                    <span key={`draft-${episode.season_number}-${episode.episode_number}`} className={`rounded-full px-3 py-1.5 text-[10px] font-black ${episode.watch_url ? 'bg-emerald-400/16 text-emerald-100' : 'bg-white/10 text-white/50'}`}>
+                      S{episode.season_number} E{episode.episode_number} {episode.watch_url ? 'พร้อม' : 'ร่าง'}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
             </div>
 
-            <div className="mt-3 grid gap-3 md:grid-cols-[1fr_1fr_150px]">
-              <input value={episodeForm.watch_url} onChange={(event) => setEpisodeForm({ ...episodeForm, watch_url: event.target.value, status: event.target.value.trim() ? 'published' : episodeForm.status })} placeholder="Episode Watch URL" className={cls} />
-              <input value={episodeForm.trailer_url} onChange={(event) => setEpisodeForm({ ...episodeForm, trailer_url: event.target.value })} placeholder="Episode Trailer URL" className={cls} />
-              <select value={episodeForm.status} onChange={(event) => setEpisodeForm({ ...episodeForm, status: event.target.value as Status })} className={cls}>
-                <option value="draft">draft</option>
-                <option value="review">review</option>
-                <option value="published">published</option>
-                <option value="broken">broken</option>
-                <option value="hidden">hidden</option>
-              </select>
-            </div>
+            <details className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-3">
+              <summary className="cursor-pointer text-sm font-black text-white/76">แก้ทีละตอน</summary>
+              <div className="mt-3 grid gap-3 md:grid-cols-[90px_90px_1fr]">
+                <input value={episodeForm.season_number} onChange={(event) => setEpisodeForm({ ...episodeForm, season_number: event.target.value })} placeholder="Season" inputMode="numeric" className={cls} />
+                <input value={episodeForm.episode_number} onChange={(event) => setEpisodeForm({ ...episodeForm, episode_number: event.target.value })} placeholder="Episode" inputMode="numeric" className={cls} />
+                <input value={episodeForm.episode_title} onChange={(event) => setEpisodeForm({ ...episodeForm, episode_title: event.target.value })} placeholder="ชื่อตอน เช่น ตอนที่ 1" className={cls} />
+              </div>
 
-            <div className="mt-3 grid gap-3 md:grid-cols-[180px_1fr_auto]">
-              <input value={episodeForm.provider} onChange={(event) => setEpisodeForm({ ...episodeForm, provider: event.target.value })} placeholder="provider" className={cls} />
-              <input value={episodeForm.notes} onChange={(event) => setEpisodeForm({ ...episodeForm, notes: event.target.value })} placeholder="หมายเหตุของตอนนี้" className={cls} />
-              <button type="button" onClick={onSaveEpisode} disabled={episodeSaving} className="rounded-xl bg-[#e50914] px-4 py-2 text-sm font-black text-white disabled:opacity-50">{episodeSaving ? 'Saving...' : 'บันทึกตอน'}</button>
-            </div>
+              <div className="mt-3 grid gap-3 md:grid-cols-[1fr_1fr_150px]">
+                <input value={episodeForm.watch_url} onChange={(event) => setEpisodeForm({ ...episodeForm, watch_url: event.target.value, status: event.target.value.trim() ? 'published' : episodeForm.status })} placeholder="Episode Watch URL" className={cls} />
+                <input value={episodeForm.trailer_url} onChange={(event) => setEpisodeForm({ ...episodeForm, trailer_url: event.target.value })} placeholder="Episode Trailer URL" className={cls} />
+                <select value={episodeForm.status} onChange={(event) => setEpisodeForm({ ...episodeForm, status: event.target.value as Status })} className={cls}>
+                  <option value="draft">draft</option>
+                  <option value="review">review</option>
+                  <option value="published">published</option>
+                  <option value="broken">broken</option>
+                  <option value="hidden">hidden</option>
+                </select>
+              </div>
+
+              <div className="mt-3 grid gap-3 md:grid-cols-[180px_1fr_auto]">
+                <input value={episodeForm.provider} onChange={(event) => setEpisodeForm({ ...episodeForm, provider: event.target.value })} placeholder="provider" className={cls} />
+                <input value={episodeForm.notes} onChange={(event) => setEpisodeForm({ ...episodeForm, notes: event.target.value })} placeholder="หมายเหตุของตอนนี้" className={cls} />
+                <button type="button" onClick={onSaveEpisode} disabled={episodeSaving} className="rounded-xl bg-white/10 px-4 py-2 text-sm font-black text-white disabled:opacity-50">{episodeSaving ? 'Saving...' : 'บันทึกตอนเดียว'}</button>
+              </div>
+            </details>
           </section>
         ) : null}
 
@@ -393,6 +500,7 @@ export function AdminCatalogTable() {
   const [form, setForm] = useState<Form | null>(null);
   const [episodes, setEpisodes] = useState<SeriesEpisode[]>([]);
   const [episodeForm, setEpisodeForm] = useState<EpisodeForm>(emptyEpisodeForm());
+  const [episodeBulkText, setEpisodeBulkText] = useState('');
 
   function currentFilters(overrides: Partial<FilterPreset> = {}) {
     return {
@@ -431,6 +539,8 @@ export function AdminCatalogTable() {
     view === 'rows' ? 'ดูทุกแถว sync' : 'unique movie',
     q.trim() ? `คำค้น “${q.trim()}”` : null,
   ].filter(Boolean), [genre, language, maxRating, media, minRating, month, poster, provider, q, section, source, status, view, year]);
+
+  const episodeBulkDrafts = useMemo(() => parseEpisodeBulk(episodeBulkText, form?.provider || 'admin'), [episodeBulkText, form?.provider]);
 
   useEffect(() => {
     void load();
@@ -571,6 +681,36 @@ export function AdminCatalogTable() {
     }
   }
 
+  async function saveBulkEpisodes() {
+    if (!active || active.media_type !== 'tv' || !episodeBulkDrafts.length) return;
+
+    setEpisodeSaving(true);
+    setErr('');
+    try {
+      const response = await fetch('/api/admin/series-episodes', {
+        method: 'POST',
+        headers: adminSessionHeaders({ 'content-type': 'application/json' }),
+        body: JSON.stringify({
+          tmdb_id: active.tmdb_id,
+          episodes: episodeBulkDrafts.map((episode) => ({
+            ...episode,
+            tmdb_id: active.tmdb_id,
+          })),
+        }),
+      });
+      const data = (await response.json()) as { ok?: boolean; saved?: number; error?: string };
+      if (!response.ok || !data.ok) throw new Error(data.error || 'Save episodes failed');
+      setMsg(`บันทึก ${data.saved || episodeBulkDrafts.length} ตอนแล้ว`);
+      setEpisodeBulkText('');
+      await loadEpisodes(active);
+      await load(0, false);
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : 'Save episodes failed');
+    } finally {
+      setEpisodeSaving(false);
+    }
+  }
+
   async function exportCatalog(exportMode: 'filtered' | 'all') {
     setExporting(true);
     setErr('');
@@ -607,6 +747,7 @@ export function AdminCatalogTable() {
     setActive(item);
     setForm(toForm(item));
     setEpisodeForm(emptyEpisodeForm(item.provider || 'bunny'));
+    setEpisodeBulkText('');
     void loadEpisodes(item);
   }
 
@@ -759,13 +900,17 @@ export function AdminCatalogTable() {
           item={active}
           form={form}
           setForm={setForm}
-          onClose={() => { setActive(null); setForm(null); setEpisodes([]); }}
+          onClose={() => { setActive(null); setForm(null); setEpisodes([]); setEpisodeBulkText(''); }}
           onSave={save}
           saving={saving}
           episodes={episodes}
           episodeForm={episodeForm}
           setEpisodeForm={setEpisodeForm}
+          episodeBulkText={episodeBulkText}
+          setEpisodeBulkText={setEpisodeBulkText}
+          episodeBulkDrafts={episodeBulkDrafts}
           onSaveEpisode={saveEpisode}
+          onSaveBulkEpisodes={saveBulkEpisodes}
           episodeSaving={episodeSaving}
           episodeLoading={episodeLoading}
           onEditEpisode={editEpisode}

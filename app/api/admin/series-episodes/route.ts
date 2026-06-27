@@ -28,6 +28,40 @@ async function fetchEpisodeByKey(tmdbId: number, seasonNumber: number, episodeNu
   return rows[0] || null;
 }
 
+function asPayloadList(body: Record<string, unknown> | null) {
+  if (!body) return [];
+  if (Array.isArray(body.episodes)) return body.episodes.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object' && !Array.isArray(item));
+  return [body];
+}
+
+function toEpisodeRecord(payload: Record<string, unknown>, fallbackTmdbId?: number) {
+  const tmdbId = Number(payload.tmdb_id || fallbackTmdbId);
+  const seasonNumber = Number(payload.season_number || 1);
+  const episodeNumber = Number(payload.episode_number);
+  const requestedStatus = (cleanText(payload.status) || 'published') as SeriesEpisodeStatus;
+  const watchUrl = normalizeDrivePreviewUrl(cleanText(payload.watch_url));
+  const status = requestedStatus === 'published' && !watchUrl ? 'draft' : requestedStatus;
+
+  if (!Number.isInteger(tmdbId) || tmdbId <= 0) throw new Error('Invalid TMDB ID');
+  if (!Number.isInteger(seasonNumber) || seasonNumber <= 0) throw new Error('Season must be greater than 0');
+  if (!Number.isInteger(episodeNumber) || episodeNumber <= 0) throw new Error('Episode must be greater than 0');
+  if (!validStatuses.has(status)) throw new Error('Invalid status');
+
+  return {
+    tmdb_id: tmdbId,
+    media_type: 'tv',
+    season_number: seasonNumber,
+    episode_number: episodeNumber,
+    episode_title: cleanText(payload.episode_title) || null,
+    watch_url: watchUrl,
+    trailer_url: normalizeDrivePreviewUrl(cleanText(payload.trailer_url)),
+    provider: cleanText(payload.provider) || 'admin',
+    notes: cleanText(payload.notes) || null,
+    status,
+    is_active: status !== 'hidden',
+  };
+}
+
 export async function GET(request: Request) {
   const auth = await requireAdminAccess(request);
   if (auth.ok === false) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
@@ -45,53 +79,36 @@ export async function POST(request: Request) {
   if (auth.ok === false) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
 
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
-  const tmdbId = Number(body?.tmdb_id);
-  const seasonNumber = Number(body?.season_number);
-  const episodeNumber = Number(body?.episode_number);
-  const status = (cleanText(body?.status) || 'published') as SeriesEpisodeStatus;
-  const watchUrl = normalizeDrivePreviewUrl(cleanText(body?.watch_url));
-
-  if (!Number.isInteger(tmdbId) || tmdbId <= 0) return NextResponse.json({ ok: false, error: 'Invalid TMDB ID' }, { status: 400 });
-  if (!Number.isInteger(seasonNumber) || seasonNumber <= 0) return NextResponse.json({ ok: false, error: 'Season must be greater than 0' }, { status: 400 });
-  if (!Number.isInteger(episodeNumber) || episodeNumber <= 0) return NextResponse.json({ ok: false, error: 'Episode must be greater than 0' }, { status: 400 });
-  if (!validStatuses.has(status)) return NextResponse.json({ ok: false, error: 'Invalid status' }, { status: 400 });
-  if (status === 'published' && !watchUrl) return NextResponse.json({ ok: false, error: 'Published episode needs a watch URL' }, { status: 400 });
-
-  const record = {
-    tmdb_id: tmdbId,
-    media_type: 'tv',
-    season_number: seasonNumber,
-    episode_number: episodeNumber,
-    episode_title: cleanText(body?.episode_title) || null,
-    watch_url: watchUrl,
-    trailer_url: normalizeDrivePreviewUrl(cleanText(body?.trailer_url)),
-    provider: cleanText(body?.provider) || 'admin',
-    notes: cleanText(body?.notes) || null,
-    status,
-    is_active: status !== 'hidden',
-  };
+  const payloads = asPayloadList(body);
+  if (!payloads.length) return NextResponse.json({ ok: false, error: 'No episodes to save' }, { status: 400 });
+  if (payloads.length > 80) return NextResponse.json({ ok: false, error: 'Save up to 80 episodes at a time' }, { status: 400 });
 
   try {
-    const before = await fetchEpisodeByKey(tmdbId, seasonNumber, episodeNumber);
+    const fallbackTmdbId = Number(body?.tmdb_id);
+    const records = payloads.map((payload) => toEpisodeRecord(payload, fallbackTmdbId));
+    const tmdbIds = new Set(records.map((record) => record.tmdb_id));
+    if (tmdbIds.size !== 1) return NextResponse.json({ ok: false, error: 'Episodes must belong to one TMDB ID' }, { status: 400 });
+
+    const beforeRows = await Promise.all(records.map((record) => fetchEpisodeByKey(record.tmdb_id, record.season_number, record.episode_number)));
     const rows = await supabaseRest<SeriesEpisode[]>('admin_series_episodes?on_conflict=tmdb_id,season_number,episode_number', {
       method: 'POST',
       mode: 'service',
       prefer: 'resolution=merge-duplicates,return=representation',
-      body: [record],
+      body: records,
     });
-    const saved = rows[0] || record;
+    const savedRows = rows.length ? rows : records;
 
     await recordAdminAuditLog({
       request,
       actor: auth,
-      action: before ? 'series_episode.upsert.update' : 'series_episode.upsert.create',
+      action: records.length > 1 ? 'series_episode.bulk_upsert' : beforeRows[0] ? 'series_episode.upsert.update' : 'series_episode.upsert.create',
       entityType: 'admin_series_episodes',
-      entityId: before?.id || `${tmdbId}-s${seasonNumber}e${episodeNumber}`,
-      beforeData: before,
-      afterData: saved,
+      entityId: `${records[0].tmdb_id}-${records.length}-episodes`,
+      beforeData: records.length > 1 ? beforeRows.filter(Boolean) : beforeRows[0],
+      afterData: records.length > 1 ? savedRows : savedRows[0],
     });
 
-    return NextResponse.json({ ok: true, episode: saved });
+    return NextResponse.json({ ok: true, episode: savedRows[0], episodes: savedRows, saved: savedRows.length });
   } catch (error) {
     return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : 'Cannot save episode' }, { status: 500 });
   }
