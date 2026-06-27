@@ -1,14 +1,25 @@
-'use client';
+﻿'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { categoryChips } from '@/lib/catalog';
 import type { HomePayload, MovieItem, MovieSection } from '@/lib/tmdb';
 import { MovieCard } from '@/components/movie-card';
 import { DetailWindow } from '@/components/window-system';
 
-const RAIL_LOAD_STEP = 6;
+const RAIL_LOAD_STEP = 9;
 const RAIL_LOAD_THRESHOLD = 360;
+
+type SectionItemsResponse = {
+  ok?: boolean;
+  items?: MovieItem[];
+  hasMore?: boolean;
+};
+
+type SearchItemsResponse = {
+  ok?: boolean;
+  items?: MovieItem[];
+};
 
 function uniqueMovies(items: MovieItem[]) {
   const map = new Map<string, MovieItem>();
@@ -75,7 +86,7 @@ function matchQuery(item: MovieItem, query: string) {
 }
 
 function matchCategory(item: MovieItem, category: string | null) {
-  if (!category || category === 'ทั้งหมด') return true;
+  if (!category || category === 'เธ—เธฑเนเธเธซเธกเธ”') return true;
 
   const genres = (item.genres || []).join(' ').toLowerCase();
   const badges = (item.badges || []).join(' ').toLowerCase();
@@ -86,27 +97,27 @@ function matchCategory(item: MovieItem, category: string | null) {
   const currentYear = new Date().getFullYear();
 
   switch (category) {
-    case 'หนังไทย':
-      return language === 'th' || genres.includes('ไทย');
-    case 'หนังฝรั่ง':
+    case 'เธซเธเธฑเธเนเธ—เธข':
+      return language === 'th' || genres.includes('เนเธ—เธข');
+    case 'เธซเธเธฑเธเธเธฃเธฑเนเธ':
       return language === 'en' || language === 'us';
-    case 'พากย์ไทย':
-      return language === 'th' || badges.includes('พากย์ไทย') || label.includes('พากย์ไทย');
-    case 'ซับไทย':
-      return badges.includes('ซับไทย') || label.includes('ซับไทย') || (language !== 'th' && Boolean(language));
-    case 'พร้อมดู':
+    case 'เธเธฒเธเธขเนเนเธ—เธข':
+      return language === 'th' || badges.includes('เธเธฒเธเธขเนเนเธ—เธข') || label.includes('เธเธฒเธเธขเนเนเธ—เธข');
+    case 'เธเธฑเธเนเธ—เธข':
+      return badges.includes('เธเธฑเธเนเธ—เธข') || label.includes('เธเธฑเธเนเธ—เธข') || (language !== 'th' && Boolean(language));
+    case 'เธเธฃเนเธญเธกเธ”เธน':
       return Boolean(item.isWatchReady || item.watchUrl || status === 'published');
-    case 'คะแนนสูง':
+    case 'เธเธฐเนเธเธเธชเธนเธ':
       return item.rating >= 8;
-    case 'หนังใหม่':
-      return badges.includes('ใหม่') || label.includes('ใหม่') || year >= currentYear - 1;
+    case 'เธซเธเธฑเธเนเธซเธกเน':
+      return badges.includes('เนเธซเธกเน') || label.includes('เนเธซเธกเน') || year >= currentYear - 1;
     case 'HD':
       return badges.includes('hd') || label.includes('hd');
     case 'ZOOM':
       return badges.includes('zoom') || label.includes('zoom') || status === 'review';
-    case 'ภาพยนตร์':
+    case 'เธ เธฒเธเธขเธเธ•เธฃเน':
       return item.mediaType === 'movie';
-    case 'ซีรีส์':
+    case 'เธเธตเธฃเธตเธชเน':
       return item.mediaType === 'tv';
     default:
       return (item.genres || []).some((genre) => genre.includes(category) || category.includes(genre));
@@ -170,33 +181,45 @@ function LazyMovieRail({
   const initiallyMounted = sectionIndex === 0;
   const { ref, mounted } = useLazyMount(initiallyMounted, '520px');
   const railRef = useRef<HTMLDivElement | null>(null);
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const loadMoreRef = useRef<HTMLButtonElement | null>(null);
   const loadGuardRef = useRef(false);
-  const initialCount = initiallyMounted ? 16 : 10;
-  const [visibleCount, setVisibleCount] = useState(initialCount);
+  const [items, setItems] = useState(section.items);
+  const [hasMore, setHasMore] = useState(section.items.length >= RAIL_LOAD_STEP);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
-    if (mounted) setVisibleCount((count) => Math.max(count, initialCount));
-  }, [initialCount, mounted]);
+    setItems(section.items);
+    setHasMore(section.items.length >= RAIL_LOAD_STEP);
+    setLoadingMore(false);
+    loadGuardRef.current = false;
+  }, [section.items]);
 
-  useEffect(() => {
-    setVisibleCount(initialCount);
-  }, [initialCount, section.items]);
+  const loadNextBatch = useCallback(async () => {
+    if (!mounted || loadingMore || loadGuardRef.current || !hasMore) return;
+
+    loadGuardRef.current = true;
+    setLoadingMore(true);
+
+    try {
+      const response = await fetch(`/api/catalog/section?slug=${encodeURIComponent(section.slug)}&limit=${RAIL_LOAD_STEP}&offset=${items.length}`);
+      const data = await response.json() as SectionItemsResponse;
+      const nextItems = Array.isArray(data.items) ? data.items : [];
+
+      setItems((current) => uniqueMovies([...current, ...nextItems]));
+      setHasMore(Boolean(data.hasMore) && nextItems.length > 0);
+    } catch {
+      setHasMore(false);
+    } finally {
+      window.setTimeout(() => {
+        loadGuardRef.current = false;
+        setLoadingMore(false);
+      }, 220);
+    }
+  }, [hasMore, items.length, loadingMore, mounted, section.slug]);
 
   useEffect(() => {
     const rail = railRef.current;
     if (!mounted || !rail) return;
-
-    function loadNextBatch() {
-      if (loadGuardRef.current) return;
-      if (visibleCount >= section.items.length) return;
-
-      loadGuardRef.current = true;
-      setVisibleCount((count) => Math.min(count + RAIL_LOAD_STEP, section.items.length));
-      window.setTimeout(() => {
-        loadGuardRef.current = false;
-      }, 220);
-    }
 
     function maybeLoadMore() {
       const currentRail = railRef.current;
@@ -211,33 +234,28 @@ function LazyMovieRail({
     window.setTimeout(maybeLoadMore, 120);
 
     return () => rail.removeEventListener('scroll', maybeLoadMore);
-  }, [mounted, section.items.length, visibleCount]);
+  }, [loadNextBatch, mounted]);
 
   useEffect(() => {
     const rail = railRef.current;
     const sentinel = loadMoreRef.current;
-    if (!mounted || !rail || !sentinel || visibleCount >= section.items.length) return;
+    if (!mounted || !rail || !sentinel || !hasMore) return;
 
     if (typeof IntersectionObserver === 'undefined') return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (!entry.isIntersecting || loadGuardRef.current) return;
-        loadGuardRef.current = true;
-        setVisibleCount((count) => Math.min(count + RAIL_LOAD_STEP, section.items.length));
-        window.setTimeout(() => {
-          loadGuardRef.current = false;
-        }, 220);
+        loadNextBatch();
       },
       { root: rail, rootMargin: '0px 420px 0px 0px', threshold: 0.1 },
     );
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [mounted, section.items.length, visibleCount]);
+  }, [hasMore, loadNextBatch, mounted]);
 
-  const visibleItems = mounted ? section.items.slice(0, visibleCount) : [];
-  const hasMore = mounted && visibleCount < section.items.length;
+  const visibleItems = mounted ? items : [];
 
   return (
     <div ref={ref} style={{ contentVisibility: 'auto', containIntrinsicSize: '340px 1000px' }}>
@@ -249,14 +267,29 @@ function LazyMovieRail({
               item={item}
               onSelect={onSelect}
               priority={sectionIndex === 0 && index < 6}
-              priorityBadge={index % 4 === 0 ? 'ใหม่' : index % 4 === 1 ? 'พรีเมียม' : undefined}
+              priorityBadge={index % 4 === 0 ? 'เนเธซเธกเน' : index % 4 === 1 ? 'เธเธฃเธตเน€เธกเธตเธขเธก' : undefined}
             />
           ))}
 
+          {loadingMore ? Array.from({ length: 3 }).map((_, index) => (
+            <div
+              key={`loading-${section.slug}-${index}`}
+              className="h-[176px] w-[116px] shrink-0 animate-pulse rounded-[8px] bg-white/[0.045] sm:h-[220px] sm:w-[140px] md:h-[280px] md:w-[180px] xl:h-[300px] xl:w-[196px]"
+              aria-hidden="true"
+            />
+          )) : null}
+
           {hasMore ? (
-            <div ref={loadMoreRef} className="grid h-[176px] w-[92px] shrink-0 place-items-center rounded-[8px] border border-white/8 bg-white/[0.025] px-3 text-center text-[10px] font-black text-white/38 backdrop-blur-xl sm:h-[220px] md:h-[280px] md:w-[120px] md:text-xs xl:h-[300px]" aria-live="polite">
-              กำลังโหลดอีก 6 เรื่อง...
-            </div>
+            <button
+              ref={loadMoreRef}
+              type="button"
+              onClick={loadNextBatch}
+              disabled={loadingMore}
+              className="grid h-[176px] w-[92px] shrink-0 place-items-center rounded-[8px] border border-white/8 bg-white/[0.025] px-3 text-center text-[10px] font-black text-white/50 backdrop-blur-xl transition hover:border-[#e50914]/60 hover:bg-[#e50914]/10 hover:text-white disabled:cursor-wait disabled:text-white/30 sm:h-[220px] md:h-[280px] md:w-[120px] md:text-xs xl:h-[300px]"
+              aria-live="polite"
+            >
+              เธเธณเธฅเธฑเธเนเธซเธฅเธ”เธญเธตเธ 9 เน€เธฃเธทเนเธญเธ...
+            </button>
           ) : null}
         </div>
       ) : (
@@ -288,16 +321,20 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
   const [selected, setSelected] = useState<MovieItem | null>(null);
   const [query, setQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [serverResults, setServerResults] = useState<MovieItem[]>([]);
+  const [searchSubmitted, setSearchSubmitted] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState('');
   const [visibleFilterCount, setVisibleFilterCount] = useState(24);
 
   const filterLoadRef = useRef<HTMLDivElement | null>(null);
 
   const hero = heroItems[heroIndex] || home.hero;
-  const filterMode = Boolean(query.trim()) || Boolean(activeCategory);
+  const filterMode = searchSubmitted;
 
   const filteredItems = useMemo(
-    () => allItems.filter((item) => matchQuery(item, query) && matchCategory(item, activeCategory)),
-    [activeCategory, allItems, query],
+    () => serverResults,
+    [serverResults],
   );
 
   const visibleFilteredItems = useMemo(
@@ -350,6 +387,36 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
     });
   }
 
+  async function runServerSearch(nextQuery = query, nextCategory = activeCategory) {
+    const trimmedQuery = nextQuery.trim();
+    const category = nextCategory && nextCategory !== 'ทั้งหมด' ? nextCategory : '';
+
+    if (!trimmedQuery && !category) {
+      setSearchSubmitted(false);
+      setServerResults([]);
+      setSearchError('');
+      return;
+    }
+
+    setSearchSubmitted(true);
+    setVisibleFilterCount(24);
+    setSearchLoading(true);
+    setSearchError('');
+    jumpToResults();
+
+    try {
+      const params = new URLSearchParams({ q: trimmedQuery, category, limit: '48' });
+      const response = await fetch(`/api/search?${params.toString()}`);
+      const data = await response.json() as SearchItemsResponse;
+      setServerResults(Array.isArray(data.items) ? data.items : []);
+    } catch {
+      setServerResults([]);
+      setSearchError('ค้นหาไม่สำเร็จ ลองใหม่อีกครั้ง');
+    } finally {
+      setSearchLoading(false);
+    }
+  }
+
   function openMovie(item: MovieItem) {
     setSelected(item);
   }
@@ -360,7 +427,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
     window.requestAnimationFrame(() => {
       window.requestAnimationFrame(() => {
         const watchTab = Array.from(document.querySelectorAll('button')).find(
-          (button) => button.textContent?.trim() === 'รับชม',
+          (button) => button.textContent?.trim() === 'เธฃเธฑเธเธเธก',
         );
 
         watchTab?.click();
@@ -371,21 +438,21 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!query.trim() && !activeCategory) {
-      setActiveCategory('ทั้งหมด');
-    }
-
-    jumpToResults();
+    runServerSearch();
   }
 
   function chooseCategory(chip: string) {
     setActiveCategory(chip);
-    jumpToResults();
+    runServerSearch(query, chip);
   }
 
   function clearFilters() {
     setQuery('');
     setActiveCategory(null);
+    setServerResults([]);
+    setSearchSubmitted(false);
+    setSearchError('');
+    setSearchLoading(false);
   }
 
   return (
@@ -404,7 +471,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
 
           <div className="ml-auto flex items-center gap-3 md:gap-5">
             <a href="/watch-ready" className="hidden text-[15px] font-black text-[#f6c56b] md:block">
-              ♛ พรีเมียม
+              โ เธเธฃเธตเน€เธกเธตเธขเธก
             </a>
             <div data-dofree-menu-host="true" className="grid h-9 w-9 place-items-center md:h-12 md:w-12" />
           </div>
@@ -413,9 +480,13 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
 
       <section className="relative min-h-[500px] border-b border-white/[0.08] pt-[58px] md:min-h-[585px] md:pt-[76px] xl:min-h-[610px] xl:pt-[88px]">
         <div className="absolute inset-0 overflow-hidden">
-          <div
-            className="absolute inset-y-0 right-0 w-full bg-cover bg-center opacity-90 transition duration-700 md:w-[78%]"
-            style={{ backgroundImage: `url(${hero.backdropUrl})` }}
+          <img
+            src={hero.backdropUrl}
+            alt=""
+            loading="eager"
+            decoding="async"
+            fetchPriority="high"
+            className="absolute inset-y-0 right-0 h-full w-full object-cover object-center opacity-90 transition duration-700 md:w-[78%]"
           />
           <div className="absolute inset-0 bg-[linear-gradient(90deg,#030303_0%,rgba(3,3,3,0.96)_24%,rgba(3,3,3,0.78)_52%,rgba(0,0,0,0.32)_78%,#030303_100%)]" />
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.06)_0%,rgba(0,0,0,0.10)_42%,#030303_100%)]" />
@@ -425,7 +496,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
         <div className="relative z-10 mx-auto flex min-h-[442px] max-w-[1920px] flex-col justify-end px-4 pb-9 md:min-h-[509px] md:justify-center md:px-7 md:pb-0">
           <div className="max-w-[680px] md:ml-[6vw] xl:ml-[10vw]">
             <p className="mb-3 text-[13px] font-black text-[#e50914] md:mb-5 md:text-[22px]">
-              {hero.status === 'published' ? 'ภาพยนตร์พร้อมรับชม' : 'ภาพยนตร์สุ่มแนะนำ'}
+              {hero.status === 'published' ? 'เธ เธฒเธเธขเธเธ•เธฃเนเธเธฃเนเธญเธกเธฃเธฑเธเธเธก' : 'เธ เธฒเธเธขเธเธ•เธฃเนเธชเธธเนเธกเนเธเธฐเธเธณ'}
             </p>
 
             <h1 className="hero-title max-w-[92vw] text-[42px] font-black leading-[0.88] tracking-[-0.085em] text-white md:whitespace-nowrap md:text-[92px] lg:text-[112px] xl:text-[120px]">
@@ -433,7 +504,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
             </h1>
 
             <h2 className="mt-3 max-w-[92vw] text-[16px] font-black tracking-[-0.04em] text-white md:mt-6 md:text-[28px]">
-              เมื่อความลับในอดีต... กลับมาทวงคืนทุกสิ่ง
+              เน€เธกเธทเนเธญเธเธงเธฒเธกเธฅเธฑเธเนเธเธญเธ”เธตเธ•... เธเธฅเธฑเธเธกเธฒเธ—เธงเธเธเธทเธเธ—เธธเธเธชเธดเนเธ
             </h2>
 
             <p className="mt-2 line-clamp-3 max-w-[92vw] text-[12px] leading-5 text-white/56 md:mt-3 md:max-w-[620px] md:text-[18px] md:leading-7">
@@ -446,7 +517,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
                 onClick={() => openHeroWatch(hero)}
                 className="inline-flex h-[42px] items-center gap-2 rounded-lg bg-[#e50914] px-5 text-[13px] font-black text-white shadow-glow md:h-[55px] md:px-9 md:text-[16px]"
               >
-                ▶ รับชม
+                โ–ถ เธฃเธฑเธเธเธก
               </button>
 
               <button
@@ -454,7 +525,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
                 onClick={() => openMovie(hero)}
                 className="inline-flex h-[42px] items-center gap-2 rounded-lg border border-white/10 bg-white/[0.12] px-5 text-[13px] font-black text-white/86 md:h-[55px] md:px-8 md:text-[16px]"
               >
-                ⓘ รายละเอียด
+                โ“ เธฃเธฒเธขเธฅเธฐเน€เธญเธตเธขเธ”
               </button>
             </div>
           </div>
@@ -472,7 +543,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="ค้นหา"
+                placeholder="เธเนเธเธซเธฒ"
                 className="min-w-0 flex-1 bg-transparent text-[11px] font-bold text-white outline-none placeholder:text-white/50 md:text-[14px]"
               />
 
@@ -482,7 +553,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
                   onClick={() => setQuery('')}
                   className="grid h-5 w-5 place-items-center rounded-full bg-black/28 text-[10px] text-white/80"
                 >
-                  ×
+                  ร—
                 </button>
               ) : null}
 
@@ -490,7 +561,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
                 type="submit"
                 className="rounded-full bg-white/[0.12] px-2 py-1 text-[9px] font-black text-white/72 md:px-3 md:text-[11px]"
               >
-                ค้นหา
+                เธเนเธเธซเธฒ
               </button>
             </form>
 
@@ -526,13 +597,14 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
           <div style={{ contentVisibility: 'auto', containIntrinsicSize: '780px 1000px' }}>
             <div className="mb-4 flex items-end justify-between gap-3">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#e50914]/80">ผลลัพธ์</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#e50914]/80">เธเธฅเธฅเธฑเธเธเน</p>
                 <h2 className="mt-1 text-[21px] font-black tracking-[-0.05em] md:text-[34px]">
-                  {query.trim() ? `ค้นหา “${query.trim()}”` : activeCategory}
+                  {query.trim() ? `เธเนเธเธซเธฒ โ€${query.trim()}โ€` : activeCategory}
                 </h2>
                 <p className="mt-1 text-[11px] font-semibold text-white/44">
-                  พบ {filteredItems.length} เรื่อง • แสดง {visibleFilteredItems.length} เรื่อง
+                  เธเธ {filteredItems.length} เน€เธฃเธทเนเธญเธ โ€ข เนเธชเธ”เธ {visibleFilteredItems.length} เน€เธฃเธทเนเธญเธ
                 </p>
+                {searchError ? <p className="mt-1 text-[11px] font-black text-[#ff6b6b]">{searchError}</p> : null}
               </div>
 
               <button
@@ -540,11 +612,17 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
                 onClick={clearFilters}
                 className="rounded-full border border-white/12 bg-white/[0.08] px-3 py-2 text-[11px] font-black text-white/72 backdrop-blur-xl"
               >
-                ล้างค่า
+                เธฅเนเธฒเธเธเนเธฒ
               </button>
             </div>
 
-            {visibleFilteredItems.length ? (
+            {searchLoading && !visibleFilteredItems.length ? (
+              <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-5 md:grid-cols-6 md:gap-4 lg:grid-cols-7 xl:grid-cols-8" aria-hidden="true">
+                {Array.from({ length: 12 }).map((_, index) => (
+                  <div key={`search-skeleton-${index}`} className="aspect-[2/3] w-full animate-pulse rounded-[8px] bg-white/[0.045]" />
+                ))}
+              </div>
+            ) : visibleFilteredItems.length ? (
               <>
                 <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-5 md:grid-cols-6 md:gap-4 lg:grid-cols-7 xl:grid-cols-8">
                   {visibleFilteredItems.map((item, index) => (
@@ -554,20 +632,20 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
                       onSelect={openMovie}
                       grid
                       priority={index < 8}
-                      priorityBadge={activeCategory && activeCategory !== 'ทั้งหมด' ? activeCategory : undefined}
+                      priorityBadge={activeCategory && activeCategory !== 'เธ—เธฑเนเธเธซเธกเธ”' ? activeCategory : undefined}
                     />
                   ))}
                 </div>
 
                 {visibleFilteredItems.length < filteredItems.length ? (
                   <div ref={filterLoadRef} className="py-6 text-center text-[11px] font-black text-white/38">
-                    กำลังโหลดเพิ่มอีก 6 เรื่อง...
+                    เธเธณเธฅเธฑเธเนเธซเธฅเธ”เน€เธเธดเนเธกเธญเธตเธ 9 เน€เธฃเธทเนเธญเธ...
                   </div>
                 ) : null}
               </>
             ) : (
               <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-6 text-center text-sm font-bold text-white/58">
-                ไม่พบหนังที่ตรงกับเงื่อนไขนี้
+                เนเธกเนเธเธเธซเธเธฑเธเธ—เธตเนเธ•เธฃเธเธเธฑเธเน€เธเธทเนเธญเธเนเธเธเธตเน
               </div>
             )}
           </div>
@@ -590,12 +668,12 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
                       </p>
                     ) : null}
                     <h2 className="text-[20px] font-black tracking-[-0.04em] md:text-[30px]">
-                      {sectionIndex === 0 ? 'แนะนำสำหรับคุณ' : section.title}
+                      {sectionIndex === 0 ? 'เนเธเธฐเธเธณเธชเธณเธซเธฃเธฑเธเธเธธเธ“' : section.title}
                     </h2>
                   </div>
 
                   <a href="/watch-ready" className="text-[12px] font-black text-white/50 hover:text-white md:text-[16px]">
-                    ดูทั้งหมด ›
+                    เธ”เธนเธ—เธฑเนเธเธซเธกเธ” โ€บ
                   </a>
                 </div>
 
@@ -612,7 +690,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
           onClick={clearFilters}
           className="fixed right-3 top-1/2 z-[60] -translate-y-1/2 rounded-full border border-white/18 bg-black/45 px-3 py-2 text-[11px] font-black text-white/86 shadow-[0_0_28px_rgba(229,9,20,0.44)] backdrop-blur-xl animate-pulse md:right-6 md:px-4 md:py-3 md:text-xs"
         >
-          ล้างค่า
+          เธฅเนเธฒเธเธเนเธฒ
         </button>
       ) : null}
 
