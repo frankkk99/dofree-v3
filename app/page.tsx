@@ -1,3 +1,4 @@
+import { AutoHideHeader } from '@/components/auto-hide-header';
 import { CleanHamburgerMenu } from '@/components/clean-hamburger-menu';
 import { FavoriteClickBridge } from '@/components/favorite-click-bridge';
 import { FloatingGlassSearch } from '@/components/floating-glass-search';
@@ -28,6 +29,7 @@ export default async function HomePage() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
       <HomeRealtimeWrapper home={home} />
+      <AutoHideHeader />
       <SearchBehaviorFix />
       <FloatingGlassSearch home={home} />
       <FloatingSearchPolish />
