@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { DetailPayload } from '@/lib/tmdb';
 import { DetailRecommendationCarousel } from '@/components/detail-recommendation-carousel';
 
@@ -61,14 +62,22 @@ function youtubeEmbedUrl(url?: string) {
   return undefined;
 }
 
+function StatusBadge({ children, active = false }: { children: ReactNode; active?: boolean }) {
+  return (
+    <span className={`rounded-full px-2.5 py-1 text-[9px] font-black shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md md:text-[11px] ${active ? 'bg-[#e50914]/22 text-red-100' : 'bg-white/[0.105] text-white/78'}`}>
+      {children}
+    </span>
+  );
+}
+
 function TrailerCard({ title, trailerUrl, fallbackImage }: { title: string; trailerUrl?: string; fallbackImage: string }) {
   const embedUrl = youtubeEmbedUrl(trailerUrl);
 
   return (
-    <section className="rounded-[26px] border border-white/10 bg-white/[0.045] p-3 shadow-[0_28px_90px_rgba(0,0,0,0.62)] backdrop-blur-2xl md:rounded-[32px] md:p-4">
-      <p className="mb-3 text-[10px] font-black uppercase tracking-[0.28em] text-red-100/70 md:text-xs">TRAILER PREVIEW</p>
+    <section>
+      <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-red-100/68 md:text-xs">TRAILER PREVIEW</p>
       {embedUrl ? (
-        <div className="overflow-hidden rounded-[20px] bg-black shadow-[0_24px_80px_rgba(0,0,0,0.68)] md:rounded-[26px]">
+        <div className="overflow-hidden rounded-[20px] bg-black shadow-[0_24px_90px_rgba(0,0,0,0.72)] md:rounded-[26px]">
           <iframe
             src={embedUrl}
             title={`ตัวอย่าง ${title}`}
@@ -80,12 +89,12 @@ function TrailerCard({ title, trailerUrl, fallbackImage }: { title: string; trai
           />
         </div>
       ) : (
-        <div className="relative grid aspect-video place-items-center overflow-hidden rounded-[20px] bg-black/58 text-center shadow-[0_24px_80px_rgba(0,0,0,0.68)] md:rounded-[26px]">
+        <div className="relative grid aspect-video place-items-center overflow-hidden rounded-[20px] bg-black/58 text-center shadow-[0_24px_90px_rgba(0,0,0,0.72)] md:rounded-[26px]">
           {fallbackImage ? <img src={fallbackImage} alt={title} className="absolute inset-0 h-full w-full object-cover opacity-25 blur-[1px]" /> : null}
-          <div className="absolute inset-0 bg-black/68" />
+          <div className="absolute inset-0 bg-black/62" />
           <div className="relative z-10 px-6">
             <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-white/[0.1] text-xl font-black text-white/58 shadow-[0_18px_50px_rgba(0,0,0,0.72)] backdrop-blur-xl md:h-16 md:w-16 md:text-2xl">▶</div>
-            <p className="mt-3 text-xs font-black text-white/70 md:text-sm">ยังไม่มีตัวอย่างที่ฝังในหน้านี้ได้</p>
+            <p className="mt-3 text-xs font-black text-white/72 md:text-sm">ยังไม่มีตัวอย่างที่ฝังในหน้านี้ได้</p>
           </div>
         </div>
       )}
@@ -98,16 +107,8 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
   const effectiveTrailerUrl = item.trailerUrl || trailerUrl;
   const watchHref = `/watch/${item.mediaType}/${item.id}`;
   const primaryHref = item.watchUrl ? watchHref : effectiveTrailerUrl || '/watch-ready';
-  const primaryLabel = item.watchUrl ? 'รับชมในเว็บ' : effectiveTrailerUrl ? 'ดูตัวอย่าง' : 'ดูรายการพร้อมรับชม';
-  const secondaryHref = effectiveTrailerUrl || primaryHref;
-  const secondaryLabel = effectiveTrailerUrl ? 'Teaser / Trailer' : 'รายละเอียดเพิ่มเติม';
+  const primaryLabel = item.watchUrl ? 'รับชม' : effectiveTrailerUrl ? 'ดูตัวอย่าง' : 'ดูรายการพร้อมรับชม';
   const fallbackImage = item.backdropUrl || item.posterUrl || '';
-  const detailFacts = [
-    item.year,
-    `คะแนน ${item.rating.toFixed(1)}`,
-    item.runtime ? `${item.runtime} นาที` : null,
-    statusLabel(item.status, item.isWatchReady),
-  ].filter(Boolean);
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -153,53 +154,37 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
           </a>
 
           <div className="relative z-10 grid grid-cols-[88px_1fr] gap-3 p-4 pt-5 md:grid-cols-[118px_1fr] md:gap-4 md:p-5 md:pb-4">
-            <div className="overflow-hidden rounded-[16px] bg-black/40 shadow-[0_20px_55px_rgba(0,0,0,0.75)] ring-1 ring-white/14 backdrop-blur-md md:rounded-[20px]">
-              <img src={item.posterUrl} alt={item.title} loading="lazy" decoding="async" className="h-[132px] w-full object-cover md:h-[176px]" />
+            <div className="overflow-hidden rounded-[16px] bg-black/40 shadow-[0_20px_55px_rgba(0,0,0,0.75)] backdrop-blur-md md:rounded-[20px]">
+              {item.posterUrl ? <img src={item.posterUrl} alt={item.title} loading="lazy" decoding="async" className="h-[132px] w-full object-cover md:h-[176px]" /> : null}
             </div>
 
             <div className="min-w-0 pr-9 md:pr-11">
-              <a href="/" className="inline-flex rounded-full border border-white/10 bg-black/30 px-3 py-1.5 text-[10px] font-black text-red-100/75 backdrop-blur-xl transition hover:border-[#e50914]/60 hover:text-white md:text-xs">
-                กลับหน้าแรก
-              </a>
-              <p className="mt-5 text-[9px] font-black uppercase tracking-[0.24em] text-[#e50914] md:text-[10px]">
-                {mediaLabel(item.mediaType)} Detail
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#e50914] md:text-[10px] md:tracking-[0.24em]">
+                {mediaLabel(item.mediaType)}
               </p>
               <h1 className="modal-title mt-1.5 line-clamp-2 text-[21px] font-black leading-[0.98] tracking-[-0.06em] text-white md:text-[31px]">
                 {item.title}
               </h1>
               {item.titleEn && item.titleEn !== item.title ? <p className="mt-2 text-sm font-bold text-white/42 md:text-base">{item.titleEn}</p> : null}
 
-              <div className="mt-4 flex flex-wrap gap-1.5 text-[9px] font-black md:text-[11px]">
-                {detailFacts.map((fact) => (
-                  <span key={fact} className="rounded-full bg-white/[0.105] px-2.5 py-1 text-white/78 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md">
-                    {fact}
-                  </span>
-                ))}
+              <div className="mt-2 flex flex-wrap gap-1.5 text-[9px] font-black md:text-[11px]">
+                <StatusBadge>★ {item.rating.toFixed(1)}</StatusBadge>
+                <StatusBadge>{item.year}</StatusBadge>
+                <StatusBadge>{item.language === 'th' ? 'TH' : item.language || 'EN'}</StatusBadge>
+                <StatusBadge active>{item.watchUrl ? 'HD' : 'ZOOM'}</StatusBadge>
               </div>
 
-              <p className="mt-3 line-clamp-3 max-w-2xl text-[11px] font-medium leading-4 text-white/58 md:text-[13px] md:leading-5">
+              <p className="mt-2 line-clamp-3 max-w-2xl text-[11px] font-medium leading-4 text-white/58 md:text-[13px] md:leading-5">
                 {item.overview || 'ยังไม่มีคำอธิบายเรื่องนี้ แต่ระบบเตรียมโครงหน้าไว้สำหรับแสดงรายละเอียด ตัวอย่าง นักแสดง และรายการแนะนำที่เกี่ยวข้อง'}
               </p>
+              <a href="#detail" className="mt-1 inline-flex text-[10px] font-black text-red-200/80 hover:text-red-100 md:text-xs">ดูเพิ่มเติม</a>
 
-              {item.genres?.length ? (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {item.genres.map((genre) => (
-                    <span key={genre} className="rounded-full border border-white/10 bg-white/[0.055] px-3 py-1.5 text-[11px] font-bold text-white/58 backdrop-blur-xl">
-                      {genre}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
-
-              <div className="mt-6 flex flex-wrap gap-2.5 md:gap-3">
-                <a {...linkProps(primaryHref)} href={primaryHref} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#e50914] px-5 text-xs font-black text-white shadow-glow transition hover:brightness-110 md:h-12 md:px-7 md:text-sm">
+              <div className="mt-3 flex flex-wrap gap-2">
+                <a {...linkProps(primaryHref)} href={primaryHref} className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#e50914] px-3 text-[11px] font-black text-white shadow-[0_14px_36px_rgba(0,0,0,0.42)] backdrop-blur-xl transition hover:brightness-110 md:h-9 md:px-4 md:text-xs">
                   <span>▶</span>{primaryLabel}
                 </a>
-                <a {...linkProps(secondaryHref)} href={secondaryHref} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/18 bg-white/[0.08] px-5 text-xs font-black text-white/85 transition hover:border-white/30 hover:bg-white/[0.13] md:h-12 md:px-7 md:text-sm">
-                  <span>▷</span>{secondaryLabel}
-                </a>
-                <a href="/watch-ready" className="inline-flex h-11 items-center justify-center rounded-xl border border-[#e50914]/30 bg-[#e50914]/10 px-5 text-xs font-black text-red-100 transition hover:border-[#e50914]/60 hover:bg-[#e50914]/18 md:h-12 md:px-7 md:text-sm">
-                  พร้อมรับชมทั้งหมด
+                <a href="#recommend" className="inline-flex h-8 items-center rounded-lg bg-white/[0.1] px-3 text-[11px] font-black text-white/82 shadow-[0_14px_36px_rgba(0,0,0,0.32)] backdrop-blur-xl transition hover:bg-white/[0.16] md:h-9 md:px-4 md:text-xs">
+                  + รายการโปรด
                 </a>
               </div>
             </div>
@@ -227,6 +212,18 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
         </section>
 
         <section className="flex flex-col gap-6 p-3 md:p-4">
+          <div id="recommend" className="order-1 rounded-[22px] bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_22px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl md:p-5">
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]/75">Recommended</p>
+                <h2 className="mt-1 text-xl font-black tracking-[-0.04em] md:text-2xl">แนะนำสำหรับคุณ</h2>
+              </div>
+              <a href="/watch-ready" className="shrink-0 text-xs font-black text-white/45 hover:text-white md:text-sm">ดูทั้งหมด ›</a>
+            </div>
+
+            <DetailRecommendationCarousel current={item} items={recommendations} />
+          </div>
+
           <div id="cast" className="order-2 rounded-[22px] bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_22px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl md:p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -272,18 +269,6 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
             <div className="mt-3 rounded-2xl bg-black/28 p-3 text-xs leading-6 text-yellow-50/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] md:text-sm md:leading-7">
               {item.overview || 'ยังไม่มีสปอยสำหรับเรื่องนี้'}
             </div>
-          </div>
-
-          <div id="recommend" className="order-1 rounded-[22px] bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_22px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl md:p-5">
-            <div className="mb-4 flex items-center justify-between gap-4">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]/75">Recommended</p>
-                <h2 className="mt-1 text-xl font-black tracking-[-0.04em] md:text-2xl">แนะนำสำหรับคุณ</h2>
-              </div>
-              <a href="/watch-ready" className="shrink-0 text-xs font-black text-white/45 hover:text-white md:text-sm">ดูทั้งหมด ›</a>
-            </div>
-
-            <DetailRecommendationCarousel current={item} items={recommendations} />
           </div>
         </section>
       </article>
