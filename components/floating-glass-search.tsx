@@ -153,6 +153,9 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
   const [query, setQuery] = useState('');
   const [activeChips, setActiveChips] = useState<string[]>([]);
   const [searchState, setSearchState] = useState<SearchState | null>(null);
+  const [floatingResults, setFloatingResults] = useState<MovieItem[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState('');
   const [sectionsHost, setSectionsHost] = useState<HTMLElement | null>(null);
   const [viewport, setViewport] = useState<ViewportSize>({ width: 0, height: 0 });
   const [position, setPosition] = useState<DockPosition>(() => defaultPosition());
@@ -169,21 +172,7 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
   const hasFilter = Boolean(query.trim()) || activeChips.length > 0 || Boolean(searchState);
   const isDesktop = viewport.width >= 768;
 
-  const allItems = useMemo(
-    () => uniqueMovies([
-      home.hero,
-      ...(home.heroItems || []),
-      ...home.sections.flatMap((section) => section.items),
-    ]),
-    [home],
-  );
-
-  const resultItems = useMemo(() => {
-    if (!searchState) return [];
-    return allItems
-      .filter((item) => matchQuery(item, searchState.query) && matchCategories(item, searchState.categories))
-      .sort((a, b) => b.rating - a.rating || a.title.localeCompare(b.title, 'th'));
-  }, [allItems, searchState]);
+  const resultItems = floatingResults;
 
   const panelPlacement = useMemo(() => {
     if (!isDesktop || !viewport.width || !viewport.height) return null;
@@ -280,7 +269,7 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
     closeTimerRef.current = window.setTimeout(() => setPanelMounted(false), 240);
   }
 
-  function submitSearch(event?: FormEvent<HTMLFormElement>) {
+  async function submitSearch(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault();
 
     const nextState = {
@@ -288,6 +277,9 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
       categories: activeChips,
     };
     setSearchState(nextState);
+    setSearchLoading(true);
+    setSearchError('');
+    setFloatingResults([]);
 
     window.requestAnimationFrame(() => {
       document.getElementById('sections')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -296,12 +288,30 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
     closePanel();
     setSettling(true);
     window.setTimeout(() => setSettling(false), 950);
+
+    try {
+      const params = new URLSearchParams({
+        q: nextState.query,
+        category: nextState.categories[0] || '',
+        limit: '48',
+      });
+      const response = await fetch(`/api/search?${params.toString()}`);
+      const data = await response.json() as { items?: MovieItem[] };
+      setFloatingResults(Array.isArray(data.items) ? data.items : []);
+    } catch {
+      setSearchError('ค้นหาไม่สำเร็จ ลองใหม่อีกครั้ง');
+    } finally {
+      setSearchLoading(false);
+    }
   }
 
   function clearSearch() {
     setQuery('');
     setActiveChips([]);
     setSearchState(null);
+    setFloatingResults([]);
+    setSearchError('');
+    setSearchLoading(false);
     closePanel();
     setSettling(true);
     window.setTimeout(() => setSettling(false), 850);
@@ -399,7 +409,16 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
           </button>
         </div>
 
-        {resultItems.length ? (
+        {searchLoading && !resultItems.length ? (
+          <div className="flex flex-wrap gap-2.5 pb-3 sm:gap-3 md:gap-5 md:pb-4" aria-hidden="true">
+            {Array.from({ length: 12 }).map((_, index) => (
+              <div
+                key={`floating-search-skeleton-${index}`}
+                className="h-[176px] w-[116px] animate-pulse rounded-[8px] bg-white/[0.045] sm:h-[220px] sm:w-[140px] md:h-[280px] md:w-[180px] xl:h-[300px] xl:w-[196px]"
+              />
+            ))}
+          </div>
+        ) : resultItems.length ? (
           <div className="flex flex-wrap gap-2.5 pb-3 sm:gap-3 md:gap-5 md:pb-4">
             {resultItems.map((item, index) => (
               <MovieCard

@@ -8,10 +8,10 @@ import { HomeRealtimeWrapper } from '@/components/home-realtime-wrapper';
 import { ModalEpisodeTitleLabels } from '@/components/modal-episode-title-labels';
 import { ModalRecommendationDefault } from '@/components/modal-recommendation-default';
 import { ReliableHeroCarousel } from '@/components/reliable-hero-carousel';
-import { ReleaseWindowAutoCarousel } from '@/components/release-window-auto-carousel';
-import { SearchBehaviorFix } from '@/components/search-behavior-fix';
 import { WatchHistoryClickBridge } from '@/components/watch-history-click-bridge';
 import { getCatalogHomePayload } from '@/lib/catalog-home';
+
+export const revalidate = 300;
 
 const siteName = 'ดูดีดี';
 const englishSiteName = 'DodeedeeV3';
@@ -31,7 +31,6 @@ export default async function HomePage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
       <HomeRealtimeWrapper home={home} />
       <AutoHideHeader />
-      <SearchBehaviorFix />
       <FloatingGlassSearch home={home} />
       <FloatingSearchPolish />
       <ModalEpisodeTitleLabels />
@@ -41,7 +40,6 @@ export default async function HomePage() {
       <WatchHistoryClickBridge home={home} />
       <CleanHamburgerMenu />
       <ReliableHeroCarousel home={home} />
-      <ReleaseWindowAutoCarousel />
     </>
   );
 }
