@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { recordAdminAuditLog } from '@/lib/admin-audit';
-import { requireAdminAccess } from '@/lib/admin-auth';
+import { requireAdminAccess, type AdminAccess } from '@/lib/admin-auth';
 import { supabaseRest } from '@/lib/supabase-rest';
 
+type Actor = Extract<AdminAccess, { ok: true }>;
 type CategoryRow = {
   id?: string;
   slug: string;
@@ -18,7 +19,8 @@ type CategoryRow = {
   updated_at?: string;
 };
 
-const defaultCategories = [
+type DefaultCategory = [string, string, string, number];
+const defaultCategories: DefaultCategory[] = [
   ['top-rated', 'คะแนน 6.5+ น่าดู', 'คะแนนสูง', 10],
   ['popular', 'ยอดนิยมคะแนนดี', 'กำลังนิยม', 20],
   ['now-playing', 'ภาพยนตร์มาใหม่คะแนนดี', 'มาใหม่', 30],
@@ -46,13 +48,11 @@ function text(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 }
 
-async function auth(request: Request) {
-  const result = await requireAdminAccess(request);
-  if (result.ok === true) return { actor: result };
-  return { response: NextResponse.json({ ok: false, error: result.error }, { status: result.status }) };
+function adminError(auth: Exclude<AdminAccess, { ok: true }>) {
+  return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
 }
 
-async function seedDefaults(request: Request, actor: Awaited<ReturnType<typeof requireAdminAccess>>) {
+async function seedDefaults(request: Request, actor: Actor) {
   const rows = defaultCategories.map(([slug, title, subtitle, order]) => ({
     slug,
     title_th: title,
@@ -71,17 +71,17 @@ async function seedDefaults(request: Request, actor: Awaited<ReturnType<typeof r
 }
 
 export async function GET(request: Request) {
-  const access = await auth(request);
-  if (access.response) return access.response;
+  const auth = await requireAdminAccess(request);
+  if (auth.ok === false) return adminError(auth);
   const categories = await supabaseRest<CategoryRow[]>('admin_categories?select=id,slug,title_th,subtitle_th,enabled,autoplay,sort_order,updated_at&order=sort_order.asc', { mode: 'service' }).catch(() => []);
   return NextResponse.json({ ok: true, categories });
 }
 
 export async function POST(request: Request) {
-  const access = await auth(request);
-  if (access.response) return access.response;
+  const auth = await requireAdminAccess(request);
+  if (auth.ok === false) return adminError(auth);
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
-  if (body?.seed === true) return NextResponse.json({ ok: true, categories: await seedDefaults(request, access.actor) });
+  if (body?.seed === true) return NextResponse.json({ ok: true, categories: await seedDefaults(request, auth) });
 
   const slug = text(body?.slug)?.toLowerCase().replace(/[^a-z0-9-]/g, '-');
   const title = text(body?.title_th);
@@ -100,13 +100,13 @@ export async function POST(request: Request) {
     sort_order: Number(body?.sort_order || 999),
   };
   const rows = await supabaseRest<CategoryRow[]>('admin_categories?on_conflict=slug', { method: 'POST', mode: 'service', prefer: 'resolution=merge-duplicates,return=representation', body: [record] });
-  await recordAdminAuditLog({ request, actor: access.actor, action: 'category.upsert', entityType: 'admin_categories', entityId: slug, afterData: rows[0] });
+  await recordAdminAuditLog({ request, actor: auth, action: 'category.upsert', entityType: 'admin_categories', entityId: slug, afterData: rows[0] });
   return NextResponse.json({ ok: true, category: rows[0] });
 }
 
 export async function PATCH(request: Request) {
-  const access = await auth(request);
-  if (access.response) return access.response;
+  const auth = await requireAdminAccess(request);
+  if (auth.ok === false) return adminError(auth);
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   const slug = text(body?.slug);
   if (!slug) return NextResponse.json({ ok: false, error: 'Missing slug' }, { status: 400 });
@@ -122,6 +122,6 @@ export async function PATCH(request: Request) {
 
   const before = await supabaseRest<CategoryRow[]>(`admin_categories?slug=eq.${encodeURIComponent(slug)}&select=*`, { mode: 'service' }).then((rows) => rows[0]).catch(() => null);
   const rows = await supabaseRest<CategoryRow[]>(`admin_categories?slug=eq.${encodeURIComponent(slug)}`, { method: 'PATCH', mode: 'service', prefer: 'return=representation', body: patch });
-  await recordAdminAuditLog({ request, actor: access.actor, action: 'category.patch', entityType: 'admin_categories', entityId: slug, beforeData: before, afterData: rows[0] || patch });
+  await recordAdminAuditLog({ request, actor: auth, action: 'category.patch', entityType: 'admin_categories', entityId: slug, beforeData: before, afterData: rows[0] || patch });
   return NextResponse.json({ ok: true, category: rows[0] });
 }
