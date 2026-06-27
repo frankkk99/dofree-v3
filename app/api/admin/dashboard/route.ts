@@ -39,6 +39,20 @@ type RankedItem = {
   mediaId?: number;
 };
 
+type ReadyLinkRow = {
+  tmdb_id: number;
+  media_type: 'movie' | 'tv';
+};
+
+type MissingCatalogSample = {
+  tmdb_id: number;
+  media_type: 'movie' | 'tv';
+  title?: string | null;
+  poster_url?: string | null;
+  rating?: number | null;
+  release_year?: string | null;
+};
+
 function supabaseUrl() {
   return process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, '');
 }
@@ -69,6 +83,10 @@ function isoDaysAgo(days: number) {
 
 function dayKey(value: string | Date) {
   return (value instanceof Date ? value.toISOString() : value).slice(0, 10);
+}
+
+function mediaKey(mediaType: string, tmdbId: number) {
+  return `${mediaType}-${tmdbId}`;
 }
 
 async function currentUser(token: string) {
@@ -182,6 +200,28 @@ function dailyTraffic(events: AnalyticsEvent[]): DailyTraffic[] {
   }));
 }
 
+function missingCatalogSamples(candidates: MissingCatalogSample[], readyLinks: ReadyLinkRow[]) {
+  const ready = new Set(readyLinks.map((row) => mediaKey(row.media_type, row.tmdb_id)));
+  const seen = new Set<string>();
+
+  return candidates
+    .filter((row) => {
+      const key = mediaKey(row.media_type, row.tmdb_id);
+      if (ready.has(key) || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 12)
+    .map((row) => ({
+      tmdb_id: row.tmdb_id,
+      media_type: row.media_type,
+      title: row.title,
+      poster_url: row.poster_url,
+      rating: row.rating,
+      year: row.release_year,
+    }));
+}
+
 export async function GET(request: Request) {
   try {
     const token = bearer(request);
@@ -229,9 +269,11 @@ export async function GET(request: Request) {
     const searches7d = events7d.filter((event) => event.event_name === 'search').length;
     const missingLinks = Math.max(totalCatalog - readyLinks, 0);
 
-    const missingSamples = await getRows<Array<{ tmdb_id: number; media_type: string; title?: string | null; poster_url?: string | null; rating?: number | null; year?: string | null }>[number]>(
-      'tmdb_catalog?select=tmdb_id,media_type,title,poster_url,rating,year&order=rating.desc&limit=12'
-    );
+    const [readyLinkRows, missingCandidates] = await Promise.all([
+      getRows<ReadyLinkRow>('admin_movie_links?watch_url=not.is.null&select=tmdb_id,media_type&limit=10000'),
+      getRows<MissingCatalogSample>('tmdb_catalog?select=tmdb_id,media_type,title,poster_url,rating,release_year&order=rating.desc&limit=120'),
+    ]);
+    const missingSamples = missingCatalogSamples(missingCandidates, readyLinkRows);
 
     return NextResponse.json({
       ok: true,
@@ -277,7 +319,7 @@ export async function GET(request: Request) {
         { title: 'วิเคราะห์คำค้น 7 วัน', value: searches7d, tone: 'blue' },
         { title: 'ตรวจคอนเทนต์ที่คนกดดู', value: watchClicks7d + detailOpens7d, tone: 'purple' },
       ],
-      missingSamples: missingSamples || [],
+      missingSamples,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Cannot load dashboard';
