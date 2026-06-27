@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { MovieCard } from '@/components/movie-card';
 import { WatchOverviewClamp } from '@/components/watch-overview-clamp';
+import { episodeWatchHref, getPublishedSeriesEpisodes, groupSeriesEpisodes } from '@/lib/series-episodes';
 import { getDetailPayload, getWatchSourceUrl, type MediaType } from '@/lib/tmdb';
 import { createWatchSourceToken } from '@/lib/watch-source-token';
 
@@ -9,6 +10,7 @@ const allowedMediaTypes = new Set(['movie', 'tv']);
 
 type PageProps = {
   params: Promise<{ mediaType: string; id: string }>;
+  searchParams?: Promise<{ season?: string; episode?: string }>;
 };
 
 function parseMediaType(value: string): MediaType {
@@ -72,14 +74,21 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export default async function WatchPage({ params }: PageProps) {
+export default async function WatchPage({ params, searchParams }: PageProps) {
   const { mediaType, id } = await params;
+  const query = await searchParams;
   const detail = await getDetailPayload(parseMediaType(mediaType), id);
   const { item, trailerUrl, recommendations } = detail;
   const effectiveTrailerUrl = item.trailerUrl || trailerUrl;
-  const watchSourceUrl = await getWatchSourceUrl(item.mediaType, item.id);
+  const seriesEpisodes = item.mediaType === 'tv' ? await getPublishedSeriesEpisodes(item.id) : [];
+  const requestedSeason = Number(query?.season || 0);
+  const requestedEpisode = Number(query?.episode || 0);
+  const selectedEpisode = seriesEpisodes.find((episode) => episode.season_number === requestedSeason && episode.episode_number === requestedEpisode) || seriesEpisodes[0];
+  const watchSourceUrl = selectedEpisode?.watch_url || await getWatchSourceUrl(item.mediaType, item.id);
   const sourceUrl = protectedWatchUrl(watchSourceUrl, item.mediaType, item.id) || effectiveTrailerUrl;
   const embedUrl = toEmbedUrl(sourceUrl);
+  const seasons = groupSeriesEpisodes(seriesEpisodes);
+  const episodeSourceLabel = selectedEpisode ? `S${selectedEpisode.season_number} E${selectedEpisode.episode_number}` : undefined;
   const sourceLabel = watchSourceUrl ? 'พร้อมรับชม' : effectiveTrailerUrl ? 'ตัวอย่าง' : 'ยังไม่มีวิดีโอ';
 
   return (
@@ -125,7 +134,7 @@ export default async function WatchPage({ params }: PageProps) {
               </div>
 
               <div className="mt-5 rounded-[24px] border border-white/10 bg-white/[0.045] p-4 backdrop-blur-xl md:p-6">
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#e50914]/80">{sourceLabel}</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#e50914]/80">{episodeSourceLabel || sourceLabel}</p>
                 <h1 className="mt-2 text-3xl font-black leading-none tracking-[-0.06em] md:text-5xl">{item.title}</h1>
                 <div className="mt-4 flex flex-wrap gap-2 text-[11px] font-black text-white/66">
                   <span className="rounded-full bg-white/10 px-3 py-1.5">{item.mediaType === 'tv' ? 'Series' : 'Movie'}</span>
@@ -134,6 +143,39 @@ export default async function WatchPage({ params }: PageProps) {
                   {item.isWatchReady ? <span className="rounded-full bg-[#e50914] px-3 py-1.5 text-white">พร้อมรับชม</span> : null}
                 </div>
                 <WatchOverviewClamp text={item.overview} />
+                {seasons.length ? (
+                  <div className="mt-5 rounded-2xl border border-white/10 bg-black/24 p-4">
+                    <div className="flex flex-wrap items-end justify-between gap-2">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]/80">Episodes</p>
+                        <h2 className="mt-1 text-xl font-black tracking-[-0.04em]">เลือกตอนรับชม</h2>
+                      </div>
+                      <span className="rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-black text-white/58">{seriesEpisodes.length} ตอน</span>
+                    </div>
+
+                    <div className="mt-4 grid gap-4">
+                      {seasons.map((season) => (
+                        <div key={season.seasonNumber}>
+                          <p className="mb-2 text-xs font-black text-white/46">Season {season.seasonNumber}</p>
+                          <div className="flex flex-wrap gap-2">
+                            {season.episodes.map((episode) => {
+                              const active = selectedEpisode?.season_number === episode.season_number && selectedEpisode?.episode_number === episode.episode_number;
+                              return (
+                                <a
+                                  key={`${episode.season_number}-${episode.episode_number}`}
+                                  href={episodeWatchHref(item.mediaType, item.id, episode)}
+                                  className={`rounded-xl px-3 py-2 text-xs font-black transition ${active ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.08] text-white/68 hover:bg-white/[0.14] hover:text-white'}`}
+                                >
+                                  E{episode.episode_number}{episode.episode_title ? ` · ${episode.episode_title}` : ''}
+                                </a>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </div>
 

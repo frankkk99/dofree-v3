@@ -58,6 +58,30 @@ type Form = {
   notes: string;
 };
 
+type SeriesEpisode = {
+  id?: string;
+  tmdb_id: number;
+  season_number: number;
+  episode_number: number;
+  episode_title?: string | null;
+  watch_url?: string | null;
+  trailer_url?: string | null;
+  provider?: string | null;
+  notes?: string | null;
+  status?: Status;
+};
+
+type EpisodeForm = {
+  season_number: string;
+  episode_number: string;
+  episode_title: string;
+  watch_url: string;
+  trailer_url: string;
+  provider: string;
+  notes: string;
+  status: Status;
+};
+
 type FilterPreset = {
   label: string;
   q?: string;
@@ -172,6 +196,32 @@ function toForm(item: Item): Form {
   };
 }
 
+function emptyEpisodeForm(provider = 'bunny'): EpisodeForm {
+  return {
+    season_number: '1',
+    episode_number: '1',
+    episode_title: '',
+    watch_url: '',
+    trailer_url: '',
+    provider,
+    notes: '',
+    status: 'published',
+  };
+}
+
+function episodeToForm(episode: SeriesEpisode): EpisodeForm {
+  return {
+    season_number: String(episode.season_number || 1),
+    episode_number: String(episode.episode_number || 1),
+    episode_title: episode.episode_title || '',
+    watch_url: episode.watch_url || '',
+    trailer_url: episode.trailer_url || '',
+    provider: episode.provider || 'bunny',
+    notes: episode.notes || '',
+    status: episode.status || 'published',
+  };
+}
+
 function statusLabel(item: Item) {
   if (item.watch_url) return 'พร้อมดู';
   if (item.status === 'broken') return 'ลิงก์เสีย';
@@ -187,6 +237,13 @@ function Edit({
   onClose,
   onSave,
   saving,
+  episodes,
+  episodeForm,
+  setEpisodeForm,
+  onSaveEpisode,
+  episodeSaving,
+  episodeLoading,
+  onEditEpisode,
 }: {
   item: Item;
   form: Form;
@@ -194,6 +251,13 @@ function Edit({
   onClose: () => void;
   onSave: (event: FormEvent) => void;
   saving: boolean;
+  episodes: SeriesEpisode[];
+  episodeForm: EpisodeForm;
+  setEpisodeForm: (form: EpisodeForm) => void;
+  onSaveEpisode: () => void;
+  episodeSaving: boolean;
+  episodeLoading: boolean;
+  onEditEpisode: (episode: SeriesEpisode) => void;
 }) {
   return (
     <div className="fixed inset-0 z-50 overflow-auto bg-black/80 p-4 text-white backdrop-blur-xl">
@@ -236,6 +300,55 @@ function Edit({
           <input value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} placeholder="หมายเหตุ / server / source / key" className={cls} />
         </div>
 
+        {item.media_type === 'tv' ? (
+          <section className="mt-5 rounded-2xl border border-white/10 bg-white/[0.045] p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#e50914]">Series Episodes</p>
+                <h3 className="mt-1 text-xl font-black">จัดการซีซัน / ตอน</h3>
+                <p className="mt-1 text-xs font-bold text-white/38">เพิ่มลิงก์รับชมเป็นรายตอน แล้วหน้าเล่นจะมีตัวเลือกตอนให้อัตโนมัติ</p>
+              </div>
+              <span className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-black text-white/60">{episodeLoading ? 'Loading...' : `${episodes.length} episodes`}</span>
+            </div>
+
+            {episodes.length ? (
+              <div className="mt-3 flex max-h-24 flex-wrap gap-2 overflow-y-auto pr-1">
+                {episodes.map((episode) => (
+                  <button key={`${episode.season_number}-${episode.episode_number}`} type="button" onClick={() => onEditEpisode(episode)} className="rounded-full border border-white/10 bg-black/35 px-3 py-1.5 text-[11px] font-black text-white/68 hover:border-[#e50914]/60 hover:text-white">
+                    S{episode.season_number} E{episode.episode_number}{episode.episode_title ? ` · ${episode.episode_title}` : ''}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-3 rounded-xl bg-black/28 px-3 py-2 text-xs font-bold text-white/36">ยังไม่มีตอนในระบบ เริ่มจาก S1 E1 ได้เลย</p>
+            )}
+
+            <div className="mt-4 grid gap-3 md:grid-cols-[90px_90px_1fr]">
+              <input value={episodeForm.season_number} onChange={(event) => setEpisodeForm({ ...episodeForm, season_number: event.target.value })} placeholder="Season" inputMode="numeric" className={cls} />
+              <input value={episodeForm.episode_number} onChange={(event) => setEpisodeForm({ ...episodeForm, episode_number: event.target.value })} placeholder="Episode" inputMode="numeric" className={cls} />
+              <input value={episodeForm.episode_title} onChange={(event) => setEpisodeForm({ ...episodeForm, episode_title: event.target.value })} placeholder="ชื่อตอน เช่น ตอนที่ 1" className={cls} />
+            </div>
+
+            <div className="mt-3 grid gap-3 md:grid-cols-[1fr_1fr_150px]">
+              <input value={episodeForm.watch_url} onChange={(event) => setEpisodeForm({ ...episodeForm, watch_url: event.target.value, status: event.target.value.trim() ? 'published' : episodeForm.status })} placeholder="Episode Watch URL" className={cls} />
+              <input value={episodeForm.trailer_url} onChange={(event) => setEpisodeForm({ ...episodeForm, trailer_url: event.target.value })} placeholder="Episode Trailer URL" className={cls} />
+              <select value={episodeForm.status} onChange={(event) => setEpisodeForm({ ...episodeForm, status: event.target.value as Status })} className={cls}>
+                <option value="draft">draft</option>
+                <option value="review">review</option>
+                <option value="published">published</option>
+                <option value="broken">broken</option>
+                <option value="hidden">hidden</option>
+              </select>
+            </div>
+
+            <div className="mt-3 grid gap-3 md:grid-cols-[180px_1fr_auto]">
+              <input value={episodeForm.provider} onChange={(event) => setEpisodeForm({ ...episodeForm, provider: event.target.value })} placeholder="provider" className={cls} />
+              <input value={episodeForm.notes} onChange={(event) => setEpisodeForm({ ...episodeForm, notes: event.target.value })} placeholder="หมายเหตุของตอนนี้" className={cls} />
+              <button type="button" onClick={onSaveEpisode} disabled={episodeSaving} className="rounded-xl bg-[#e50914] px-4 py-2 text-sm font-black text-white disabled:opacity-50">{episodeSaving ? 'Saving...' : 'บันทึกตอน'}</button>
+            </div>
+          </section>
+        ) : null}
+
         <div className="mt-5 flex flex-wrap justify-end gap-2">
           <a href={form.watch_url || '#'} target="_blank" rel="noreferrer" className={`rounded-xl bg-white/10 px-4 py-2 text-sm ${form.watch_url ? '' : 'pointer-events-none opacity-40'}`}>เปิด Preview</a>
           <button type="button" onClick={() => setForm({ ...form, watch_url: '', status: 'draft' })} className="rounded-xl bg-white/10 px-4 py-2 text-sm">ล้างลิงก์</button>
@@ -273,9 +386,13 @@ export function AdminCatalogTable() {
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [episodeSaving, setEpisodeSaving] = useState(false);
+  const [episodeLoading, setEpisodeLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [active, setActive] = useState<Item | null>(null);
   const [form, setForm] = useState<Form | null>(null);
+  const [episodes, setEpisodes] = useState<SeriesEpisode[]>([]);
+  const [episodeForm, setEpisodeForm] = useState<EpisodeForm>(emptyEpisodeForm());
 
   function currentFilters(overrides: Partial<FilterPreset> = {}) {
     return {
@@ -397,6 +514,63 @@ export function AdminCatalogTable() {
     }
   }
 
+  async function loadEpisodes(item: Item) {
+    if (item.media_type !== 'tv') {
+      setEpisodes([]);
+      return;
+    }
+
+    setEpisodeLoading(true);
+    try {
+      const response = await fetch(`/api/admin/series-episodes?tmdbId=${item.tmdb_id}`, {
+        headers: adminSessionHeaders(),
+        cache: 'no-store',
+      });
+      const data = (await response.json()) as { ok?: boolean; episodes?: SeriesEpisode[]; error?: string };
+      if (!response.ok || !data.ok) throw new Error(data.error || 'Load episodes failed');
+      setEpisodes(data.episodes || []);
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : 'Load episodes failed');
+      setEpisodes([]);
+    } finally {
+      setEpisodeLoading(false);
+    }
+  }
+
+  async function saveEpisode() {
+    if (!active || active.media_type !== 'tv') return;
+
+    setEpisodeSaving(true);
+    setErr('');
+    try {
+      const response = await fetch('/api/admin/series-episodes', {
+        method: 'POST',
+        headers: adminSessionHeaders({ 'content-type': 'application/json' }),
+        body: JSON.stringify({
+          tmdb_id: active.tmdb_id,
+          season_number: Number(episodeForm.season_number),
+          episode_number: Number(episodeForm.episode_number),
+          episode_title: episodeForm.episode_title,
+          watch_url: episodeForm.watch_url,
+          trailer_url: episodeForm.trailer_url,
+          provider: episodeForm.provider,
+          notes: episodeForm.notes,
+          status: episodeForm.status,
+        }),
+      });
+      const data = (await response.json()) as { ok?: boolean; error?: string };
+      if (!response.ok || !data.ok) throw new Error(data.error || 'Save episode failed');
+      setMsg(`บันทึก S${episodeForm.season_number} E${episodeForm.episode_number} แล้ว`);
+      setEpisodeForm(emptyEpisodeForm(form?.provider || 'bunny'));
+      await loadEpisodes(active);
+      await load(0, false);
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : 'Save episode failed');
+    } finally {
+      setEpisodeSaving(false);
+    }
+  }
+
   async function exportCatalog(exportMode: 'filtered' | 'all') {
     setExporting(true);
     setErr('');
@@ -432,6 +606,12 @@ export function AdminCatalogTable() {
   function open(item: Item) {
     setActive(item);
     setForm(toForm(item));
+    setEpisodeForm(emptyEpisodeForm(item.provider || 'bunny'));
+    void loadEpisodes(item);
+  }
+
+  function editEpisode(episode: SeriesEpisode) {
+    setEpisodeForm(episodeToForm(episode));
   }
 
   function applyPreset(preset: FilterPreset) {
@@ -574,7 +754,23 @@ export function AdminCatalogTable() {
         </div>
       ) : null}
 
-      {active && form ? <Edit item={active} form={form} setForm={setForm} onClose={() => { setActive(null); setForm(null); }} onSave={save} saving={saving} /> : null}
+      {active && form ? (
+        <Edit
+          item={active}
+          form={form}
+          setForm={setForm}
+          onClose={() => { setActive(null); setForm(null); setEpisodes([]); }}
+          onSave={save}
+          saving={saving}
+          episodes={episodes}
+          episodeForm={episodeForm}
+          setEpisodeForm={setEpisodeForm}
+          onSaveEpisode={saveEpisode}
+          episodeSaving={episodeSaving}
+          episodeLoading={episodeLoading}
+          onEditEpisode={editEpisode}
+        />
+      ) : null}
     </section>
   );
 }
