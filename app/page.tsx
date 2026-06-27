@@ -9,23 +9,24 @@ import { ModalEpisodeTitleLabels } from '@/components/modal-episode-title-labels
 import { ModalRecommendationDefault } from '@/components/modal-recommendation-default';
 import { ReliableHeroCarousel } from '@/components/reliable-hero-carousel';
 import { WatchHistoryClickBridge } from '@/components/watch-history-click-bridge';
+import { applyAdminHomeConfig } from '@/lib/admin-home-config';
 import { getCatalogHomePayload } from '@/lib/catalog-home';
 
 export const revalidate = 300;
 
-const siteName = '\u0e14\u0e39\u0e14\u0e35\u0e14\u0e35';
+const siteName = 'ดูดีดี';
 const englishSiteName = 'DodeedeeV3';
 const siteUrl = 'https://www.xn--l3caa5kbu.online/';
 const websiteJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
   name: siteName,
-  alternateName: ['\u0e14\u0e39\u0e14\u0e35\u0e14\u0e35\u0e2d\u0e2d\u0e19\u0e44\u0e25\u0e19\u0e4c', englishSiteName, 'Dodeedee', 'DooDeeDee'],
+  alternateName: ['ดูดีดีออนไลน์', englishSiteName, 'Dodeedee', 'DooDeeDee'],
   url: siteUrl,
 };
 
 export default async function HomePage() {
-  const home = await getCatalogHomePayload();
+  const home = await applyAdminHomeConfig(await getCatalogHomePayload());
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
