@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { MovieCard } from '@/components/movie-card';
 import type { HomePayload, MovieItem } from '@/lib/tmdb';
 
@@ -98,6 +99,15 @@ const sortOptions = [
   { value: 'year-asc', label: 'ปีเก่า→ใหม่' },
 ];
 
+function SearchIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5 md:h-6 md:w-6" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.15">
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
+    </svg>
+  );
+}
+
 function fallbackCategories(home: HomePayload): SearchCategory[] {
   return home.sections.map((section, index) => ({
     slug: section.slug,
@@ -120,6 +130,7 @@ function FilterSelect({ value, options, onChange, label }: { value: string; opti
 }
 
 export function FloatingGlassSearch({ home }: { home: HomePayload }) {
+  const [headerHost, setHeaderHost] = useState<HTMLElement | null>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<FilterState>(defaultFilters);
@@ -142,6 +153,18 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
     ].filter(Boolean);
     return selected.length ? selected.join(' · ') : '';
   }, [activeTitle, filters]);
+
+  useEffect(() => {
+    function findHeaderHost() {
+      const menuHost = document.querySelector('[data-dofree-menu-host="true"]') as HTMLElement | null;
+      const parent = menuHost?.parentElement || null;
+      if (parent) setHeaderHost(parent);
+    }
+
+    findHeaderHost();
+    const timer = window.setInterval(findHeaderHost, 800);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -207,17 +230,21 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
     if (!searched) void runSearch(query, filters);
   }
 
+  const headerButton = headerHost ? createPortal(
+    <button
+      type="button"
+      aria-label="เปิดค้นหา"
+      onClick={openSearch}
+      className="order-[-2] grid h-10 w-10 place-items-center rounded-full bg-transparent text-white/90 transition hover:bg-white/10 hover:text-white md:h-12 md:w-12"
+    >
+      <SearchIcon />
+    </button>,
+    headerHost,
+  ) : null;
+
   return (
     <>
-      <button
-        type="button"
-        aria-label="เปิดค้นหา"
-        onClick={openSearch}
-        className="fixed bottom-5 right-4 z-[75] grid h-[58px] w-[58px] place-items-center rounded-[22px] bg-white/[0.085] text-white shadow-[0_22px_80px_rgba(0,0,0,0.72),inset_0_1px_0_rgba(255,255,255,0.18),inset_0_-18px_42px_rgba(255,255,255,0.035)] backdrop-blur-2xl transition hover:scale-105 md:bottom-7 md:right-7"
-      >
-        <span className="absolute inset-0 rounded-[22px] bg-[radial-gradient(circle_at_28%_18%,rgba(255,255,255,0.24),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.12),rgba(255,255,255,0.02))]" />
-        <span className="relative grid h-10 w-10 place-items-center rounded-[16px] bg-black/28 text-[20px] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]">⌕</span>
-      </button>
+      {headerButton}
 
       {open ? (
         <div className="fixed inset-0 z-[95] overflow-y-auto bg-black/50 px-2 py-3 text-white backdrop-blur-[5px] md:px-3 md:py-4">
