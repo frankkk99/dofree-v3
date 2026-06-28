@@ -1,3 +1,4 @@
+import { ActorProfileBridge } from '@/components/actor-profile-bridge';
 import { AutoHideHeader } from '@/components/auto-hide-header';
 import { FavoriteClickBridge } from '@/components/favorite-click-bridge';
 import { FloatingGlassSearch } from '@/components/floating-glass-search';
@@ -31,6 +32,7 @@ export default async function HomePage() {
       <HomeRealtimeWrapper home={home} />
       <AutoHideHeader />
       <FloatingGlassSearch home={home} />
+      <ActorProfileBridge />
       <ModalEpisodeTitleLabels />
       <ModalRecommendationDefault />
       <HomeCardLinkBridge home={home} />
