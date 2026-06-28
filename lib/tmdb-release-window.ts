@@ -86,11 +86,13 @@ async function tmdbPages(basePath: string, pages = 3) {
   return responses.flatMap((response) => response?.results || []);
 }
 
-function validMovie(movie: TmdbMovie, from: string) {
+function validMovie(movie: TmdbMovie, from: string, to: string) {
+  const releaseDate = movie.release_date || '';
   return Boolean(
     movie.id &&
-    movie.release_date &&
-    movie.release_date >= from &&
+    releaseDate &&
+    releaseDate >= from &&
+    releaseDate <= to &&
     !movie.adult &&
     (movie.poster_path || movie.backdrop_path) &&
     (movie.title || movie.original_title)
@@ -149,8 +151,8 @@ function sortReleaseWindow(items: ReleaseMovie[]) {
   return [...items].sort((a, b) => {
     const ad = a.releaseDate || '';
     const bd = b.releaseDate || '';
-    const au = ad > today;
-    const bu = bd > today;
+    const au = ad >= today;
+    const bu = bd >= today;
     if (au && bu) return ad.localeCompare(bd) || (b.popularity || 0) - (a.popularity || 0);
     if (au !== bu) return au ? -1 : 1;
     return bd.localeCompare(ad) || (b.popularity || 0) - (a.popularity || 0);
@@ -161,16 +163,32 @@ async function getFreshReleaseMovies() {
   const range = releaseWindow();
   const path = `/discover/movie?language=th-TH&region=TH&include_adult=false&sort_by=popularity.desc&primary_release_date.gte=${range.from}&primary_release_date.lte=${range.to}`;
   const rows = await tmdbPages(path, 5);
-  return sortReleaseWindow(unique(rows.filter((movie) => validMovie(movie, range.from)).map(toMovieItem)));
+  return sortReleaseWindow(unique(rows.filter((movie) => validMovie(movie, range.from, range.to)).map(toMovieItem)));
+}
+
+export async function getFreshComingSoonItems(limit = 18, offset = 0): Promise<MovieItem[]> {
+  const range = releaseWindow();
+  const movies = await getFreshReleaseMovies().catch(() => []);
+  const safeLimit = Math.max(1, Math.min(Number(limit) || 18, 24));
+  const safeOffset = Math.max(Number(offset) || 0, 0);
+  return movies
+    .filter((item) => {
+      const date = item.releaseDate || '';
+      return date >= range.today && date <= range.to;
+    })
+    .slice(safeOffset, safeOffset + safeLimit);
 }
 
 export async function decorateHomeWithFreshTmdbReleases(home: HomePayload): Promise<HomePayload> {
+  const range = releaseWindow();
   const movies = await getFreshReleaseMovies().catch(() => []);
   if (!movies.length) return home;
 
-  const today = isoDate(new Date());
   const heroItems = movies.filter((item) => item.backdropUrl || item.posterUrl).slice(0, 12);
-  const upcomingItems = movies.filter((item) => (item.releaseDate || '') > today).slice(0, 18);
+  const upcomingItems = movies.filter((item) => {
+    const date = item.releaseDate || '';
+    return date >= range.today && date <= range.to;
+  }).slice(0, 18);
   const comingSoonSection: MovieSection | null = upcomingItems.length
     ? {
       slug: 'coming-soon',
