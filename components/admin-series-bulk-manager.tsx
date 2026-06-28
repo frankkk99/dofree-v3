@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { adminSessionHeaders } from '@/lib/admin-session-browser';
+import { adminInputClassSm, adminSelectClassSm, adminTextareaClass } from '@/lib/admin-ui-classes';
 
 type Status = 'draft' | 'review' | 'published' | 'broken' | 'hidden';
 
@@ -19,7 +20,8 @@ type ParsedEpisode = {
 
 type ExistingEpisode = ParsedEpisode & { id?: string };
 
-const cls = 'rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-sm text-white outline-none focus:border-[#e50914]';
+const cls = adminInputClassSm;
+const selectCls = adminSelectClassSm;
 const statuses: Status[] = ['published', 'draft', 'review', 'broken', 'hidden'];
 
 function isUrl(value: string) {
@@ -209,13 +211,13 @@ export function AdminSeriesBulkManager() {
           <input value={tmdbId} onChange={(event) => setTmdbId(event.target.value)} placeholder="TMDB ID ซีรีส์" inputMode="numeric" className={cls} />
           <input value={season} onChange={(event) => setSeason(event.target.value)} placeholder="Season" inputMode="numeric" className={cls} />
           <input value={provider} onChange={(event) => setProvider(event.target.value)} placeholder="provider" className={cls} />
-          <select value={status} onChange={(event) => setStatus(event.target.value as Status)} className={cls}>{statuses.map((item) => <option key={item} value={item}>{item}</option>)}</select>
+          <select value={status} onChange={(event) => setStatus(event.target.value as Status)} className={selectCls}>{statuses.map((item) => <option key={item} value={item}>{item}</option>)}</select>
           <button type="button" onClick={loadExisting} disabled={loading} className="rounded-xl bg-white/[0.1] px-4 py-2 text-sm font-black text-white/78 disabled:opacity-50">{loading ? 'กำลังโหลด' : 'โหลดตอนเดิม'}</button>
         </div>
 
         <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_0.95fr]">
           <div>
-            <textarea value={bulkText} onChange={(event) => setBulkText(event.target.value)} rows={18} className="w-full rounded-2xl border border-white/10 bg-black/38 p-4 font-mono text-xs leading-6 text-white outline-none focus:border-[#e50914]" />
+            <textarea value={bulkText} onChange={(event) => setBulkText(event.target.value)} rows={18} className={`w-full ${adminTextareaClass}`} />
             <div className="mt-3 rounded-2xl border border-white/8 bg-black/30 p-4 text-xs font-semibold leading-6 text-white/50">
               <p className="font-black text-white/74">รูปแบบที่รองรับ</p>
               <p>1 | ตอนที่ 1 | watch_url</p>

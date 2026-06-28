@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { adminSessionHeaders } from '@/lib/admin-session-browser';
+import { adminInputClass, adminSelectClass } from '@/lib/admin-ui-classes';
 
 type Category = { slug: string; title_th: string; subtitle_th?: string | null; enabled: boolean; autoplay?: boolean; sort_order: number; updated_at?: string; card_count?: number };
 type Card = { tmdb_id: number; media_type: 'movie' | 'tv'; title: string; title_en?: string | null; poster_url?: string | null; rating?: number | string | null; release_year?: string | null; source_bucket?: string | null; sort_score?: number | string | null; is_active: boolean };
@@ -10,7 +11,8 @@ type Card = { tmdb_id: number; media_type: 'movie' | 'tv'; title: string; title_
 type CategoryPayload = { ok?: boolean; categories?: Category[]; category?: Category; error?: string };
 type CardPayload = { ok?: boolean; cards?: Card[]; card?: Card; error?: string };
 
-const input = 'rounded-xl border border-white/10 bg-white/[0.08] px-3 py-2 text-xs font-bold text-white outline-none placeholder:text-white/32 focus:border-[#e50914]';
+const input = adminInputClass;
+const selectInput = adminSelectClass;
 const ghostBtn = 'rounded-xl bg-white/[0.08] px-3 py-2 text-[10px] font-black text-white/70 hover:bg-white/[0.14] disabled:opacity-45';
 const redBtn = 'rounded-xl bg-[#e50914] px-3 py-2 text-[10px] font-black text-white shadow-glow disabled:opacity-45';
 
@@ -334,14 +336,14 @@ export function AdminControlCenter() {
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-lg font-black">การ์ดหนัง / ซีรีส์</h3><p className="text-[10px] font-black text-white/35">{cards.length} รายการ · เลือก {selectedCardCount}</p></div><div className="flex gap-1.5"><button className={ghostBtn} onClick={() => setSelectedCards(cards.map(cardKey))}>เลือกทั้งหมด</button><button className={ghostBtn} onClick={() => setSelectedCards([])}>ไม่เลือกทั้งหมด</button></div></div>
             <div className="mb-4 grid gap-2 md:grid-cols-[1fr_160px_130px_auto]">
               <input className={input} value={q} onChange={(event) => setQ(event.target.value)} placeholder="ค้นหาชื่อหนัง" />
-              <select className={input} value={bucket} onChange={(event) => { setBucket(event.target.value); void loadCards(event.target.value); }}><option value="all">ทุกหมวด</option>{categoryOptions.map((cat) => <option key={cat.slug} value={cat.slug}>{cat.title_th}</option>)}</select>
-              <select className={input} value={active} onChange={(event) => setActive(event.target.value)}><option value="all">ทุกสถานะ</option><option value="true">เปิดอยู่</option><option value="false">ปิดอยู่</option></select>
+              <select className={selectInput} value={bucket} onChange={(event) => { setBucket(event.target.value); void loadCards(event.target.value); }}><option value="all">ทุกหมวด</option>{categoryOptions.map((cat) => <option key={cat.slug} value={cat.slug}>{cat.title_th}</option>)}</select>
+              <select className={selectInput} value={active} onChange={(event) => setActive(event.target.value)}><option value="all">ทุกสถานะ</option><option value="true">เปิดอยู่</option><option value="false">ปิดอยู่</option></select>
               <button onClick={() => void loadCards()} disabled={loading} className={ghostBtn}>ค้นหา</button>
             </div>
             <div className="mb-4 flex flex-wrap gap-1.5">
               <button className={ghostBtn} disabled={!selectedCardCount || loading} onClick={() => void bulkPatchCards({ is_active: true })}>แสดงที่เลือก</button>
               <button className={ghostBtn} disabled={!selectedCardCount || loading} onClick={() => void bulkPatchCards({ is_active: false })}>ซ่อนที่เลือก</button>
-              <select className={input} value={bulkBucket} onChange={(event) => setBulkBucket(event.target.value)}><option value="">เลือกหมวดเพื่อย้าย</option>{categoryOptions.map((cat) => <option key={cat.slug} value={cat.slug}>{cat.title_th}</option>)}</select>
+              <select className={selectInput} value={bulkBucket} onChange={(event) => setBulkBucket(event.target.value)}><option value="">เลือกหมวดเพื่อย้าย</option>{categoryOptions.map((cat) => <option key={cat.slug} value={cat.slug}>{cat.title_th}</option>)}</select>
               <button className={redBtn} disabled={!selectedCardCount || !bulkBucket || loading} onClick={() => void bulkPatchCards({ source_bucket: bulkBucket })}>ย้ายที่เลือก</button>
             </div>
             <div className="grid max-h-[680px] gap-3 overflow-y-auto pr-1">
@@ -354,7 +356,7 @@ export function AdminControlCenter() {
                     <div className="h-[82px] w-14 overflow-hidden rounded-lg bg-white/[0.06]">{card.poster_url ? <img src={card.poster_url} alt="" className="h-full w-full object-cover" loading="lazy" /> : null}</div>
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-start justify-between gap-2"><div className="min-w-0"><p className="truncate text-sm font-black text-white/90">{card.title_en || card.title}</p><p className="mt-1 text-[10px] font-bold text-white/38">{card.media_type} · TMDB {card.tmdb_id} · ★ {Number(card.rating || 0).toFixed(1)} · {card.release_year || '-'}</p></div><button onClick={() => void patchCard(card, { is_active: !card.is_active })} className={`rounded-xl px-3 py-2 text-[10px] font-black ${card.is_active ? 'bg-emerald-400/15 text-emerald-100' : 'bg-white/[0.08] text-white/45'}`}>{card.is_active ? 'แสดง' : 'ซ่อน'}</button></div>
-                      <div className="mt-3 grid gap-2 md:grid-cols-[1fr_130px]"><select className={input} value={card.source_bucket || ''} onChange={(event) => void patchCard(card, { source_bucket: event.target.value })}><option value="">ไม่ระบุหมวด</option>{categoryOptions.map((cat) => <option key={cat.slug} value={cat.slug}>{cat.title_th}</option>)}</select><input className={input} type="number" value={String(card.sort_score || 0)} onChange={(event) => setCards((current) => current.map((item) => item.tmdb_id === card.tmdb_id && item.media_type === card.media_type ? { ...item, sort_score: Number(event.target.value) } : item))} onBlur={(event) => void patchCard(card, { sort_score: Number(event.target.value) })} placeholder="ลำดับ" /></div>
+                      <div className="mt-3 grid gap-2 md:grid-cols-[1fr_130px]"><select className={selectInput} value={card.source_bucket || ''} onChange={(event) => void patchCard(card, { source_bucket: event.target.value })}><option value="">ไม่ระบุหมวด</option>{categoryOptions.map((cat) => <option key={cat.slug} value={cat.slug}>{cat.title_th}</option>)}</select><input className={input} type="number" value={String(card.sort_score || 0)} onChange={(event) => setCards((current) => current.map((item) => item.tmdb_id === card.tmdb_id && item.media_type === card.media_type ? { ...item, sort_score: Number(event.target.value) } : item))} onBlur={(event) => void patchCard(card, { sort_score: Number(event.target.value) })} placeholder="ลำดับ" /></div>
                     </div>
                   </article>
                 );

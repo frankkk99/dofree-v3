@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { adminSessionHeaders } from '@/lib/admin-session-browser';
+import { adminInputClass, adminSelectClass } from '@/lib/admin-ui-classes';
 
 type Status = 'draft' | 'review' | 'published' | 'broken' | 'hidden';
 
@@ -31,7 +32,8 @@ type EpisodeCard = {
 };
 
 const statuses: Status[] = ['published', 'draft', 'review', 'broken', 'hidden'];
-const inputClass = 'w-full rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-xs font-bold text-white outline-none placeholder:text-white/32 focus:border-[#e50914]';
+const inputClass = `w-full ${adminInputClass}`;
+const selectClass = `w-full ${adminSelectClass}`;
 
 function makeKey() {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -221,7 +223,7 @@ function EpisodeCardsPanel({ target, tmdbId }: { target: HTMLElement; tmdbId: st
             <input value={card.trailer_url} onChange={(event) => updateCard(card.key, { trailer_url: event.target.value })} placeholder="Episode Trailer URL" className={`${inputClass} mt-2`} />
             <div className="mt-2 grid grid-cols-[1fr_120px] gap-2">
               <input value={card.provider} onChange={(event) => updateCard(card.key, { provider: event.target.value })} placeholder="provider" className={inputClass} />
-              <select value={card.status} onChange={(event) => updateCard(card.key, { status: event.target.value as Status })} className={inputClass}>{statuses.map((value) => <option key={value} value={value}>{value}</option>)}</select>
+              <select value={card.status} onChange={(event) => updateCard(card.key, { status: event.target.value as Status })} className={selectClass}>{statuses.map((value) => <option key={value} value={value}>{value}</option>)}</select>
             </div>
             <input value={card.notes} onChange={(event) => updateCard(card.key, { notes: event.target.value })} placeholder="หมายเหตุของตอนนี้" className={`${inputClass} mt-2`} />
           </article>
