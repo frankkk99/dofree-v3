@@ -9,6 +9,7 @@ import { canUseNextImage } from '@/lib/image-optimizer';
 
 const RAIL_LOAD_STEP = 6;
 const RAIL_LOAD_THRESHOLD = 360;
+const thaiMonthShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
 type SectionItemsResponse = {
   ok?: boolean;
@@ -49,6 +50,19 @@ function shuffleSections(sections: MovieSection[], seed: number) {
 
 function shortTitle(item: MovieItem) {
   return item.title.length > 14 ? item.title.slice(0, 13) : item.title;
+}
+
+function heroEnglishReleaseLine(item: MovieItem) {
+  const englishTitle = item.titleEn || item.title;
+  const releaseDate = (item as MovieItem & { releaseDate?: string }).releaseDate || '';
+  if (!releaseDate) return englishTitle;
+
+  const date = new Date(`${releaseDate}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return englishTitle;
+
+  const month = thaiMonthShort[date.getUTCMonth()] || '';
+  const year = date.getUTCFullYear();
+  return `${englishTitle} · เข้าฉาย ${month} ${year}`;
 }
 
 function useLazyMount(initiallyMounted = false, rootMargin = '420px') {
@@ -233,7 +247,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
           <div className="max-w-[680px] md:ml-[6vw] xl:ml-[10vw]">
             <p className="mb-3 text-[13px] font-black text-[#e50914] md:mb-5 md:text-[22px]">{hero.label === 'เร็ว ๆ นี้' ? 'ภาพยนตร์กำลังจะเข้าฉาย' : hero.status === 'published' ? 'ภาพยนตร์พร้อมรับชม' : 'ภาพยนตร์เริ่มฉายล่าสุด'}</p>
             <h1 className="hero-title max-w-[92vw] text-[42px] font-black leading-[0.88] tracking-[-0.085em] text-white md:whitespace-nowrap md:text-[92px] lg:text-[112px] xl:text-[120px]">{shortTitle(hero)}</h1>
-            <h2 className="mt-3 max-w-[92vw] text-[16px] font-black tracking-[-0.04em] text-white md:mt-6 md:text-[28px]">หนังใหม่และกำลังจะเข้า อัปเดตสดจาก TMDB</h2>
+            <h2 className="mt-3 max-w-[92vw] text-[16px] font-black tracking-[-0.04em] text-white md:mt-6 md:text-[28px]">{heroEnglishReleaseLine(hero)}</h2>
             <p className="mt-2 line-clamp-3 max-w-[92vw] text-[12px] leading-5 text-white/56 md:mt-3 md:max-w-[620px] md:text-[18px] md:leading-7">{hero.overview}</p>
             <div className="mt-5 flex gap-2.5 md:mt-8 md:gap-5"><button type="button" onClick={() => openHeroWatch(hero)} className="inline-flex h-[42px] items-center gap-2 rounded-lg bg-[#e50914] px-5 text-[13px] font-black text-white shadow-glow md:h-[55px] md:px-9 md:text-[16px]">▶ รับชม</button><button type="button" onClick={() => openMovie(hero)} className="inline-flex h-[42px] items-center gap-2 rounded-lg border border-white/10 bg-white/[0.12] px-5 text-[13px] font-black text-white/86 md:h-[55px] md:px-8 md:text-[16px]">ⓘ รายละเอียด</button></div>
           </div>
