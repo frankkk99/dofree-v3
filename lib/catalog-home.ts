@@ -43,8 +43,8 @@ type SectionDef = {
 
 type EpisodeSummaryLookup = Awaited<ReturnType<typeof getSeriesEpisodeSummaries>>;
 
-export const HOME_SECTION_LIMIT = 6;
-export const HOME_SECTION_LOAD_LIMIT = 6;
+export const HOME_SECTION_LIMIT = 18;
+export const HOME_SECTION_LOAD_LIMIT = 9;
 const HOME_HERO_LIMIT = 6;
 const PUBLIC_CATALOG_REVALIDATE = 300;
 const minRating = 6.5;
