@@ -92,40 +92,40 @@ export default async function WatchPage({ params, searchParams }: PageProps) {
   const sourceLabel = watchSourceUrl ? 'พร้อมรับชม' : effectiveTrailerUrl ? 'ตัวอย่าง' : 'ยังไม่มีวิดีโอ';
 
   return (
-    <main className="min-h-screen bg-[#030303] text-white">
-      <section className="relative overflow-hidden border-b border-white/10 px-4 pb-8 pt-4 md:px-6 md:pb-12">
+    <main className="min-h-screen w-full overflow-x-hidden bg-[#030303] text-white">
+      <section className="relative w-full overflow-hidden border-b border-white/10 px-3 pb-8 pt-4 md:px-6 md:pb-12">
         <div className="absolute inset-0 bg-cover bg-center opacity-30" style={{ backgroundImage: `url(${item.backdropUrl})` }} />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(3,3,3,0.64),#030303_82%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_12%,rgba(229,9,20,0.20),transparent_26rem)]" />
 
-        <div className="relative z-10 mx-auto max-w-[1600px]">
-          <div className="flex min-h-[58px] items-center justify-between gap-3 md:min-h-[76px]">
-            <a href={`/${item.mediaType}/${item.id}`} className="inline-flex rounded-full border border-white/10 bg-black/35 px-4 py-2 text-xs font-black text-red-100/75 backdrop-blur-xl transition hover:border-[#e50914]/60 hover:text-white">
+        <div className="relative z-10 mx-auto w-full max-w-[1280px] overflow-hidden">
+          <div className="flex min-h-[58px] w-full min-w-0 items-center justify-between gap-3 md:min-h-[76px]">
+            <a href={`/${item.mediaType}/${item.id}`} className="inline-flex max-w-[62vw] shrink-0 truncate rounded-full border border-white/10 bg-black/35 px-4 py-2 text-xs font-black text-red-100/75 backdrop-blur-xl transition hover:border-[#e50914]/60 hover:text-white">
               กลับหน้ารายละเอียด
             </a>
-            <a href="/" className="text-[24px] font-black tracking-[-0.08em] text-[#e50914] md:text-[34px]">
+            <a href="/" className="shrink-0 text-[24px] font-black tracking-[-0.08em] text-[#e50914] md:text-[34px]">
               {siteName}
             </a>
           </div>
 
-          <div className="mt-4 grid gap-5">
-            <div>
-              <div className="overflow-hidden rounded-[22px] border border-white/10 bg-black shadow-[0_35px_120px_rgba(0,0,0,0.86)] md:rounded-[30px]">
-                <div className="relative aspect-video bg-black">
+          <div className="mt-4 grid w-full min-w-0 gap-5 overflow-hidden">
+            <div className="w-full min-w-0 overflow-hidden">
+              <div className="mx-auto w-full max-w-[1180px] overflow-hidden rounded-[18px] border border-white/10 bg-black shadow-[0_35px_120px_rgba(0,0,0,0.86)] md:rounded-[30px]">
+                <div className="relative h-[56.25vw] min-h-[205px] max-h-[calc(100svh-150px)] w-full bg-black md:aspect-video md:h-auto md:min-h-0 md:max-h-none">
                   {embedUrl ? (
                     <iframe
                       src={embedUrl}
                       title={`รับชม ${item.title}`}
-                      className="absolute inset-0 h-full w-full"
+                      className="absolute inset-0 h-full w-full border-0"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                       referrerPolicy="no-referrer"
                       allowFullScreen
                     />
                   ) : (
                     <div className="absolute inset-0 grid place-items-center px-6 text-center">
-                      <div>
+                      <div className="max-w-md">
                         <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#e50914]/80">No playable source</p>
-                        <h1 className="mt-3 text-3xl font-black tracking-[-0.05em] md:text-5xl">ยังไม่มีลิงก์รับชม</h1>
+                        <h1 className="mt-3 text-2xl font-black tracking-[-0.05em] md:text-5xl">ยังไม่มีลิงก์รับชม</h1>
                         <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-white/45">เรื่องนี้มีหน้ารายละเอียดแล้ว แต่ยังไม่มี watch URL หรือ trailer ที่เปิดใน player ได้</p>
                       </div>
                     </div>
@@ -133,10 +133,10 @@ export default async function WatchPage({ params, searchParams }: PageProps) {
                 </div>
               </div>
 
-              <div className="mt-5 rounded-[24px] border border-white/10 bg-white/[0.045] p-4 backdrop-blur-xl md:p-6">
+              <div className="mt-5 w-full min-w-0 overflow-hidden rounded-[22px] border border-white/10 bg-white/[0.045] p-4 backdrop-blur-xl md:rounded-[24px] md:p-6">
                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#e50914]/80">{episodeSourceLabel || sourceLabel}</p>
-                <h1 className="mt-2 text-3xl font-black leading-none tracking-[-0.06em] md:text-5xl">{item.title}</h1>
-                <div className="mt-4 flex flex-wrap gap-2 text-[11px] font-black text-white/66">
+                <h1 className="mt-2 max-w-full break-words text-3xl font-black leading-[0.96] tracking-[-0.06em] md:text-5xl">{item.title}</h1>
+                <div className="mt-4 flex max-w-full flex-wrap gap-2 text-[11px] font-black text-white/66">
                   <span className="rounded-full bg-white/10 px-3 py-1.5">{item.mediaType === 'tv' ? 'Series' : 'Movie'}</span>
                   <span className="rounded-full bg-white/10 px-3 py-1.5">{item.year}</span>
                   <span className="rounded-full bg-white/10 px-3 py-1.5">★ {item.rating.toFixed(1)}</span>
@@ -144,7 +144,7 @@ export default async function WatchPage({ params, searchParams }: PageProps) {
                 </div>
                 <WatchOverviewClamp text={item.overview} />
                 {seasons.length ? (
-                  <div className="mt-5 rounded-2xl border border-white/10 bg-black/24 p-4">
+                  <div className="mt-5 max-w-full overflow-hidden rounded-2xl border border-white/10 bg-black/24 p-4">
                     <div className="flex flex-wrap items-end justify-between gap-2">
                       <div>
                         <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]/80">Episodes</p>
@@ -155,18 +155,18 @@ export default async function WatchPage({ params, searchParams }: PageProps) {
 
                     <div className="mt-4 grid gap-4">
                       {seasons.map((season) => (
-                        <div key={season.seasonNumber}>
+                        <div key={season.seasonNumber} className="min-w-0">
                           <p className="mb-2 text-xs font-black text-white/46">Season {season.seasonNumber}</p>
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex max-w-full flex-wrap gap-2">
                             {season.episodes.map((episode) => {
                               const active = selectedEpisode?.season_number === episode.season_number && selectedEpisode?.episode_number === episode.episode_number;
                               return (
                                 <a
                                   key={`${episode.season_number}-${episode.episode_number}`}
                                   href={episodeWatchHref(item.mediaType, item.id, episode)}
-                                  className={`rounded-xl px-3 py-2 text-xs font-black transition ${active ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.08] text-white/68 hover:bg-white/[0.14] hover:text-white'}`}
+                                  className={`max-w-full rounded-xl px-3 py-2 text-xs font-black transition ${active ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.08] text-white/68 hover:bg-white/[0.14] hover:text-white'}`}
                                 >
-                                  E{episode.episode_number}{episode.episode_title ? ` · ${episode.episode_title}` : ''}
+                                  <span className="line-clamp-1">E{episode.episode_number}{episode.episode_title ? ` · ${episode.episode_title}` : ''}</span>
                                 </a>
                               );
                             })}
@@ -179,11 +179,11 @@ export default async function WatchPage({ params, searchParams }: PageProps) {
               </div>
             </div>
 
-            <aside className="rounded-[24px] border border-white/10 bg-white/[0.04] p-3 backdrop-blur-xl md:p-4">
+            <aside className="w-full min-w-0 overflow-hidden rounded-[22px] border border-white/10 bg-white/[0.04] p-3 backdrop-blur-xl md:rounded-[24px] md:p-4">
               <p className="px-1 text-[10px] font-black uppercase tracking-[0.3em] text-[#e50914]/80">Up Next</p>
               <h2 className="px-1 pt-1 text-2xl font-black tracking-[-0.05em]">แนะนำต่อ</h2>
 
-              <div className="mt-4">
+              <div className="mt-4 max-w-full overflow-hidden">
                 <DetailRecommendationCarousel current={item} items={recommendations.slice(0, 18)} />
               </div>
             </aside>
