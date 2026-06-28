@@ -1,7 +1,9 @@
 'use client';
 
+import Image from 'next/image';
 import type { MovieItem } from '@/lib/tmdb';
 import { releaseMonthYear } from '@/lib/release-date';
+import { canUseNextImage } from '@/lib/image-optimizer';
 
 type MovieCardProps = {
   item: MovieItem;
@@ -30,17 +32,32 @@ export function MovieCard({ item, priorityBadge, onSelect, compact = false, grid
       ? 'h-[158px] w-[104px] sm:h-[206px] sm:w-[132px] md:h-[260px] md:w-[170px]'
       : 'h-[176px] w-[116px] sm:h-[220px] sm:w-[140px] md:h-[280px] md:w-[180px] xl:h-[300px] xl:w-[196px]';
   const cardClass = `${sizeClass} group relative ${grid ? '' : 'shrink-0'} overflow-hidden rounded-[8px] border border-white/[0.07] bg-[#111] text-left shadow-[0_16px_44px_rgba(0,0,0,0.62)] transition duration-300 hover:-translate-y-1 hover:border-[#e50914]/80 hover:shadow-glow md:rounded-[10px] md:shadow-[0_24px_70px_rgba(0,0,0,0.65)]`;
+  const imageUrl = item.posterUrl || item.backdropUrl;
+  const optimizeImage = canUseNextImage(imageUrl);
   const content = (
     <>
-      <img
-        src={item.posterUrl}
-        alt={item.title}
-        loading={priority ? 'eager' : 'lazy'}
-        decoding="async"
-        fetchPriority={priority ? 'high' : 'low'}
-        sizes={grid ? '(max-width: 640px) 25vw, (max-width: 1024px) 16vw, 12vw' : compact ? '(max-width: 640px) 104px, 170px' : '(max-width: 640px) 116px, 196px'}
-        className="absolute inset-0 h-full w-full object-cover object-center transition duration-700 group-hover:scale-110"
-      />
+      {imageUrl && optimizeImage ? (
+        <Image
+          src={imageUrl}
+          alt={item.title}
+          fill
+          priority={priority}
+          sizes={grid ? '(max-width: 640px) 25vw, (max-width: 1024px) 16vw, 12vw' : compact ? '(max-width: 640px) 104px, 170px' : '(max-width: 640px) 116px, 196px'}
+          className="object-cover object-center transition duration-700 group-hover:scale-110"
+        />
+      ) : imageUrl ? (
+        <img
+          src={imageUrl}
+          alt={item.title}
+          loading={priority ? 'eager' : 'lazy'}
+          decoding="async"
+          fetchPriority={priority ? 'high' : 'low'}
+          sizes={grid ? '(max-width: 640px) 25vw, (max-width: 1024px) 16vw, 12vw' : compact ? '(max-width: 640px) 104px, 170px' : '(max-width: 640px) 116px, 196px'}
+          className="absolute inset-0 h-full w-full object-cover object-center transition duration-700 group-hover:scale-110"
+        />
+      ) : (
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_24%,rgba(229,9,20,0.28),#111_62%)]" />
+      )}
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.05)_0%,rgba(0,0,0,0.0)_42%,rgba(0,0,0,0.9)_100%)]" />
 
       <div className="absolute left-1.5 top-1.5 flex flex-wrap gap-1 pr-1 md:left-3 md:top-3 md:gap-1.5 md:pr-2">

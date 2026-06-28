@@ -6,6 +6,7 @@ type SupabaseRestOptions = {
   body?: unknown;
   prefer?: string;
   cache?: RequestCache;
+  next?: { revalidate?: number; tags?: string[] };
 };
 
 function cleanBaseUrl(value?: string) {
@@ -54,7 +55,8 @@ export async function supabaseRest<T>(path: string, options: SupabaseRestOptions
       ...(options.prefer ? { Prefer: options.prefer } : {}),
     },
     body: options.body ? JSON.stringify(options.body) : undefined,
-    cache: options.cache || 'no-store',
+    cache: options.next ? undefined : options.cache || 'no-store',
+    next: options.next,
   });
 
   if (!response.ok) {

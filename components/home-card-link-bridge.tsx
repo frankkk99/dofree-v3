@@ -51,7 +51,7 @@ export function HomeCardLinkBridge({ home }: { home: HomePayload }) {
 
     async function loadRecent() {
       try {
-        const response = await fetch('/api/catalog/recent', { cache: 'no-store' });
+        const response = await fetch('/api/catalog/recent');
         const payload = (await response.json()) as { ok?: boolean; items?: MovieItem[] };
         if (active && payload.ok && payload.items?.length) setLiveItems(payload.items);
       } catch {

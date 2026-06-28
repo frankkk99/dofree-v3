@@ -42,9 +42,10 @@ type SectionDef = {
 
 type EpisodeSummaryLookup = Awaited<ReturnType<typeof getSeriesEpisodeSummaries>>;
 
-export const HOME_SECTION_LIMIT = 9;
-export const HOME_SECTION_LOAD_LIMIT = 9;
-const HOME_HERO_LIMIT = 10;
+export const HOME_SECTION_LIMIT = 6;
+export const HOME_SECTION_LOAD_LIMIT = 6;
+const HOME_HERO_LIMIT = 6;
+const PUBLIC_CATALOG_REVALIDATE = 300;
 const minRating = 6.5;
 const fallbackImage = 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1400&q=80';
 
@@ -148,7 +149,7 @@ async function fetchWatchLinks(rows?: Pick<CatalogRow, 'tmdb_id'>[]) {
     const idFilter = ids.length ? `&tmdb_id=in.(${ids.join(',')})` : '';
     const linkRows = await supabaseRest<WatchLinkRecord[]>(
       `admin_movie_links?is_active=eq.true&watch_url=not.is.null${idFilter}&select=tmdb_id,media_type,title,title_th,watch_url,trailer_url`,
-      { mode: 'service', cache: 'no-store' }
+      { mode: 'service', next: { revalidate: PUBLIC_CATALOG_REVALIDATE } }
     );
     for (const row of linkRows || []) {
       const watchUrl = normalizeDrivePreviewUrl(row.watch_url);
@@ -257,7 +258,7 @@ function sortRecentHeroItems(items: MovieItem[]) {
 async function rowsForBucket(slug: string, limit: number, offset = 0) {
   return supabaseRest<CatalogRow[]>(
     `tmdb_catalog?select=tmdb_id,media_type,title,title_en,overview,poster_url,backdrop_url,rating,vote_count,popularity,release_year,release_date,genres,language,runtime,source_bucket,sort_score&is_active=eq.true&source_bucket=eq.${encodeURIComponent(slug)}&order=sort_score.desc&limit=${limit}&offset=${offset}`,
-    { mode: 'service', cache: 'no-store' }
+    { mode: 'service', next: { revalidate: PUBLIC_CATALOG_REVALIDATE } }
   ).catch(() => []);
 }
 
@@ -265,7 +266,7 @@ async function rowsForRecentHero(limit = HOME_HERO_LIMIT) {
   const window = recentWindow();
   return supabaseRest<CatalogRow[]>(
     `tmdb_catalog?select=tmdb_id,media_type,title,title_en,overview,poster_url,backdrop_url,rating,vote_count,popularity,release_year,release_date,genres,language,runtime,source_bucket,sort_score&is_active=eq.true&release_date=gte.${window.from}&release_date=lte.${window.to}&order=release_date.asc&limit=${limit}`,
-    { mode: 'service', cache: 'no-store' }
+    { mode: 'service', next: { revalidate: PUBLIC_CATALOG_REVALIDATE } }
   ).catch(() => []);
 }
 
@@ -273,14 +274,14 @@ async function rowsForIds(ids: number[]) {
   if (!ids.length) return [];
   return supabaseRest<CatalogRow[]>(
     `tmdb_catalog?select=tmdb_id,media_type,title,title_en,overview,poster_url,backdrop_url,rating,vote_count,popularity,release_year,release_date,genres,language,runtime,source_bucket,sort_score&is_active=eq.true&tmdb_id=in.(${ids.join(',')})&limit=${ids.length}`,
-    { mode: 'service', cache: 'no-store' },
+    { mode: 'service', next: { revalidate: PUBLIC_CATALOG_REVALIDATE } },
   ).catch(() => []);
 }
 
 async function rowsForWatchReady(limit: number, offset = 0) {
   const links = await supabaseRest<WatchLinkRecord[]>(
     `admin_movie_links?is_active=eq.true&watch_url=not.is.null&select=tmdb_id,media_type,title,title_th,watch_url,trailer_url&order=updated_at.desc.nullslast&limit=${limit}&offset=${offset}`,
-    { mode: 'service', cache: 'no-store' },
+    { mode: 'service', next: { revalidate: PUBLIC_CATALOG_REVALIDATE } },
   ).catch(() => []);
   const ids = rowIds(links);
   const rows = await rowsForIds(ids);
@@ -331,7 +332,7 @@ export async function searchCatalogItems(query: string, category?: string | null
     : '';
   const rows = await supabaseRest<CatalogRow[]>(
     `tmdb_catalog?select=tmdb_id,media_type,title,title_en,overview,poster_url,backdrop_url,rating,vote_count,popularity,release_year,release_date,genres,language,runtime,source_bucket,sort_score&is_active=eq.true${termFilter}&order=sort_score.desc.nullslast,rating.desc&limit=${safeLimit * 3}`,
-    { mode: 'service', cache: 'no-store' },
+    { mode: 'service', next: { revalidate: 120 } },
   ).catch(() => []);
   const items = await hydrateRows(rows, 0);
   return items

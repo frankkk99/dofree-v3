@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getCatalogSectionItems, HOME_SECTION_LOAD_LIMIT } from '@/lib/catalog-home';
 
 export const dynamic = 'force-dynamic';
+const CACHE_HEADERS = { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' };
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -17,5 +18,5 @@ export async function GET(request: Request) {
     offset,
     items,
     hasMore: items.length >= limit,
-  });
+  }, { headers: CACHE_HEADERS });
 }

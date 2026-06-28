@@ -20,7 +20,7 @@ export async function getAdminCategoryConfig() {
   try {
     const rows = await supabaseRest<AdminCategoryRow[]>(
       'admin_categories?select=slug,title_th,subtitle_th,enabled,sort_order&order=sort_order.asc',
-      { mode: 'service', cache: 'no-store' }
+      { mode: 'service', next: { revalidate: 300 } }
     );
     return rows || [];
   } catch {

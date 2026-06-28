@@ -28,6 +28,9 @@ type LinkRow = {
 };
 
 export const dynamic = 'force-dynamic';
+const CACHE_HEADERS = { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' };
+const ERROR_HEADERS = { 'Cache-Control': 'no-store, max-age=0' };
+const PUBLIC_RECENT_REVALIDATE = 300;
 
 function isoDate(date: Date) {
   return date.toISOString().slice(0, 10);
@@ -39,6 +42,10 @@ function key(mediaType: MediaType, id: number) {
 
 function publicWatchUrl(mediaType: MediaType, id: number) {
   return `/watch/${mediaType}/${id}`;
+}
+
+function rowIds(rows: Pick<CatalogRow, 'tmdb_id'>[]) {
+  return [...new Set(rows.map((row) => Number(row.tmdb_id)).filter((id) => Number.isInteger(id) && id > 0))];
 }
 
 function normalizeDrivePreviewUrl(value?: string | null) {
@@ -97,16 +104,16 @@ export async function GET() {
   const today = isoDate(now);
 
   try {
-    const [rows, links] = await Promise.all([
-      supabaseRest<CatalogRow[]>(
-        `tmdb_catalog?select=tmdb_id,media_type,title,title_en,overview,poster_url,backdrop_url,rating,release_year,release_date,genres,language,runtime&is_active=eq.true&release_date=gte.${isoDate(start)}&release_date=lte.${isoDate(end)}&order=release_date.asc&limit=320`,
-        { mode: 'service', cache: 'no-store' }
-      ),
-      supabaseRest<LinkRow[]>(
-        'admin_movie_links?is_active=eq.true&select=tmdb_id,media_type,title,title_th,watch_url,trailer_url&limit=3000',
-        { mode: 'service', cache: 'no-store' }
-      ).catch(() => []),
-    ]);
+    const rows = await supabaseRest<CatalogRow[]>(
+      `tmdb_catalog?select=tmdb_id,media_type,title,title_en,overview,poster_url,backdrop_url,rating,release_year,release_date,genres,language,runtime&is_active=eq.true&release_date=gte.${isoDate(start)}&release_date=lte.${isoDate(end)}&order=release_date.asc&limit=160`,
+      { mode: 'service', next: { revalidate: PUBLIC_RECENT_REVALIDATE } }
+    );
+    const ids = rowIds(rows || []);
+    const idFilter = ids.length ? `&tmdb_id=in.(${ids.join(',')})` : '';
+    const links = await supabaseRest<LinkRow[]>(
+      `admin_movie_links?is_active=eq.true${idFilter}&select=tmdb_id,media_type,title,title_th,watch_url,trailer_url&limit=${Math.max(ids.length, 1)}`,
+      { mode: 'service', next: { revalidate: PUBLIC_RECENT_REVALIDATE } }
+    ).catch(() => []);
 
     const linkMap = new Map((links || []).map((link) => [key(link.media_type, link.tmdb_id), link]));
     const items = (rows || [])
@@ -121,10 +128,10 @@ export async function GET() {
         return bd.localeCompare(ad);
       })
       .map((row) => rowToItem(row, linkMap.get(key(row.media_type, row.tmdb_id)), today))
-      .slice(0, 80);
+      .slice(0, 36);
 
-    return NextResponse.json({ ok: true, items, window: { from: isoDate(start), to: isoDate(end), today } });
+    return NextResponse.json({ ok: true, items, window: { from: isoDate(start), to: isoDate(end), today } }, { headers: CACHE_HEADERS });
   } catch (error) {
-    return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : 'Cannot load recent catalog' }, { status: 500 });
+    return NextResponse.json({ ok: false, items: [], error: error instanceof Error ? error.message : 'Cannot load recent catalog' }, { headers: ERROR_HEADERS });
   }
 }
