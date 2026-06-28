@@ -9,8 +9,6 @@ import { canUseNextImage } from '@/lib/image-optimizer';
 
 const RAIL_LOAD_STEP = 6;
 const RAIL_LOAD_THRESHOLD = 360;
-const COMING_SOON_AUTO_SPEED = 18;
-const AUTO_RESUME_DELAY = 2600;
 const thaiMonthShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
 type SectionItemsResponse = {
@@ -108,14 +106,11 @@ function railSegmentWidth(rail: HTMLElement) {
 
 function LazyMovieRail({ section, sectionIndex, onSelect }: { section: MovieSection; sectionIndex: number; onSelect: (item: MovieItem) => void }) {
   const initiallyMounted = sectionIndex === 0;
-  const autoLoop = section.slug === 'coming-soon';
   const { ref, mounted } = useLazyMount(initiallyMounted, '520px');
   const railRef = useRef<HTMLDivElement | null>(null);
   const loadGuardRef = useRef(false);
   const jumpGuardRef = useRef(false);
   const loopReadyRef = useRef(false);
-  const frameRef = useRef<number | null>(null);
-  const pauseUntilRef = useRef(0);
   const [items, setItems] = useState(section.items.slice(0, RAIL_LOAD_STEP));
   const [hasMore, setHasMore] = useState(section.items.length >= RAIL_LOAD_STEP);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -215,47 +210,12 @@ function LazyMovieRail({ section, sectionIndex, onSelect }: { section: MovieSect
     return () => window.cancelAnimationFrame(id);
   }, [canLoop, mounted, section.slug]);
 
-  useEffect(() => {
-    if (!autoLoop || !mounted || !canLoop) return;
-
-    let last = 0;
-    function tick(now: number) {
-      const rail = railRef.current;
-      if (!rail) return;
-
-      const delta = Math.min(now - (last || now), 64);
-      last = now;
-
-      if (now > pauseUntilRef.current) {
-        rail.scrollLeft += (COMING_SOON_AUTO_SPEED * delta) / 1000;
-        maybeLoadMore();
-        handleLoopBounds();
-      }
-
-      frameRef.current = window.requestAnimationFrame(tick);
-    }
-
-    frameRef.current = window.requestAnimationFrame(tick);
-    return () => {
-      if (frameRef.current) window.cancelAnimationFrame(frameRef.current);
-      frameRef.current = null;
-    };
-  }, [autoLoop, canLoop, handleLoopBounds, maybeLoadMore, mounted]);
-
-  function pauseAuto() {
-    if (!autoLoop) return;
-    pauseUntilRef.current = performance.now() + AUTO_RESUME_DELAY;
-  }
-
   return (
     <div ref={ref} style={{ contentVisibility: 'auto', containIntrinsicSize: '340px 1000px' }}>
       {mounted ? (
         <div
           ref={railRef}
           className="movie-rail flex max-w-full gap-2.5 overflow-x-auto overflow-y-hidden scroll-smooth pb-3 sm:gap-3 md:gap-5 md:pb-4"
-          onPointerDown={pauseAuto}
-          onTouchStart={pauseAuto}
-          onWheel={pauseAuto}
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
           {renderedItems.map((item, index) => (
