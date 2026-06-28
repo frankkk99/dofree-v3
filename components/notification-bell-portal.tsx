@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { canUsePremiumFeature } from '@/lib/premium-access-config';
+import { usePremiumAccessSnapshot } from '@/lib/premium-access-client';
 
 type SiteNotification = {
   id: string;
@@ -41,7 +43,9 @@ export function NotificationBellPortal() {
   const [bodyHost, setBodyHost] = useState<HTMLElement | null>(null);
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<SiteNotification[]>([fallback]);
+  const { config: premiumAccessConfig, userState: premiumUserState } = usePremiumAccessSnapshot();
   const boxRef = useRef<HTMLDivElement | null>(null);
+  const canOpenNotifications = canUsePremiumFeature('notifications', premiumUserState, premiumAccessConfig);
 
   useEffect(() => {
     setBodyHost(document.body);
@@ -98,7 +102,13 @@ export function NotificationBellPortal() {
     <button
       type="button"
       aria-label="เปิดแจ้งเตือน"
-      onClick={() => setOpen((value) => !value)}
+      onClick={() => {
+        if (!canOpenNotifications) {
+          window.location.href = '/membership';
+          return;
+        }
+        setOpen((value) => !value);
+      }}
       className="order-[-1] relative grid h-10 w-10 place-items-center rounded-none bg-transparent text-white transition hover:opacity-75 md:h-12 md:w-12"
     >
       <BellIcon />

@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { HomePayload, MovieItem } from '@/lib/tmdb';
+import { canUsePremiumFeature } from '@/lib/premium-access-config';
+import { usePremiumAccessSnapshot } from '@/lib/premium-access-client';
 import { getStoredSession } from '@/lib/supabase-auth-browser';
 
 function unique(items: MovieItem[]) {
@@ -35,6 +37,7 @@ function findByTitle(items: MovieItem[], title: string) {
 export function FavoriteClickBridge({ home }: { home: HomePayload }) {
   const items = useMemo(() => allHomeItems(home), [home]);
   const [message, setMessage] = useState('');
+  const { config: premiumAccessConfig, userState: premiumUserState } = usePremiumAccessSnapshot();
 
   useEffect(() => {
     let timer: number | null = null;
@@ -52,6 +55,14 @@ export function FavoriteClickBridge({ home }: { home: HomePayload }) {
         showMessage('เข้าสู่ระบบก่อนเพื่อบันทึกรายการโปรด');
         window.setTimeout(() => {
           window.location.href = '/auth?mode=signin';
+        }, 650);
+        return;
+      }
+
+      if (!canUsePremiumFeature('favorites', premiumUserState, premiumAccessConfig)) {
+        showMessage('รายการโปรดเป็นฟีเจอร์ Premium');
+        window.setTimeout(() => {
+          window.location.href = '/membership';
         }, 650);
         return;
       }
@@ -96,7 +107,7 @@ export function FavoriteClickBridge({ home }: { home: HomePayload }) {
       document.removeEventListener('click', onClick, true);
       if (timer) window.clearTimeout(timer);
     };
-  }, [items]);
+  }, [items, premiumAccessConfig, premiumUserState]);
 
   if (!message) return null;
 

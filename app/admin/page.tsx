@@ -5,6 +5,7 @@ import { AdminCatalogBrowser } from '@/components/admin-catalog-browser';
 import { AdminControlCenter } from '@/components/admin-control-center';
 import { AdminDashboard } from '@/components/admin-dashboard';
 import { AdminFloatingTopbar } from '@/components/admin-floating-topbar';
+import { AdminPremiumAccessPanel } from '@/components/admin-premium-access-panel';
 import { AdminSeriesBulkManager } from '@/components/admin-series-bulk-manager';
 
 export const metadata: Metadata = {
@@ -24,6 +25,7 @@ export default function AdminPage() {
         <section id="admin-dashboard-root">
           <AdminDashboard />
         </section>
+        <AdminPremiumAccessPanel />
         <AdminControlCenter />
         <section id="series-bulk-manager" className="border-y border-white/10 bg-black/20">
           <AdminSeriesBulkManager />

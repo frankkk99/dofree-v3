@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { MovieItem } from '@/lib/tmdb';
 import { MovieCard } from '@/components/movie-card';
 import { DetailWindow } from '@/components/window-system';
+import { canUsePremiumFeature } from '@/lib/premium-access-config';
+import { usePremiumAccessSnapshot } from '@/lib/premium-access-client';
 
 type ActorRef = { id?: number; name: string };
 
@@ -79,6 +81,8 @@ export function ActorProfileBridge() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [selectedMovie, setSelectedMovie] = useState<MovieItem | null>(null);
+  const [upsell, setUpsell] = useState('');
+  const { config: premiumAccessConfig, userState: premiumUserState } = usePremiumAccessSnapshot();
 
   const works = payload.works || [];
   const collaborators = payload.collaborators || [];
@@ -86,12 +90,20 @@ export function ActorProfileBridge() {
 
   const openActor = useCallback((next: ActorRef, pushHistory = true) => {
     if (!next.id && !next.name.trim()) return;
+    if (!canUsePremiumFeature('actorClick', premiumUserState, premiumAccessConfig)) {
+      setUpsell('การดูผลงานจากนักแสดงเป็นฟีเจอร์ Premium');
+      window.setTimeout(() => {
+        window.location.href = '/membership';
+      }, 700);
+      return;
+    }
+    setUpsell('');
     setSelectedMovie(null);
     setCurrent((prev) => {
       if (pushHistory && prev) setHistory((stack) => [...stack.slice(-10), prev]);
       return next;
     });
-  }, []);
+  }, [premiumAccessConfig, premiumUserState]);
 
   useEffect(() => {
     function onClick(event: MouseEvent) {
@@ -154,7 +166,13 @@ export function ActorProfileBridge() {
     openActor(previous, false);
   }
 
-  if (!current) return null;
+  if (!current) {
+    return upsell ? (
+      <div className="fixed bottom-24 left-1/2 z-[1200] -translate-x-1/2 rounded-full bg-[#e50914] px-5 py-3 text-xs font-black text-white shadow-[0_18px_70px_rgba(229,9,20,0.45)]">
+        {upsell}
+      </div>
+    ) : null;
+  }
 
   return (
     <>

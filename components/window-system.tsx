@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { MovieItem } from '@/lib/tmdb';
 import { MovieCard } from '@/components/movie-card';
+import { canUsePremiumFeature } from '@/lib/premium-access-config';
+import { usePremiumAccessSnapshot } from '@/lib/premium-access-client';
 
 const modalTabs = [
   { id: 'recommend', label: 'แนะนำ' },
@@ -248,6 +250,8 @@ function ModalWatchSection({
   reported,
   episodes,
   episodeLoading,
+  canWatch,
+  premiumLabel,
 }: {
   item: MovieItem;
   fallbackImage: string;
@@ -255,6 +259,8 @@ function ModalWatchSection({
   reported: boolean;
   episodes?: PublicEpisode[];
   episodeLoading?: boolean;
+  canWatch: boolean;
+  premiumLabel?: string;
 }) {
   const readyEpisodes = episodes || [];
   const firstEpisodeHref = readyEpisodes[0]?.href;
@@ -275,12 +281,17 @@ function ModalWatchSection({
             <p className="mt-2 max-w-xl text-xs font-semibold leading-5 text-white/55 md:text-sm md:leading-6">
               {hasLink ? readyEpisodes.length ? 'เลือกตอนที่ต้องการ หรือเปิดตอนแรกในแท็บใหม่เพื่อรับชมได้ทันที' : 'กดเพื่อเปิดหน้าเล่นในแท็บใหม่ แล้วกลับมาดูข้อมูลเรื่องนี้ต่อได้เลย' : 'เรื่องนี้ยังไม่พร้อมรับชมตอนนี้ เก็บไว้ก่อนหรือแจ้งแอดมินให้ตรวจสอบได้'}
             </p>
+            {hasLink && premiumLabel ? <p className="mt-2 inline-flex rounded-full bg-[#e50914]/18 px-3 py-1 text-[10px] font-black text-red-100">{premiumLabel}</p> : null}
           </div>
 
           <div className="flex shrink-0 flex-wrap gap-2">
-            {hasLink ? (
+            {hasLink && canWatch ? (
               <a href={watchHref} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center justify-center rounded-2xl bg-[#e50914] px-5 text-sm font-black text-white shadow-glow transition hover:scale-[1.01] md:h-12 md:px-6">
                 ▶ เปิดหน้าเล่น
+              </a>
+            ) : hasLink ? (
+              <a href="/membership" className="inline-flex h-11 items-center justify-center rounded-2xl bg-white/[0.08] px-5 text-sm font-black text-white/70 md:h-12 md:px-6">
+                Premium
               </a>
             ) : (
               <button type="button" disabled className="inline-flex h-11 cursor-not-allowed items-center justify-center rounded-2xl bg-white/[0.08] px-5 text-sm font-black text-white/38 md:h-12 md:px-6">
@@ -301,7 +312,7 @@ function ModalWatchSection({
             </div>
             <div className="grid max-h-28 grid-cols-3 gap-2 overflow-y-auto pr-1 sm:grid-cols-4 md:grid-cols-6">
               {readyEpisodes.map((episode) => (
-                <a key={`${episode.seasonNumber}-${episode.episodeNumber}`} href={episode.href} target="_blank" rel="noreferrer" title={episode.title || `EP ${episode.episodeNumber}`} className="rounded-xl border border-white/10 bg-white/[0.07] px-2.5 py-2 text-center text-[11px] font-black text-white/76 transition hover:border-[#e50914]/70 hover:bg-[#e50914] hover:text-white">
+                <a key={`${episode.seasonNumber}-${episode.episodeNumber}`} href={canWatch ? episode.href : '/membership'} target={canWatch ? '_blank' : undefined} rel={canWatch ? 'noreferrer' : undefined} title={episode.title || `EP ${episode.episodeNumber}`} className="rounded-xl border border-white/10 bg-white/[0.07] px-2.5 py-2 text-center text-[11px] font-black text-white/76 transition hover:border-[#e50914]/70 hover:bg-[#e50914] hover:text-white">
                   S{episode.seasonNumber}E{episode.episodeNumber}{episode.title ? ` · ${episode.title}` : ''}
                 </a>
               ))}
@@ -372,6 +383,7 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
   const [detailLoading, setDetailLoading] = useState(false);
   const [seriesEpisodes, setSeriesEpisodes] = useState<PublicEpisode[]>([]);
   const [seriesEpisodesLoading, setSeriesEpisodesLoading] = useState(false);
+  const { config: premiumAccessConfig, userState: premiumUserState } = usePremiumAccessSnapshot();
   const recRailRef = useRef<HTMLDivElement | null>(null);
   const watchSectionRef = useRef<HTMLDivElement | null>(null);
 
@@ -379,6 +391,9 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
   const cast = realCast.length ? realCast : fallbackCast(displayItem);
   const visibleRecommendations = detailRecommendations.slice(0, visibleRecCount);
   const fallbackImage = displayItem.backdropUrl || displayItem.posterUrl || '';
+  const hasWatchLink = Boolean(displayItem.watchUrl || seriesEpisodes.length);
+  const canWatch = canUsePremiumFeature('watch', premiumUserState, premiumAccessConfig);
+  const premiumPromoLabel = hasWatchLink && canWatch && !premiumUserState.hasPremiumAccess ? premiumAccessConfig.label : '';
 
   useEffect(() => {
     let cancelled = false;
@@ -572,7 +587,7 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
             {activeTab === 'spoiler' && <div><h3 className="text-base font-black md:text-xl">สปอยหนัง</h3><div className="mt-3 rounded-2xl bg-yellow-300/[0.08] p-3 text-xs leading-5 text-yellow-50/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl md:text-sm md:leading-6">{displayItem.overview}</div></div>}
 
             <div ref={watchSectionRef}>
-              <ModalWatchSection item={displayItem} fallbackImage={fallbackImage} onReport={reportIssue} reported={reported} episodes={seriesEpisodes} episodeLoading={seriesEpisodesLoading} />
+              <ModalWatchSection item={displayItem} fallbackImage={fallbackImage} onReport={reportIssue} reported={reported} episodes={seriesEpisodes} episodeLoading={seriesEpisodesLoading} canWatch={canWatch} premiumLabel={premiumPromoLabel} />
             </div>
           </Surface>
         </div>
