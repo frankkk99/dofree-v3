@@ -24,7 +24,7 @@ function toMovieItem(item: WatchHistoryRecord): MovieItem {
     id: item.media_id,
     mediaType: item.media_type === 'tv' ? 'tv' : 'movie',
     title: item.title,
-    overview: 'ประวัติการรับชมของคุณ กดรายละเอียดเพื่อโหลดข้อมูลเต็มจาก TMDB',
+    overview: 'ประวัติการรับชมของคุณ กดรายละเอียดเพื่อดูข้อมูลเพิ่มเติม',
     posterUrl: poster,
     backdropUrl: poster,
     rating: 0,

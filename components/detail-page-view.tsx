@@ -232,7 +232,7 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
                 <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]/75">Cast</p>
                 <h2 className="mt-1 text-xl font-black tracking-[-0.04em] md:text-2xl">นักแสดงหลัก</h2>
               </div>
-              <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-black text-white/38 backdrop-blur-xl">TMDB</span>
+              <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-black text-white/38 backdrop-blur-xl">นักแสดง</span>
             </div>
 
             {cast.length ? (

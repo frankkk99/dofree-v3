@@ -378,7 +378,7 @@ export async function getHomePayload(): Promise<HomePayload> {
     slug: 'watch-ready',
     eyebrow: 'พร้อมรับชม',
     title: 'แนะนำสำหรับคุณ',
-    description: 'คัดเรื่องที่มีลิงก์รับชมและคะแนน 6.5+ จากระบบของคุณ โดยใช้ข้อมูลหนังจาก TMDB',
+    description: 'คัดเรื่องที่มีลิงก์รับชมและคะแนน 6.5+ จากรายการที่พร้อมแนะนำ',
     items: linkedItems.length ? linkedItems : sections[0].items,
   };
 

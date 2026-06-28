@@ -7,7 +7,7 @@ export async function GET(request: Request) {
   const id = searchParams.get('id');
 
   if ((mediaType !== 'movie' && mediaType !== 'tv') || !id) {
-    return NextResponse.json({ error: 'Invalid TMDB detail request' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid detail request' }, { status: 400 });
   }
 
   const payload = await getDetailPayload(mediaType as MediaType, id);

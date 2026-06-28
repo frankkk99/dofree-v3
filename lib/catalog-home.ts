@@ -183,7 +183,7 @@ function rowSearchText(row: CatalogRow) {
 
 function rowToMovie(row: CatalogRow, index: number): MovieItem {
   const rating = Number(row.rating || 0);
-  const mainTitle = row.title_en || row.title || `TMDB ${row.tmdb_id}`;
+  const mainTitle = row.title_en || row.title || `รายการ ${row.tmdb_id}`;
   const searchText = rowSearchText(row);
   const base = {
     id: row.tmdb_id,

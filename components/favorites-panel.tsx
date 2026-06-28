@@ -25,7 +25,7 @@ function toMovieItem(item: FavoriteRecord): MovieItem {
     id: item.media_id,
     mediaType: item.media_type === 'tv' ? 'tv' : 'movie',
     title: item.title,
-    overview: 'รายการโปรดของคุณ กดรายละเอียดเพื่อโหลดข้อมูลเต็มจาก TMDB',
+    overview: 'รายการโปรดของคุณ กดรายละเอียดเพื่อดูข้อมูลเพิ่มเติม',
     posterUrl: poster,
     backdropUrl: backdrop,
     rating: 0,

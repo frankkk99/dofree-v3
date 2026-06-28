@@ -78,7 +78,7 @@ function rowToItem(row: CatalogRow, link: LinkRow | undefined, today: string): M
   const item: MovieItem & { releaseDate?: string } = {
     id: row.tmdb_id,
     mediaType: row.media_type,
-    title: link?.title_th || row.title || row.title_en || `TMDB ${row.tmdb_id}`,
+    title: link?.title_th || row.title || row.title_en || `รายการ ${row.tmdb_id}`,
     titleEn: link?.title || row.title_en || undefined,
     overview: row.overview || undefined,
     posterUrl: row.poster_url || row.backdrop_url || '',

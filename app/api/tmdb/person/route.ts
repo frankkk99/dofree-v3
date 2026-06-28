@@ -88,7 +88,7 @@ function toMovieItem(item: TmdbCredit, index: number): MovieItem | null {
     mediaType,
     title,
     titleEn: item.original_title || item.original_name,
-    overview: item.overview || `ผลงานที่ ${index + 1} ของนักแสดงคนนี้จากฐานข้อมูล TMDB`,
+    overview: item.overview || `ผลงานที่ ${index + 1} ของนักแสดงคนนี้`,
     posterUrl: item.poster_path ? `${posterBase}${item.poster_path}` : fallbackImage,
     backdropUrl: item.backdrop_path ? `${imageBase}${item.backdrop_path}` : item.poster_path ? `${posterBase}${item.poster_path}` : fallbackImage,
     rating,
@@ -116,7 +116,7 @@ export async function GET(request: Request) {
   const numericId = Number(id);
 
   if (!numericId) {
-    return NextResponse.json({ error: 'Invalid TMDB person request' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid person request' }, { status: 400 });
   }
 
   const [person, credits] = await Promise.all([

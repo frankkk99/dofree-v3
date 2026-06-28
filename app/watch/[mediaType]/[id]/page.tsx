@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { MovieCard } from '@/components/movie-card';
+import { DetailRecommendationCarousel } from '@/components/detail-recommendation-carousel';
 import { WatchOverviewClamp } from '@/components/watch-overview-clamp';
 import { episodeWatchHref, getPublishedSeriesEpisodes, groupSeriesEpisodes } from '@/lib/series-episodes';
 import { getDetailPayload, getWatchSourceUrl, type MediaType } from '@/lib/tmdb';
@@ -183,10 +183,8 @@ export default async function WatchPage({ params, searchParams }: PageProps) {
               <p className="px-1 text-[10px] font-black uppercase tracking-[0.3em] text-[#e50914]/80">Up Next</p>
               <h2 className="px-1 pt-1 text-2xl font-black tracking-[-0.05em]">แนะนำต่อ</h2>
 
-              <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3 md:grid-cols-6 md:gap-4 lg:grid-cols-8 xl:grid-cols-10">
-                {recommendations.slice(0, 12).map((movie, index) => (
-                  <MovieCard key={`${movie.mediaType}-${movie.id}-${index}`} item={movie} grid priorityBadge={index === 0 ? 'ต่อไป' : undefined} />
-                ))}
+              <div className="mt-4">
+                <DetailRecommendationCarousel current={item} items={recommendations.slice(0, 18)} />
               </div>
             </aside>
           </div>

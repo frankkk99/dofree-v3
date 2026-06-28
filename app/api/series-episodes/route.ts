@@ -6,7 +6,7 @@ export async function GET(request: Request) {
   const tmdbId = Number(searchParams.get('tmdbId'));
 
   if (!Number.isInteger(tmdbId) || tmdbId <= 0) {
-    return NextResponse.json({ ok: false, error: 'Invalid TMDB ID' }, { status: 400 });
+    return NextResponse.json({ ok: false, error: 'Invalid series request' }, { status: 400 });
   }
 
   const rows = await getPublishedSeriesEpisodes(tmdbId);

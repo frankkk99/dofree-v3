@@ -10,10 +10,10 @@ type SearchProps = {
 
 export const metadata: Metadata = {
   title: 'ค้นหาภาพยนตร์และซีรีส์',
-  description: `ค้นหาภาพยนตร์ ซีรีส์ และข้อมูลจาก TMDB บน${siteName}`,
+  description: `ค้นหาภาพยนตร์ ซีรีส์ และรายการพร้อมรับชมบน${siteName}`,
   openGraph: {
     title: `ค้นหาภาพยนตร์และซีรีส์ | ${siteName}`,
-    description: `ค้นหาภาพยนตร์ ซีรีส์ และข้อมูลจาก TMDB บน${siteName}`,
+    description: `ค้นหาภาพยนตร์ ซีรีส์ และรายการพร้อมรับชมบน${siteName}`,
     siteName,
   },
 };

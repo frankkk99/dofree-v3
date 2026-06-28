@@ -531,7 +531,7 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
 
           <div className="relative z-10 px-4 pb-4 md:px-5 md:pb-5">
             <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-red-100/68 md:text-xs">TRAILER PREVIEW</p>
-            <InlinePlayer url={displayItem.trailerUrl} title={`ตัวอย่าง ${displayItem.title}`} fallbackImage={fallbackImage} emptyLabel={detailLoading ? 'กำลังโหลดตัวอย่างจาก TMDB...' : 'ยังไม่มีตัวอย่างที่ฝังใน Modal ได้'} />
+            <InlinePlayer url={displayItem.trailerUrl} title={`ตัวอย่าง ${displayItem.title}`} fallbackImage={fallbackImage} emptyLabel={detailLoading ? 'กำลังโหลดตัวอย่าง...' : 'ยังไม่มีตัวอย่างที่เปิดดูได้'} />
           </div>
         </div>
 
@@ -547,7 +547,7 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
               <div>
                 <div className="flex items-center justify-between gap-3">
                   <h3 className="text-base font-black md:text-xl">นักแสดงหลัก</h3>
-                  <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-black text-white/38 backdrop-blur-xl">{realCast.length ? 'TMDB' : 'สำรอง'}</span>
+                  <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-black text-white/38 backdrop-blur-xl">{realCast.length ? 'นักแสดง' : 'กำลังจัดข้อมูล'}</span>
                 </div>
                 <div className="mt-3 grid grid-cols-3 gap-2 md:grid-cols-4 md:gap-3">{cast.map((person, index) => <ActorCard key={`${person.id || person.name}-${index}`} person={person} />)}</div>
               </div>
@@ -555,7 +555,7 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
 
             {activeTab === 'detail' && (
               <div>
-                <div className="flex items-center justify-between gap-3"><h3 className="text-base font-black md:text-xl">เกี่ยวกับภาพยนตร์</h3>{detailLoading ? <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-black text-white/38 backdrop-blur-xl">กำลังโหลด TMDB</span> : null}</div>
+                <div className="flex items-center justify-between gap-3"><h3 className="text-base font-black md:text-xl">เกี่ยวกับภาพยนตร์</h3>{detailLoading ? <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-black text-white/38 backdrop-blur-xl">กำลังโหลดข้อมูล</span> : null}</div>
                 <div className="mt-3 grid gap-2 text-[11px] font-bold text-white/62 sm:grid-cols-2 md:mt-4 md:gap-3 md:text-sm">
                   <p>ประเภท: {(displayItem.genres || []).join(', ') || 'ภาพยนตร์'}</p>
                   <p>ความยาว: {displayItem.runtime ? `${displayItem.runtime} นาที` : 'ยังไม่มีข้อมูล'}</p>
