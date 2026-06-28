@@ -11,6 +11,7 @@ const RAIL_LOAD_STEP = 9;
 const RAIL_LOAD_THRESHOLD = 360;
 const RAIL_OBSERVER_MARGIN = '160px';
 const thaiMonthShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+const heroSectionPriority = ['coming-soon', 'watch-ready', 'new-release', 'new-releases', 'latest', 'popular'];
 
 type SectionItemsResponse = {
   ok?: boolean;
@@ -22,6 +23,24 @@ function uniqueMovies(items: MovieItem[]) {
   const map = new Map<string, MovieItem>();
   for (const item of items) map.set(`${item.mediaType}-${item.id}`, item);
   return [...map.values()];
+}
+
+function numericYear(item: MovieItem) {
+  const year = Number(item.year || 0);
+  return Number.isFinite(year) ? year : 0;
+}
+
+function isRecentEnoughForHero(item: MovieItem) {
+  const year = numericYear(item);
+  const currentYear = new Date().getFullYear();
+  return year >= currentYear - 2 || item.label === 'เร็ว ๆ นี้';
+}
+
+function heroScore(item: MovieItem) {
+  const year = numericYear(item);
+  const readyBoost = item.isWatchReady || item.status === 'published' ? 1000 : 0;
+  const soonBoost = item.label === 'เร็ว ๆ นี้' ? 1200 : 0;
+  return soonBoost + readyBoost + year * 10 + Math.round((item.rating || 0) * 10);
 }
 
 function seededMovieScore(item: MovieItem, seed: number, scope: string, index: number) {
@@ -47,6 +66,12 @@ function shuffleSections(sections: MovieSection[], seed: number) {
     ...section,
     items: shuffleMovies(section.items, seed + index + 11, section.slug),
   }));
+}
+
+function heroCandidatesFromSections(sections: MovieSection[]) {
+  const priorityItems = heroSectionPriority.flatMap((slug) => sections.find((section) => section.slug === slug)?.items || []);
+  const fallbackItems = sections.slice(0, 4).flatMap((section) => section.items || []);
+  return uniqueMovies([...priorityItems, ...fallbackItems]).filter(isRecentEnoughForHero).sort((a, b) => heroScore(b) - heroScore(a));
 }
 
 function shortTitle(item: MovieItem) {
@@ -116,14 +141,15 @@ function LazyMovieRail({ section, sectionIndex, onSelect }: { section: MovieSect
     loadGuardRef.current = false;
   }, [section.items]);
 
-  const loadNextBatch = useCallback(async () => {
+  const loadNextBatch = useCallback(async (requestedLimit = RAIL_LOAD_STEP) => {
     if (!mounted || loadingMore || loadGuardRef.current || !hasMore) return;
 
     loadGuardRef.current = true;
     setLoadingMore(true);
 
     try {
-      const response = await fetch(`/api/catalog/section?slug=${encodeURIComponent(section.slug)}&limit=${RAIL_LOAD_STEP}&offset=${items.length}`);
+      const limit = Math.max(1, Math.min(requestedLimit, RAIL_LOAD_STEP));
+      const response = await fetch(`/api/catalog/section?slug=${encodeURIComponent(section.slug)}&limit=${limit}&offset=${items.length}`);
       const data = await response.json() as SectionItemsResponse;
       const nextItems = Array.isArray(data.items) ? data.items : [];
       setItems((current) => uniqueMovies([...current, ...nextItems]));
@@ -144,8 +170,13 @@ function LazyMovieRail({ section, sectionIndex, onSelect }: { section: MovieSect
 
     const remaining = rail.scrollWidth - rail.clientWidth - rail.scrollLeft;
     const threshold = Math.max(RAIL_LOAD_THRESHOLD, rail.clientWidth * 0.38);
-    if (remaining <= threshold) loadNextBatch();
+    if (remaining <= threshold) void loadNextBatch();
   }, [hasMore, loadNextBatch, loadingMore]);
+
+  useEffect(() => {
+    if (!mounted || items.length >= RAIL_LOAD_STEP || !hasMore) return;
+    void loadNextBatch(RAIL_LOAD_STEP - items.length);
+  }, [hasMore, items.length, loadNextBatch, mounted]);
 
   useEffect(() => {
     const rail = railRef.current;
@@ -166,7 +197,7 @@ function LazyMovieRail({ section, sectionIndex, onSelect }: { section: MovieSect
           {items.map((item, index) => (
             <MovieCard key={`${section.slug}-${item.mediaType}-${item.id}-${index}`} item={item} onSelect={onSelect} priority={sectionIndex === 0 && index < 3} priorityBadge={section.slug === 'coming-soon' ? 'เร็ว ๆ นี้' : index % 4 === 0 ? 'ใหม่' : undefined} />
           ))}
-          {loadingMore ? Array.from({ length: RAIL_LOAD_STEP }).map((_, index) => (
+          {loadingMore ? Array.from({ length: Math.min(RAIL_LOAD_STEP, Math.max(1, RAIL_LOAD_STEP - items.length)) }).map((_, index) => (
             <div key={`loading-${section.slug}-${index}`} className="h-[176px] w-[116px] shrink-0 animate-pulse rounded-[8px] bg-white/[0.045] sm:h-[220px] sm:w-[140px] md:h-[280px] md:w-[180px] xl:h-[300px] xl:w-[196px]" aria-hidden="true" />
           )) : null}
         </div>
@@ -179,9 +210,12 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
   const [shuffleSeed, setShuffleSeed] = useState(1);
   const randomizedSections = useMemo(() => shuffleSections(home.sections, shuffleSeed), [home.sections, shuffleSeed]);
   const heroItems = useMemo(() => {
-    const candidates = uniqueMovies([...(home.heroItems?.length ? home.heroItems : [home.hero]), ...randomizedSections.flatMap((section) => section.items.slice(0, 6))]);
-    return shuffleMovies(candidates.length ? candidates : [home.hero], shuffleSeed + 101, 'hero').slice(0, 24);
-  }, [home.hero, home.heroItems, randomizedSections, shuffleSeed]);
+    const explicitHeroItems = uniqueMovies(home.heroItems || []).filter(isRecentEnoughForHero).sort((a, b) => heroScore(b) - heroScore(a));
+    const sectionHeroItems = heroCandidatesFromSections(randomizedSections);
+    const fallbackHero = isRecentEnoughForHero(home.hero) ? [home.hero] : [];
+    const candidates = uniqueMovies([...explicitHeroItems, ...sectionHeroItems, ...fallbackHero]);
+    return candidates.length ? candidates.slice(0, 24) : [home.hero];
+  }, [home.hero, home.heroItems, randomizedSections]);
   const allItems = useMemo(() => uniqueMovies([...heroItems, ...randomizedSections.flatMap((section) => section.items)]), [heroItems, randomizedSections]);
   const [heroIndex, setHeroIndex] = useState(0);
   const [selected, setSelected] = useState<MovieItem | null>(null);
