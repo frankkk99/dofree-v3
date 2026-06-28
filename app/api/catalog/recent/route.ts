@@ -28,7 +28,11 @@ type LinkRow = {
 };
 
 export const dynamic = 'force-dynamic';
-const CACHE_HEADERS = { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' };
+const CACHE_HEADERS = {
+  'Cache-Control': 'public, max-age=0, must-revalidate',
+  'CDN-Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+  'Vercel-CDN-Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+};
 const ERROR_HEADERS = { 'Cache-Control': 'no-store, max-age=0' };
 const PUBLIC_RECENT_REVALIDATE = 300;
 

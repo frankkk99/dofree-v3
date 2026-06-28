@@ -2,7 +2,11 @@ import { NextResponse } from 'next/server';
 import { getCatalogSectionItems, HOME_SECTION_LOAD_LIMIT } from '@/lib/catalog-home';
 
 export const dynamic = 'force-dynamic';
-const CACHE_HEADERS = { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' };
+const CACHE_HEADERS = {
+  'Cache-Control': 'public, max-age=0, must-revalidate',
+  'CDN-Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+  'Vercel-CDN-Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+};
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
