@@ -10,6 +10,9 @@ export type DofreeProfile = {
   display_name?: string | null;
   avatar_url?: string | null;
   role?: string | null;
+  membership_tier?: 'free' | 'premium' | null;
+  membership_status?: 'active' | 'expired' | 'canceled' | 'trialing' | null;
+  premium_until?: string | null;
 };
 
 export type DofreeSession = {
@@ -24,6 +27,11 @@ export type DofreeSession = {
 
 const sessionKey = 'dodeedee_auth_session';
 const defaultRole = 'viewer';
+const defaultMembership = {
+  membership_tier: 'free',
+  membership_status: 'active',
+  premium_until: null,
+} satisfies Pick<DofreeProfile, 'membership_tier' | 'membership_status' | 'premium_until'>;
 
 function baseUrl() {
   return process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/$/, '');
@@ -103,31 +111,88 @@ function profileName(user: DofreeUser) {
   return user.email?.split('@')[0] || user.phone || `user-${user.id.slice(0, 8)}`;
 }
 
+function withMembershipDefaults(profile: DofreeProfile | null) {
+  return profile ? { ...defaultMembership, ...profile } : null;
+}
+
 async function loadProfile(userId: string, token: string) {
-  const data = await restFetch<DofreeProfile[]>(
-    `profiles?id=eq.${encodeURIComponent(userId)}&select=id,display_name,avatar_url,role&limit=1`,
-    { method: 'GET' },
-    token,
-  );
-  return Array.isArray(data) ? data[0] || null : null;
+  try {
+    const data = await restFetch<DofreeProfile[]>(
+      `profiles?id=eq.${encodeURIComponent(userId)}&select=id,display_name,avatar_url,role,membership_tier,membership_status,premium_until&limit=1`,
+      { method: 'GET' },
+      token,
+    );
+    return withMembershipDefaults(Array.isArray(data) ? data[0] || null : null);
+  } catch {
+    const data = await restFetch<DofreeProfile[]>(
+      `profiles?id=eq.${encodeURIComponent(userId)}&select=id,display_name,avatar_url,role&limit=1`,
+      { method: 'GET' },
+      token,
+    );
+    return withMembershipDefaults(Array.isArray(data) ? data[0] || null : null);
+  }
 }
 
 async function createProfile(user: DofreeUser, token: string) {
-  const data = await restFetch<DofreeProfile[]>(
-    'profiles',
-    {
-      method: 'POST',
-      body: JSON.stringify({
-        id: user.id,
-        display_name: profileName(user),
-        role: defaultRole,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }),
-    },
-    token,
-  );
-  return Array.isArray(data) ? data[0] || null : null;
+  const now = new Date().toISOString();
+  const baseProfile = {
+    id: user.id,
+    display_name: profileName(user),
+    role: defaultRole,
+    created_at: now,
+    updated_at: now,
+  };
+
+  try {
+    const data = await restFetch<DofreeProfile[]>(
+      'profiles',
+      {
+        method: 'POST',
+        body: JSON.stringify({ ...baseProfile, ...defaultMembership }),
+      },
+      token,
+    );
+    return withMembershipDefaults(Array.isArray(data) ? data[0] || null : null);
+  } catch {
+    const data = await restFetch<DofreeProfile[]>(
+      'profiles',
+      {
+        method: 'POST',
+        body: JSON.stringify(baseProfile),
+      },
+      token,
+    );
+    return withMembershipDefaults(Array.isArray(data) ? data[0] || null : null);
+  }
+}
+
+export function roleIsAdmin(role?: string | null) {
+  return role === 'admin' || role === 'super_admin';
+}
+
+export function isPremiumProfile(profile?: DofreeProfile | null) {
+  return profile?.membership_tier === 'premium' && (profile.membership_status === 'active' || profile.membership_status === 'trialing');
+}
+
+export function hasPremiumAccess(profile?: DofreeProfile | null, role?: string | null) {
+  return roleIsAdmin(role || profile?.role) || isPremiumProfile(profile);
+}
+
+export function sessionMembershipState(session?: DofreeSession | null) {
+  const profile = withMembershipDefaults(session?.profile || null);
+  const role = profile?.role || session?.user?.role || defaultRole;
+  const isSignedIn = Boolean(session?.access_token && session?.user?.id);
+  const isAdmin = isSignedIn && roleIsAdmin(role);
+  const isPremium = isSignedIn && isPremiumProfile(profile);
+  return {
+    isSignedIn,
+    isAdmin,
+    membershipTier: profile?.membership_tier || 'free',
+    membershipStatus: profile?.membership_status || 'active',
+    premiumUntil: profile?.premium_until || null,
+    isPremium,
+    hasPremiumAccess: isAdmin || isPremium,
+  };
 }
 
 export function getStoredSession(): DofreeSession | null {
@@ -157,7 +222,8 @@ export async function ensureProfile(session: DofreeSession) {
   let profile = await loadProfile(user.id, token);
   if (!profile) profile = await createProfile(user, token);
 
-  const nextSession = { ...session, user: { ...user, role: profile?.role || user.role || defaultRole }, profile };
+  const normalizedProfile = withMembershipDefaults(profile);
+  const nextSession = { ...session, user: { ...user, role: normalizedProfile?.role || user.role || defaultRole }, profile: normalizedProfile };
   storeSession(nextSession);
   return nextSession;
 }

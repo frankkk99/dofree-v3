@@ -6,7 +6,7 @@ import type { HomePayload, MovieItem, MovieSection } from '@/lib/tmdb';
 import { HomeExperienceV3 } from '@/components/home-experience-v3';
 import { MovieCard } from '@/components/movie-card';
 import { DetailWindow } from '@/components/window-system';
-import { getStoredSession, signOut, type DofreeUser } from '@/lib/supabase-auth-browser';
+import { getStoredSession, sessionMembershipState, signOut, type DofreeSession, type DofreeUser } from '@/lib/supabase-auth-browser';
 
 const FULL_SECTION_BATCH_SIZE = 24;
 
@@ -114,29 +114,28 @@ function DesktopRailScrollFix() {
   return null;
 }
 
-function roleIsAdmin(role?: string | null) {
-  return role === 'admin' || role === 'super_admin';
-}
-
 function HeaderAccountMenuPortal() {
   const [host, setHost] = useState<HTMLElement | null>(null);
   const [bodyHost, setBodyHost] = useState<HTMLElement | null>(null);
   const [open, setOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
+  const [session, setSession] = useState<DofreeSession | null>(null);
   const [user, setUser] = useState<DofreeUser | null>(null);
-  const [role, setRole] = useState<string>('');
   const menuRef = useRef<HTMLDivElement | null>(null);
-  const isSignedIn = Boolean(user?.id || user?.email || user?.phone);
-  const isAdmin = isSignedIn && roleIsAdmin(role);
-  const userLabel = user?.email || user?.phone || (user?.id ? `User ${user.id.slice(0, 8)}` : 'Guest');
+  const accountState = sessionMembershipState(session);
+  const isSignedIn = accountState.isSignedIn;
+  const isAdmin = accountState.isAdmin;
+  const hasPremiumAccess = accountState.hasPremiumAccess;
+  const userLabel = session?.profile?.display_name || user?.email || user?.phone || (user?.id ? `User ${user.id.slice(0, 8)}` : 'Guest');
+  const planBadge = hasPremiumAccess ? 'Premium' : 'Free';
 
   useEffect(() => {
     setBodyHost(document.body);
 
     function syncAuth() {
       const session = getStoredSession();
+      setSession(session);
       setUser(session?.user || null);
-      setRole(session?.profile?.role || session?.user?.role || '');
     }
 
     function findHost() {
@@ -182,12 +181,27 @@ function HeaderAccountMenuPortal() {
 
   async function handleLogout() {
     await signOut();
+    setSession(null);
     setUser(null);
-    setRole('');
     setOpen(false);
   }
 
   if (!host) return null;
+
+  const mainNavigation = [
+    ['/', 'หน้าแรก', 'กลับไปหน้าแรก'],
+    ['/#sections', 'เร็ว ๆ นี้', 'หนังใหม่และกำหนดฉาย'],
+    ['/#sections', 'หนังใหม่', 'รายการอัปเดตล่าสุด'],
+    ['/#sections', 'ยอดนิยม', 'คอนเทนต์ที่คนสนใจ'],
+    ['/#sections', 'ซีรีส์', 'รวมซีรีส์น่าติดตาม'],
+    ['/#sections', 'หมวดหมู่ทั้งหมด', 'ดูทุกหมวดบนหน้าแรก'],
+  ];
+  const memberFeatures = [
+    ['/favorites', '♡ รายการโปรด', 'เก็บหนังที่อยากดูไว้ในบัญชี'],
+    ['/history', '⏱ ดูต่อและประวัติ', 'ดูเรื่องที่เปิดล่าสุดและดูต่อ'],
+    ['/membership', 'แจ้งเตือนหนังใหม่', 'ติดตามคอนเทนต์ใหม่สำหรับสมาชิก'],
+    ['/membership', '♛ จัดการสมาชิก', 'ดูสถานะแผนและอัปเกรด Premium'],
+  ];
 
   const menuButton = createPortal(
     <div ref={menuRef} className="relative">
@@ -210,8 +224,9 @@ function HeaderAccountMenuPortal() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.30em] text-[#e50914]">Account</p>
-              <h3 className="mt-2 text-[27px] font-black tracking-[-0.06em] md:text-[32px]">{isSignedIn ? 'บัญชีของฉัน' : 'เมนูผู้ใช้'}</h3>
-              <p className="mt-2 break-all text-sm font-semibold leading-5 text-white/58">{isSignedIn ? userLabel : 'บัญชี รายการโปรด ประวัติ และสมาชิก'}</p>
+              <h3 className="mt-2 text-[27px] font-black tracking-[-0.06em] md:text-[32px]">{isSignedIn ? 'บัญชีของฉัน' : 'เมนู'}</h3>
+              <p className="mt-2 break-all text-sm font-semibold leading-5 text-white/58">{isSignedIn ? userLabel : 'เลือกดูหนัง ค้นหา หรือเข้าสู่ระบบ'}</p>
+              {isSignedIn ? <span className={`mt-3 inline-flex rounded-full px-3 py-1.5 text-[10px] font-black ${hasPremiumAccess ? 'bg-[#f4c46b] text-black' : 'bg-white/[0.10] text-white/72'}`}>{isAdmin ? 'Admin' : planBadge}</span> : null}
             </div>
             <button type="button" aria-label="ปิดเมนู" onClick={() => setOpen(false)} className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/[0.09] text-2xl font-black text-white/82 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] transition hover:bg-[#e50914] hover:text-white">×</button>
           </div>
@@ -221,7 +236,18 @@ function HeaderAccountMenuPortal() {
           <div className="mt-4 rounded-[28px] bg-[#1d0307]/64 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_22px_70px_rgba(229,9,20,0.08)]">
             <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#e50914]">Signed in</p>
             <p className="mt-3 break-all text-base font-black text-white/90">{userLabel}</p>
+            {!hasPremiumAccess ? <a href="/membership" className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-[20px] bg-[#e50914] text-sm font-black text-white shadow-glow">อัปเกรดเป็น Premium</a> : accountState.premiumUntil ? <p className="mt-3 rounded-2xl bg-white/[0.06] px-3 py-2 text-xs font-bold text-white/54">Premium ถึง {new Date(accountState.premiumUntil).toLocaleDateString('th-TH')}</p> : null}
             <button type="button" onClick={handleLogout} className="mt-4 h-12 w-full rounded-[22px] bg-white/[0.09] text-sm font-black text-white/76 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:bg-white/[0.14] hover:text-white">Logout</button>
+          </div>
+        ) : null}
+
+        {!isSignedIn ? (
+          <div className="mt-4 rounded-[28px] bg-[#1d0307]/64 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_22px_70px_rgba(229,9,20,0.08)]">
+            <p className="text-sm font-bold leading-6 text-white/62">เข้าสู่ระบบเพื่อเก็บรายการโปรด ประวัติการรับชม และดูต่อ</p>
+            <div className="mt-4 grid grid-cols-1 gap-2">
+              <a href="/auth?mode=signin" className="inline-flex h-11 items-center justify-center rounded-[20px] bg-[#e50914] text-sm font-black text-white shadow-glow">เข้าสู่ระบบ</a>
+              <a href="/membership" className="inline-flex h-11 items-center justify-center rounded-[20px] bg-white/[0.085] text-sm font-black text-white/76 hover:bg-white/[0.13] hover:text-white">สมัครสมาชิก Premium</a>
+            </div>
           </div>
         ) : null}
 
@@ -232,16 +258,26 @@ function HeaderAccountMenuPortal() {
               <span className="mt-1 block text-xs font-semibold text-white/72">จัดการหนัง หมวดหมู่ ระบบหลังบ้าน</span>
             </a>
           ) : null}
-          {[
-            ['/favorites', '♡ รายการโปรด', 'เก็บหนังที่อยากดูไว้ในบัญชี'],
-            ['/history', '⏱ ประวัติการรับชม', 'ดูเรื่องที่เปิดล่าสุดและดูต่อ'],
-            ['/membership', '♛ สมัครสมาชิก', 'Premium / ไม่มีโฆษณา / ดูต่อทุกอุปกรณ์'],
-          ].map(([href, title, desc]) => (
-            <a key={href} href={href} className="rounded-[24px] bg-white/[0.065] px-4 py-4 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] transition hover:bg-white/[0.105]">
+          <p className="mt-1 text-[10px] font-black uppercase tracking-[0.24em] text-white/36">Main Navigation</p>
+          {mainNavigation.map(([href, title, desc]) => (
+            <a key={`${href}-${title}`} href={href} className="rounded-[24px] bg-white/[0.065] px-4 py-4 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] transition hover:bg-white/[0.105]">
               <span className="block text-base font-black text-white/92">{title}</span>
               <span className="mt-1 block text-xs font-semibold text-white/42">{desc}</span>
             </a>
           ))}
+          <p className="mt-3 text-[10px] font-black uppercase tracking-[0.24em] text-white/36">Membership Features</p>
+          {memberFeatures.map(([href, title, desc], index) => {
+            const locked = !hasPremiumAccess && index < 3;
+            return (
+              <a key={`${href}-${title}`} href={locked ? '/membership' : href} className={`rounded-[24px] px-4 py-4 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] transition hover:bg-white/[0.105] ${locked ? 'bg-white/[0.035] opacity-72' : 'bg-white/[0.065]'}`}>
+                <span className="flex items-center justify-between gap-2 text-base font-black text-white/92">
+                  <span>{title}</span>
+                  {locked ? <span className="rounded bg-[#f4c46b] px-2 py-1 text-[9px] text-black">Premium</span> : null}
+                </span>
+                <span className="mt-1 block text-xs font-semibold text-white/42">{locked ? 'สมัคร Premium เพื่อใช้งานฟีเจอร์นี้' : desc}</span>
+              </a>
+            );
+          })}
         </div>
 
         {!isSignedIn ? (

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { MovieItem } from '@/lib/tmdb';
 import { MovieCard } from '@/components/movie-card';
 import { DetailWindow } from '@/components/window-system';
+import { getStoredSession, sessionMembershipState, type DofreeSession } from '@/lib/supabase-auth-browser';
 
 type ActorRef = { id?: number; name: string };
 
@@ -73,25 +74,46 @@ function PersonPoster({ person }: { person?: Pick<ActorPerson | Collaborator, 'n
 }
 
 export function ActorProfileBridge() {
+  const [session, setSession] = useState<DofreeSession | null>(null);
   const [current, setCurrent] = useState<ActorRef | null>(null);
   const [history, setHistory] = useState<ActorRef[]>([]);
   const [payload, setPayload] = useState<ActorPayload>(emptyPayload);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [upsell, setUpsell] = useState(false);
   const [selectedMovie, setSelectedMovie] = useState<MovieItem | null>(null);
 
   const works = payload.works || [];
   const collaborators = payload.collaborators || [];
   const recommendations = useMemo(() => works.filter((item) => selectedMovie ? `${item.mediaType}-${item.id}` !== `${selectedMovie.mediaType}-${selectedMovie.id}` : true).slice(0, 24), [selectedMovie, works]);
+  const premiumState = useMemo(() => sessionMembershipState(session), [session]);
+
+  useEffect(() => {
+    function syncSession() {
+      setSession(getStoredSession());
+    }
+
+    syncSession();
+    window.addEventListener('storage', syncSession);
+    window.addEventListener('dofree-auth-change', syncSession);
+    return () => {
+      window.removeEventListener('storage', syncSession);
+      window.removeEventListener('dofree-auth-change', syncSession);
+    };
+  }, []);
 
   const openActor = useCallback((next: ActorRef, pushHistory = true) => {
     if (!next.id && !next.name.trim()) return;
+    if (!premiumState.hasPremiumAccess) {
+      setUpsell(true);
+      return;
+    }
     setSelectedMovie(null);
     setCurrent((prev) => {
       if (pushHistory && prev) setHistory((stack) => [...stack.slice(-10), prev]);
       return next;
     });
-  }, []);
+  }, [premiumState.hasPremiumAccess]);
 
   useEffect(() => {
     function onClick(event: MouseEvent) {
@@ -154,10 +176,25 @@ export function ActorProfileBridge() {
     openActor(previous, false);
   }
 
-  if (!current) return null;
+  const upsellModal = upsell ? (
+    <div className="fixed inset-0 z-[145] grid place-items-center bg-black/68 px-4 text-white backdrop-blur-[10px]" role="dialog" aria-modal="true" onClick={() => setUpsell(false)}>
+      <div onClick={(event) => event.stopPropagation()} className="w-full max-w-[420px] rounded-[30px] bg-white/[0.08] p-5 shadow-[0_36px_130px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,255,255,0.16)] backdrop-blur-3xl">
+        <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#f4c46b]">Premium</p>
+        <h3 className="mt-2 text-3xl font-black tracking-[-0.06em]">ฟีเจอร์สำหรับ Premium</h3>
+        <p className="mt-3 text-sm font-semibold leading-6 text-white/58">สมัคร Premium เพื่อกดดูผลงานทั้งหมดจากนักแสดงคนนี้ได้ ส่วนภาพนักแสดงยังแสดงตามปกติสำหรับทุกคน</p>
+        <div className="mt-5 grid grid-cols-2 gap-2">
+          <button type="button" onClick={() => setUpsell(false)} className="h-11 rounded-[18px] bg-white/[0.08] text-xs font-black text-white/70 hover:bg-white/[0.13] hover:text-white">ปิด</button>
+          <a href="/membership" className="inline-flex h-11 items-center justify-center rounded-[18px] bg-[#e50914] text-xs font-black text-white shadow-glow">สมัคร Premium</a>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+  if (!current) return upsellModal;
 
   return (
     <>
+      {upsellModal}
       <div data-actor-profile-window="true" className="fixed inset-0 z-[140] overflow-y-auto bg-black/68 px-3 py-4 text-white backdrop-blur-[12px] md:px-6 md:py-8" role="dialog" aria-modal="true" onClick={close}>
         <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_18%_8%,rgba(229,9,20,0.26),transparent_24rem),radial-gradient(circle_at_90%_90%,rgba(255,255,255,0.08),transparent_28rem)]" />
         <div onClick={(event) => event.stopPropagation()} className="relative mx-auto w-full max-w-6xl overflow-hidden rounded-[34px] bg-white/[0.072] p-3 shadow-[0_42px_160px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,255,255,0.16),inset_0_-40px_90px_rgba(0,0,0,0.42)] backdrop-blur-3xl md:p-5">
