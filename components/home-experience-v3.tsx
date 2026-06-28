@@ -266,7 +266,7 @@ function LazyMovieRail({
               key={`${section.slug}-${item.id}-${index}`}
               item={item}
               onSelect={onSelect}
-              priority={sectionIndex === 0 && index < 6}
+              priority={sectionIndex === 0 && index < 3}
               priorityBadge={index % 4 === 0 ? 'เนเธซเธกเน' : index % 4 === 1 ? 'เธเธฃเธตเน€เธกเธตเธขเธก' : undefined}
             />
           ))}
@@ -631,7 +631,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
                       item={item}
                       onSelect={openMovie}
                       grid
-                      priority={index < 8}
+                      priority={index < 4}
                       priorityBadge={activeCategory && activeCategory !== 'เธ—เธฑเนเธเธซเธกเธ”' ? activeCategory : undefined}
                     />
                   ))}

@@ -1,13 +1,10 @@
 import { AutoHideHeader } from '@/components/auto-hide-header';
-import { CleanHamburgerMenu } from '@/components/clean-hamburger-menu';
 import { FavoriteClickBridge } from '@/components/favorite-click-bridge';
 import { FloatingGlassSearch } from '@/components/floating-glass-search';
-import { FloatingSearchPolish } from '@/components/floating-search-polish';
 import { HomeCardLinkBridge } from '@/components/home-card-link-bridge';
 import { HomeRealtimeWrapper } from '@/components/home-realtime-wrapper';
 import { ModalEpisodeTitleLabels } from '@/components/modal-episode-title-labels';
 import { ModalRecommendationDefault } from '@/components/modal-recommendation-default';
-import { ReliableHeroCarousel } from '@/components/reliable-hero-carousel';
 import { WatchHistoryClickBridge } from '@/components/watch-history-click-bridge';
 import { applyAdminHomeConfig } from '@/lib/admin-home-config';
 import { getCatalogHomePayload } from '@/lib/catalog-home';
@@ -33,14 +30,11 @@ export default async function HomePage() {
       <HomeRealtimeWrapper home={home} />
       <AutoHideHeader />
       <FloatingGlassSearch home={home} />
-      <FloatingSearchPolish />
       <ModalEpisodeTitleLabels />
       <ModalRecommendationDefault />
       <HomeCardLinkBridge home={home} />
       <FavoriteClickBridge home={home} />
       <WatchHistoryClickBridge home={home} />
-      <CleanHamburgerMenu />
-      <ReliableHeroCarousel home={home} />
     </>
   );
 }

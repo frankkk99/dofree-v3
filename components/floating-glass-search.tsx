@@ -7,8 +7,8 @@ import { MovieCard } from '@/components/movie-card';
 import { categoryChips } from '@/lib/catalog';
 import type { HomePayload, MovieItem } from '@/lib/tmdb';
 
-const STORAGE_KEY = 'dofree-floating-search-position';
-const DOCK_SIZE = 62;
+const STORAGE_KEY = 'dofree-floating-search-position-v2';
+const DOCK_SIZE = 52;
 const EDGE_GAP = 12;
 const PANEL_WIDTH = 430;
 const PANEL_GAP = 14;
@@ -424,7 +424,7 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
               <MovieCard
                 key={`floating-search-${item.mediaType}-${item.id}-${index}`}
                 item={item}
-                priority={index < 8}
+                priority={index < 4}
                 priorityBadge={searchState.categories[0] || undefined}
               />
             ))}
@@ -450,11 +450,11 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
         onPointerMove={moveDrag}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
-        className={`fixed z-[75] grid h-[62px] w-[62px] place-items-center rounded-[24px] border border-white/20 bg-white/[0.105] text-white shadow-[0_20px_70px_rgba(0,0,0,0.72),inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-2xl ${dragging ? 'cursor-grabbing scale-105 transition-transform' : 'cursor-grab'} ${snapping ? 'transition-[left,top,transform,opacity] duration-300 ease-out' : 'transition-transform'} ${settling ? 'scale-90 opacity-70' : 'floating-search-wiggle'}`}
+        className={`fixed z-[75] grid h-[52px] w-[52px] place-items-center rounded-[18px] border border-white/15 bg-black/58 text-white shadow-[0_16px_54px_rgba(0,0,0,0.64),inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-2xl ${dragging ? 'cursor-grabbing scale-105 transition-transform' : 'cursor-grab'} ${snapping ? 'transition-[left,top,transform,opacity] duration-300 ease-out' : 'transition-transform'} ${settling ? 'scale-90 opacity-70' : 'floating-search-wiggle'}`}
         style={{ left: position.x, top: position.y, touchAction: 'none' }}
       >
-        <span className="absolute inset-0 rounded-[24px] bg-[radial-gradient(circle_at_30%_18%,rgba(255,255,255,0.22),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.16),rgba(255,255,255,0.04))]" />
-        <span className="relative grid h-11 w-11 place-items-center rounded-[18px] bg-black/24 text-[21px] shadow-[inset_0_1px_0_rgba(255,255,255,0.10)]">⌕</span>
+        <span className="absolute inset-0 rounded-[18px] bg-[radial-gradient(circle_at_30%_18%,rgba(255,255,255,0.18),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.12),rgba(255,255,255,0.03))]" />
+        <span className="relative grid h-9 w-9 place-items-center rounded-[14px] bg-black/28 text-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.10)]">⌕</span>
         {hasFilter ? <span className="absolute -right-1 -top-1 h-4 w-4 rounded-full border border-black/40 bg-[#e50914] shadow-glow" /> : null}
       </button>
 
