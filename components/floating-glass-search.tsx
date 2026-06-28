@@ -21,7 +21,81 @@ type SearchPayload = {
   items?: MovieItem[];
 };
 
+type FilterState = {
+  category: string;
+  type: string;
+  country: string;
+  language: string;
+  quality: string;
+  year: string;
+  sort: string;
+};
+
 const SEARCH_LIMIT = 48;
+const defaultFilters: FilterState = {
+  category: '',
+  type: '',
+  country: '',
+  language: '',
+  quality: '',
+  year: '',
+  sort: 'rating-desc',
+};
+
+const selectClass = 'h-9 min-w-0 rounded-[14px] bg-white/[0.085] px-2 text-[10px] font-black text-white outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-xl md:h-10 md:px-3 md:text-xs';
+
+const typeOptions = [
+  { value: '', label: 'ทุกประเภท' },
+  { value: 'movie', label: 'หนัง' },
+  { value: 'tv', label: 'ซีรีส์' },
+];
+
+const countryOptions = [
+  { value: '', label: 'ทุกประเทศ' },
+  { value: 'th', label: 'ไทย' },
+  { value: 'kr', label: 'เกาหลี' },
+  { value: 'jp', label: 'ญี่ปุ่น' },
+  { value: 'cn', label: 'จีน' },
+  { value: 'us', label: 'อเมริกา' },
+  { value: 'uk', label: 'อังกฤษ' },
+  { value: 'in', label: 'อินเดีย' },
+];
+
+const languageOptions = [
+  { value: '', label: 'ทุกภาษา' },
+  { value: 'th', label: 'ภาษาไทย' },
+  { value: 'en', label: 'อังกฤษ' },
+  { value: 'ko', label: 'เกาหลี' },
+  { value: 'ja', label: 'ญี่ปุ่น' },
+  { value: 'zh', label: 'จีน' },
+  { value: 'hi', label: 'ฮินดี' },
+];
+
+const qualityOptions = [
+  { value: '', label: 'ทุกความชัด' },
+  { value: 'ready', label: 'พร้อมดู' },
+  { value: 'hd', label: 'HD' },
+  { value: 'review', label: 'รีวิว/ตัวอย่าง' },
+];
+
+const yearOptions = [
+  { value: '', label: 'ทุกปี' },
+  { value: '2026', label: '2026' },
+  { value: '2025', label: '2025' },
+  { value: '2024', label: '2024' },
+  { value: '2023', label: '2023' },
+  { value: '2022', label: '2022' },
+  { value: '2020s', label: '2020s' },
+  { value: '2010s', label: '2010s' },
+  { value: 'before-2010', label: 'ก่อน 2010' },
+];
+
+const sortOptions = [
+  { value: 'rating-desc', label: 'คะแนนมาก→น้อย' },
+  { value: 'rating-asc', label: 'คะแนนน้อย→มาก' },
+  { value: 'year-desc', label: 'ปีใหม่→เก่า' },
+  { value: 'year-asc', label: 'ปีเก่า→ใหม่' },
+];
 
 function fallbackCategories(home: HomePayload): SearchCategory[] {
   return home.sections.map((section, index) => ({
@@ -32,17 +106,40 @@ function fallbackCategories(home: HomePayload): SearchCategory[] {
   }));
 }
 
+function FilterSelect({ value, options, onChange, label }: { value: string; options: { value: string; label: string }[]; onChange: (value: string) => void; label: string }) {
+  return (
+    <label className="min-w-0">
+      <span className="sr-only">{label}</span>
+      <select className={selectClass} value={value} onChange={(event) => onChange(event.target.value)}>
+        {options.map((option) => <option key={`${label}-${option.value || 'all'}`} value={option.value}>{option.label}</option>)}
+      </select>
+    </label>
+  );
+}
+
 export function FloatingGlassSearch({ home }: { home: HomePayload }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState('');
+  const [filters, setFilters] = useState<FilterState>(defaultFilters);
   const [categories, setCategories] = useState<SearchCategory[]>(() => fallbackCategories(home));
   const [items, setItems] = useState<MovieItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState('');
 
-  const activeTitle = useMemo(() => categories.find((category) => category.slug === activeCategory)?.title || '', [activeCategory, categories]);
+  const categoryOptions = useMemo(() => [{ value: '', label: 'ทุกหมวด' }, ...categories.map((category) => ({ value: category.slug, label: category.title }))], [categories]);
+  const activeTitle = useMemo(() => categories.find((category) => category.slug === filters.category)?.title || '', [filters.category, categories]);
+  const filterSummary = useMemo(() => {
+    const selected = [
+      activeTitle,
+      typeOptions.find((option) => option.value === filters.type && option.value)?.label,
+      countryOptions.find((option) => option.value === filters.country && option.value)?.label,
+      languageOptions.find((option) => option.value === filters.language && option.value)?.label,
+      qualityOptions.find((option) => option.value === filters.quality && option.value)?.label,
+      yearOptions.find((option) => option.value === filters.year && option.value)?.label,
+    ].filter(Boolean);
+    return selected.length ? selected.join(' · ') : '';
+  }, [activeTitle, filters]);
 
   useEffect(() => {
     let cancelled = false;
@@ -68,16 +165,21 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);
 
-  async function runSearch(nextQuery = query, nextCategory = activeCategory) {
+  async function runSearch(nextQuery = query, nextFilters = filters) {
     const cleanQuery = nextQuery.trim();
-    const cleanCategory = nextCategory.trim();
     setLoading(true);
     setSearched(true);
     setError('');
     try {
       const params = new URLSearchParams();
       if (cleanQuery) params.set('q', cleanQuery);
-      if (cleanCategory) params.set('category', cleanCategory);
+      if (nextFilters.category) params.set('category', nextFilters.category);
+      if (nextFilters.type) params.set('type', nextFilters.type);
+      if (nextFilters.country) params.set('country', nextFilters.country);
+      if (nextFilters.language) params.set('language', nextFilters.language);
+      if (nextFilters.quality) params.set('quality', nextFilters.quality);
+      if (nextFilters.year) params.set('year', nextFilters.year);
+      if (nextFilters.sort) params.set('sort', nextFilters.sort);
       params.set('limit', String(SEARCH_LIMIT));
       const response = await fetch(`/api/search?${params.toString()}`, { cache: 'no-store' });
       const payload = (await response.json()) as SearchPayload;
@@ -90,18 +192,23 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
     }
   }
 
-  function chooseCategory(slug: string) {
-    const nextCategory = activeCategory === slug ? '' : slug;
-    setActiveCategory(nextCategory);
-    void runSearch(query, nextCategory);
+  function updateFilter(key: keyof FilterState, value: string) {
+    const nextFilters = { ...filters, [key]: value };
+    setFilters(nextFilters);
+    void runSearch(query, nextFilters);
   }
 
   function clearSearch() {
     setQuery('');
-    setActiveCategory('');
+    setFilters(defaultFilters);
     setItems([]);
     setSearched(false);
     setError('');
+  }
+
+  function openSearch() {
+    setOpen(true);
+    if (!searched) void runSearch(query, filters);
   }
 
   return (
@@ -109,7 +216,7 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
       <button
         type="button"
         aria-label="เปิดค้นหา"
-        onClick={() => setOpen(true)}
+        onClick={openSearch}
         className="fixed bottom-5 right-4 z-[75] grid h-[58px] w-[58px] place-items-center rounded-[22px] bg-white/[0.085] text-white shadow-[0_22px_80px_rgba(0,0,0,0.72),inset_0_1px_0_rgba(255,255,255,0.18),inset_0_-18px_42px_rgba(255,255,255,0.035)] backdrop-blur-2xl transition hover:scale-105 md:bottom-7 md:right-7"
       >
         <span className="absolute inset-0 rounded-[22px] bg-[radial-gradient(circle_at_28%_18%,rgba(255,255,255,0.24),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.12),rgba(255,255,255,0.02))]" />
@@ -123,8 +230,8 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]">Search</p>
-                  <h2 className="mt-1 text-2xl font-black tracking-[-0.06em] md:text-4xl">ค้นหาตามหมวดหลังบ้าน</h2>
-                  <p className="mt-1 text-xs font-bold text-white/42">เลือกหมวดแล้วระบบจะค้นหาให้อัตโนมัติ</p>
+                  <h2 className="mt-1 text-2xl font-black tracking-[-0.06em] md:text-4xl">ค้นหาแบบละเอียด</h2>
+                  <p className="mt-1 text-xs font-bold text-white/42">กรองด้วยหมวด ประเภท ประเทศ ภาษา ความชัด ปี และคะแนน</p>
                 </div>
                 <button
                   type="button"
@@ -156,28 +263,14 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
                   ) : null}
                 </div>
 
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => chooseCategory('')}
-                    className={`h-8 rounded-full px-3 text-[10px] font-black transition ${!activeCategory ? 'bg-white text-black shadow-[0_10px_35px_rgba(255,255,255,0.18)]' : 'bg-white/[0.075] text-white/68 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-white/[0.12] hover:text-white'}`}
-                  >
-                    ทั้งหมด
-                  </button>
-                  {categories.map((category) => {
-                    const active = activeCategory === category.slug;
-                    return (
-                      <button
-                        key={category.slug}
-                        type="button"
-                        onClick={() => chooseCategory(category.slug)}
-                        className={`h-8 rounded-full px-3 text-[10px] font-black transition ${active ? 'bg-[#e50914] text-white shadow-[0_14px_45px_rgba(229,9,20,0.35)]' : 'bg-white/[0.075] text-white/68 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-white/[0.12] hover:text-white'}`}
-                        title={category.slug}
-                      >
-                        {category.title}
-                      </button>
-                    );
-                  })}
+                <div className="mt-3 grid grid-cols-4 gap-1.5 md:grid-cols-[1.35fr_0.95fr_0.95fr_0.95fr_1fr_0.82fr_1.25fr] md:gap-2">
+                  <FilterSelect label="หมวดหมู่" value={filters.category} options={categoryOptions} onChange={(value) => updateFilter('category', value)} />
+                  <FilterSelect label="ประเภท" value={filters.type} options={typeOptions} onChange={(value) => updateFilter('type', value)} />
+                  <FilterSelect label="ประเทศ" value={filters.country} options={countryOptions} onChange={(value) => updateFilter('country', value)} />
+                  <FilterSelect label="ภาษา" value={filters.language} options={languageOptions} onChange={(value) => updateFilter('language', value)} />
+                  <FilterSelect label="ความชัด" value={filters.quality} options={qualityOptions} onChange={(value) => updateFilter('quality', value)} />
+                  <FilterSelect label="ปี" value={filters.year} options={yearOptions} onChange={(value) => updateFilter('year', value)} />
+                  <FilterSelect label="เรียงคะแนน" value={filters.sort} options={sortOptions} onChange={(value) => updateFilter('sort', value)} />
                 </div>
 
                 <div className="mt-3 flex gap-2">
@@ -191,10 +284,10 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/38">Results</p>
                     <h3 className="mt-1 text-xl font-black tracking-[-0.04em]">
-                      {activeTitle ? `หมวด: ${activeTitle}` : query.trim() ? `ค้นหา “${query.trim()}”` : 'ผลลัพธ์ทั้งหมด'}
+                      {filterSummary ? filterSummary : query.trim() ? `ค้นหา “${query.trim()}”` : 'ผลลัพธ์ทั้งหมด'}
                     </h3>
                   </div>
-                  <p className="text-[11px] font-bold text-white/38">{loading ? 'กำลังค้นหา...' : searched ? `พบ ${items.length} เรื่อง` : 'เลือกหมวดหรือพิมพ์คำค้นหา'}</p>
+                  <p className="text-[11px] font-bold text-white/38">{loading ? 'กำลังค้นหา...' : searched ? `พบ ${items.length} เรื่อง` : 'เลือกตัวกรองหรือพิมพ์คำค้นหา'}</p>
                 </div>
 
                 {error ? <div className="mb-3 rounded-2xl bg-[#e50914]/12 px-4 py-3 text-xs font-bold text-red-100">{error}</div> : null}
