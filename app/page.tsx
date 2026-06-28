@@ -8,6 +8,7 @@ import { ModalRecommendationDefault } from '@/components/modal-recommendation-de
 import { WatchHistoryClickBridge } from '@/components/watch-history-click-bridge';
 import { applyAdminHomeConfig } from '@/lib/admin-home-config';
 import { getCatalogHomePayload } from '@/lib/catalog-home';
+import { decorateHomeWithFreshTmdbReleases } from '@/lib/tmdb-release-window';
 
 export const revalidate = 300;
 
@@ -23,7 +24,7 @@ const websiteJsonLd = {
 };
 
 export default async function HomePage() {
-  const home = await applyAdminHomeConfig(await getCatalogHomePayload());
+  const home = await decorateHomeWithFreshTmdbReleases(await applyAdminHomeConfig(await getCatalogHomePayload()));
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
