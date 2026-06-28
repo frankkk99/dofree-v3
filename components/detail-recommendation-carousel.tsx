@@ -85,7 +85,8 @@ export function DetailRecommendationCarousel({ current, items }: { current: Movi
         ref={railRef}
         onMouseEnter={() => setHoverPaused(true)}
         onMouseLeave={() => setHoverPaused(false)}
-        className="movie-rail flex gap-2.5 overflow-x-auto pb-2 sm:gap-3 md:gap-4"
+        className="movie-rail flex w-full max-w-full min-w-0 gap-2.5 overflow-x-auto overflow-y-hidden pb-2 sm:gap-3 md:gap-4"
+        style={{ WebkitOverflowScrolling: 'touch' }}
       >
         {carouselItems.map((movie, index) => (
           <MovieCard
