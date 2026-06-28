@@ -72,11 +72,6 @@ export function MovieCard({ item, priorityBadge, onSelect, compact = false, grid
       </div>
 
       <div className="absolute inset-x-0 bottom-0 p-2 md:p-3.5">
-        <div className="mb-1 flex items-center gap-1 text-[7px] font-black uppercase tracking-[0.1em] text-white/38 md:mb-2 md:gap-2 md:text-[10px] md:tracking-[0.16em]">
-          <span>{item.mediaType === 'tv' ? 'Series' : 'Movie'}</span>
-          <span>•</span>
-          <span>{item.watchUrl ? 'Ready' : item.status || 'Preview'}</span>
-        </div>
         <h3 className="line-clamp-2 text-[9px] font-black leading-tight text-white drop-shadow sm:text-[11px] md:text-[15px]">{item.title}</h3>
         <div className="mt-1 flex items-center gap-1 text-[8px] font-bold text-white/58 md:mt-2 md:gap-2 md:text-[11px]">
           <span className="text-[#f4c46b]">★ {item.rating.toFixed(1)}</span>
