@@ -76,10 +76,8 @@ function DesktopRailScrollFix() {
     function onWheel(event: WheelEvent) {
       const rail = railFromTarget(event.target);
       if (!rail || rail.scrollWidth <= rail.clientWidth) return;
-
       const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
       if (!delta) return;
-
       event.preventDefault();
       rail.scrollLeft += delta;
     }
@@ -88,7 +86,6 @@ function DesktopRailScrollFix() {
       if (event.pointerType === 'touch') return;
       const rail = railFromTarget(event.target);
       if (!rail || rail.scrollWidth <= rail.clientWidth) return;
-
       activeRail = rail;
       startX = event.clientX;
       startLeft = rail.scrollLeft;
@@ -143,14 +140,20 @@ function DesktopRailScrollFix() {
   return null;
 }
 
+function roleIsAdmin(role?: string | null) {
+  return role === 'admin' || role === 'super_admin';
+}
+
 function HeaderAccountMenuPortal() {
   const [host, setHost] = useState<HTMLElement | null>(null);
   const [bodyHost, setBodyHost] = useState<HTMLElement | null>(null);
   const [open, setOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [user, setUser] = useState<DofreeUser | null>(null);
+  const [role, setRole] = useState<string>('');
   const menuRef = useRef<HTMLDivElement | null>(null);
   const isSignedIn = Boolean(user?.id || user?.email || user?.phone);
+  const isAdmin = isSignedIn && roleIsAdmin(role);
   const userLabel = user?.email || user?.phone || (user?.id ? `User ${user.id.slice(0, 8)}` : 'Guest');
 
   useEffect(() => {
@@ -159,6 +162,7 @@ function HeaderAccountMenuPortal() {
     function syncAuth() {
       const session = getStoredSession();
       setUser(session?.user || null);
+      setRole(session?.profile?.role || session?.user?.role || '');
     }
 
     function findHost() {
@@ -205,6 +209,7 @@ function HeaderAccountMenuPortal() {
   async function handleLogout() {
     await signOut();
     setUser(null);
+    setRole('');
     setOpen(false);
   }
 
@@ -217,12 +222,12 @@ function HeaderAccountMenuPortal() {
         aria-label="เปิดเมนู"
         data-dofree-menu-button="true"
         onClick={() => setOpen((value) => !value)}
-        className={`grid h-9 w-9 place-items-center rounded-full border text-white shadow-[0_0_28px_rgba(229,9,20,0.28)] transition md:h-12 md:w-12 ${open ? 'border-[#e50914]/80 bg-[#170203]' : 'border-white/12 bg-white/[0.08] hover:border-[#e50914]/70 hover:bg-[#170203]'}`}
+        className="grid h-10 w-10 place-items-center rounded-none bg-transparent text-white transition hover:opacity-75 md:h-12 md:w-12"
       >
-        <span className="flex flex-col gap-1.5">
-          <span className="block h-0.5 w-4 rounded-full bg-white md:w-5" />
-          <span className="block h-0.5 w-4 rounded-full bg-white md:w-5" />
-          <span className="block h-0.5 w-4 rounded-full bg-white md:w-5" />
+        <span className="flex flex-col gap-[6px]">
+          <span className="block h-[3px] w-8 rounded-full bg-white md:w-9" />
+          <span className="block h-[3px] w-8 rounded-full bg-white md:w-9" />
+          <span className="block h-[3px] w-8 rounded-full bg-white md:w-9" />
         </span>
       </button>
     </div>,
@@ -231,55 +236,63 @@ function HeaderAccountMenuPortal() {
 
   const drawer = open && bodyHost ? createPortal(
     <div
-      className="fixed inset-0 z-[1000] bg-[#030303]/90 text-white backdrop-blur-2xl"
+      className="fixed inset-0 z-[1000] overflow-y-auto bg-black/54 px-4 py-5 text-white backdrop-blur-[10px]"
       onMouseDown={() => setOpen(false)}
     >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_8%,rgba(229,9,20,0.24),transparent_18rem)]" />
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_85%_6%,rgba(229,9,20,0.25),transparent_20rem),radial-gradient(circle_at_20%_100%,rgba(255,255,255,0.08),transparent_22rem)]" />
       <aside
-        className="absolute bottom-3 right-3 top-[68px] w-[calc(100vw-24px)] max-w-[390px] overflow-y-auto rounded-[30px] border border-white/14 bg-[#050505] p-4 shadow-[0_30px_120px_rgba(0,0,0,0.92)] md:right-7 md:top-[92px] md:w-[390px]"
+        className="relative ml-auto min-h-[calc(100svh-40px)] w-full max-w-[430px] overflow-hidden rounded-[34px] bg-white/[0.075] p-4 shadow-[0_40px_150px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,255,255,0.16),inset_0_-38px_90px_rgba(0,0,0,0.42)] backdrop-blur-3xl md:mr-4 md:mt-4 md:min-h-[auto] md:max-h-[calc(100svh-40px)] md:overflow-y-auto md:p-5"
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-3 rounded-[22px] border border-white/8 bg-white/[0.04] p-4">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]/85">Account</p>
-            <h3 className="mt-1 text-[24px] font-black tracking-[-0.06em]">{isSignedIn ? 'บัญชีของฉัน' : 'เมนูผู้ใช้'}</h3>
-            <p className="mt-1 break-all text-[11px] font-semibold leading-5 text-white/44">
-              {isSignedIn ? userLabel : 'บัญชี รายการโปรด ประวัติ และสมาชิก'}
-            </p>
+        <div className="rounded-[28px] bg-black/32 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.10),inset_0_-24px_70px_rgba(255,255,255,0.025)]">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.30em] text-[#e50914]">Account</p>
+              <h3 className="mt-2 text-[27px] font-black tracking-[-0.06em] md:text-[32px]">{isSignedIn ? 'บัญชีของฉัน' : 'เมนูผู้ใช้'}</h3>
+              <p className="mt-2 break-all text-sm font-semibold leading-5 text-white/58">
+                {isSignedIn ? userLabel : 'บัญชี รายการโปรด ประวัติ และสมาชิก'}
+              </p>
+            </div>
+            <button
+              type="button"
+              aria-label="ปิดเมนู"
+              onClick={() => setOpen(false)}
+              className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/[0.09] text-2xl font-black text-white/82 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] transition hover:bg-[#e50914] hover:text-white"
+            >
+              ×
+            </button>
           </div>
-          <button
-            type="button"
-            aria-label="ปิดเมนู"
-            onClick={() => setOpen(false)}
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/[0.08] text-lg font-black text-white/80 hover:bg-[#e50914] hover:text-white"
-          >
-            ×
-          </button>
         </div>
 
         {isSignedIn ? (
-          <div className="mt-4 rounded-[22px] border border-[#e50914]/26 bg-[#170203]/70 p-4">
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#e50914]/85">Signed in</p>
-            <p className="mt-2 break-all text-sm font-black text-white/86">{userLabel}</p>
+          <div className="mt-4 rounded-[28px] bg-[#1d0307]/64 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_22px_70px_rgba(229,9,20,0.08)]">
+            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#e50914]">Signed in</p>
+            <p className="mt-3 break-all text-base font-black text-white/90">{userLabel}</p>
             <button
               type="button"
               onClick={handleLogout}
-              className="mt-4 h-11 w-full rounded-2xl bg-white/[0.09] text-xs font-black text-white/72 transition hover:bg-white/[0.14] hover:text-white"
+              className="mt-4 h-12 w-full rounded-[22px] bg-white/[0.09] text-sm font-black text-white/76 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:bg-white/[0.14] hover:text-white"
             >
               Logout
             </button>
           </div>
         ) : null}
 
-        <div className="mt-4 grid gap-2">
+        <div className="mt-4 grid gap-2.5">
+          {isAdmin ? (
+            <a href="/admin" className="rounded-[24px] bg-[#e50914] px-4 py-4 text-left shadow-[0_18px_60px_rgba(229,9,20,0.32)] transition hover:scale-[1.01]">
+              <span className="block text-base font-black text-white">Admin Dashboard</span>
+              <span className="mt-1 block text-xs font-semibold text-white/72">จัดการหนัง หมวดหมู่ ระบบหลังบ้าน</span>
+            </a>
+          ) : null}
           {[
             ['/favorites', '♡ รายการโปรด', 'เก็บหนังที่อยากดูไว้ในบัญชี'],
             ['/history', '⏱ ประวัติการรับชม', 'ดูเรื่องที่เปิดล่าสุดและดูต่อ'],
             ['/membership', '♛ สมัครสมาชิก', 'Premium / ไม่มีโฆษณา / ดูต่อทุกอุปกรณ์'],
           ].map(([href, title, desc]) => (
-            <a key={href} href={href} className="rounded-2xl border border-white/8 bg-white/[0.055] px-4 py-3 text-left transition hover:border-[#e50914]/60 hover:bg-[#120102]">
-              <span className="block text-sm font-black text-white/90">{title}</span>
-              <span className="mt-0.5 block text-[11px] font-semibold text-white/40">{desc}</span>
+            <a key={href} href={href} className="rounded-[24px] bg-white/[0.065] px-4 py-4 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] transition hover:bg-white/[0.105]">
+              <span className="block text-base font-black text-white/92">{title}</span>
+              <span className="mt-1 block text-xs font-semibold text-white/42">{desc}</span>
             </a>
           ))}
         </div>
@@ -287,16 +300,16 @@ function HeaderAccountMenuPortal() {
         {!isSignedIn ? (
           <>
             <div className="mt-4 grid grid-cols-2 gap-2">
-              <a href="/auth?mode=signin" onClick={() => setAuthMode('signin')} className={`rounded-2xl px-4 py-3 text-center text-xs font-black ${authMode === 'signin' ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.075] text-white/72 hover:bg-white/[0.12]'}`}>
+              <a href="/auth?mode=signin" onClick={() => setAuthMode('signin')} className={`rounded-[22px] px-4 py-3 text-center text-xs font-black ${authMode === 'signin' ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.075] text-white/72 hover:bg-white/[0.12]'}`}>
                 Sign in
               </a>
-              <a href="/auth?mode=signup" onClick={() => setAuthMode('signup')} className={`rounded-2xl px-4 py-3 text-center text-xs font-black ${authMode === 'signup' ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.075] text-white/72 hover:bg-white/[0.12]'}`}>
+              <a href="/auth?mode=signup" onClick={() => setAuthMode('signup')} className={`rounded-[22px] px-4 py-3 text-center text-xs font-black ${authMode === 'signup' ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.075] text-white/72 hover:bg-white/[0.12]'}`}>
                 Sign up
               </a>
             </div>
 
-            <div className="mt-4 rounded-[22px] border border-white/8 bg-white/[0.035] p-3">
-              <p className="mb-2 text-[10px] font-black uppercase tracking-[0.22em] text-white/40">เข้าสู่ระบบด้วย</p>
+            <div className="mt-4 rounded-[26px] bg-white/[0.045] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+              <p className="mb-2 text-[10px] font-black uppercase tracking-[0.22em] text-white/42">เข้าสู่ระบบด้วย</p>
               <div className="grid grid-cols-2 gap-2">
                 {[
                   ['Google', '/auth?provider=google'],
@@ -306,7 +319,7 @@ function HeaderAccountMenuPortal() {
                   ['Email', '/auth?method=email'],
                   ['เบอร์โทร', '/auth?method=phone'],
                 ].map(([label, href]) => (
-                  <a key={label} href={href} className="rounded-xl bg-black/55 px-3 py-2.5 text-center text-[11px] font-black text-white/74 transition hover:bg-[#e50914] hover:text-white">
+                  <a key={label} href={href} className="rounded-[16px] bg-black/38 px-3 py-2.5 text-center text-[11px] font-black text-white/76 transition hover:bg-[#e50914] hover:text-white">
                     {label}
                   </a>
                 ))}
@@ -347,35 +360,6 @@ function ViewAllClickBridge({ sections, onOpen }: { sections: MovieSection[]; on
     return () => document.removeEventListener('click', onClick, true);
   }, [onOpen, sections]);
   return null;
-}
-
-function DynamicCategoryChips({ sections, onOpen }: { sections: MovieSection[]; onOpen: (section: MovieSection) => void }) {
-  const [host, setHost] = useState<HTMLElement | null>(null);
-  useEffect(() => {
-    function findHost() {
-      const searchForm = document.querySelector('main section.sticky form');
-      const next = searchForm?.nextElementSibling;
-      if (next instanceof HTMLElement) {
-        Array.from(next.children).forEach((child) => {
-          if ((child as HTMLElement).id !== 'dynamic-category-chip-row') (child as HTMLElement).style.display = 'none';
-        });
-        setHost(next);
-      }
-    }
-    findHost();
-    const timer = window.setInterval(findHost, 1200);
-    return () => window.clearInterval(timer);
-  }, []);
-  const categorySections = useMemo(() => [allSection(sections), ...sections], [sections]);
-  if (!host) return null;
-  return createPortal(
-    <div id="dynamic-category-chip-row" className="flex max-h-[138px] flex-wrap gap-1.5 overflow-y-auto pr-1 md:max-h-[96px] md:gap-2 xl:max-h-[112px]">
-      {categorySections.map((section, index) => (
-        <button key={`${section.slug}-${index}`} type="button" onClick={() => onOpen(section)} className="inline-flex h-[22px] items-center rounded-full bg-white/[0.075] px-2.5 text-[9px] font-black leading-none text-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition hover:bg-[#e50914] hover:text-white md:h-7 md:px-3 md:text-[11px]">{index === 0 ? 'ทั้งหมด' : sectionDisplayTitle(section, index - 1)}</button>
-      ))}
-    </div>,
-    host
-  );
 }
 
 function FullSectionOverlay({ section, allItems, onClose }: { section: MovieSection; allItems: MovieItem[]; onClose: () => void }) {
@@ -452,10 +436,10 @@ function RealtimePortal({ home, onOpen }: { home: HomePayload; onOpen: (section:
   const fallbackItems = useMemo(() => fallbackRecentlyAdded(home), [home]);
   const items = liveItems.length ? liveItems : fallbackItems;
   useEffect(() => {
-    const searchSection = document.querySelector('main section.sticky');
-    if (!searchSection?.parentElement) return;
+    const sectionsHost = document.querySelector('#sections');
+    if (!sectionsHost?.parentElement) return;
     let node = document.getElementById('realtime-added-host');
-    if (!node) { node = document.createElement('div'); node.id = 'realtime-added-host'; searchSection.insertAdjacentElement('afterend', node); }
+    if (!node) { node = document.createElement('div'); node.id = 'realtime-added-host'; sectionsHost.insertAdjacentElement('afterbegin', node); }
     setHost(node);
   }, []);
   useEffect(() => {
@@ -476,19 +460,15 @@ function RealtimePortal({ home, onOpen }: { home: HomePayload; onOpen: (section:
 
 export function HomeRealtimeWrapper({ home }: { home: HomePayload }) {
   const [openSection, setOpenSection] = useState<MovieSection | null>(null);
-  const [selected, setSelected] = useState<MovieItem | null>(null);
   const allItems = useMemo(() => unique(home.sections.flatMap((section) => section.items)), [home.sections]);
-  const recommendations = selected ? allItems.filter((item) => `${item.mediaType}-${item.id}` !== `${selected.mediaType}-${selected.id}`).slice(0, 24) : allItems.slice(0, 24);
   return (
     <>
       <HomeExperienceV3 home={home} />
       <HeaderAccountMenuPortal />
       <DesktopRailScrollFix />
       <ViewAllClickBridge sections={home.sections} onOpen={setOpenSection} />
-      <DynamicCategoryChips sections={home.sections} onOpen={setOpenSection} />
       <RealtimePortal home={home} onOpen={setOpenSection} />
       {openSection ? <FullSectionOverlay section={openSection} allItems={allItems} onClose={() => setOpenSection(null)} /> : null}
-      {selected ? <DetailWindow item={selected} recommendations={recommendations} onClose={() => setSelected(null)} onSelect={setSelected} /> : null}
     </>
   );
 }
