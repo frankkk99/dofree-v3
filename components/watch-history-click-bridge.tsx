@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { HomePayload, MovieItem } from '@/lib/tmdb';
+import { canUsePremiumFeature } from '@/lib/premium-access-config';
+import { usePremiumAccessSnapshot } from '@/lib/premium-access-client';
 import { getStoredSession } from '@/lib/supabase-auth-browser';
 
 function unique(items: MovieItem[]) {
@@ -35,6 +37,7 @@ function findByTitle(items: MovieItem[], title: string) {
 export function WatchHistoryClickBridge({ home }: { home: HomePayload }) {
   const items = useMemo(() => allHomeItems(home), [home]);
   const [message, setMessage] = useState('');
+  const { config: premiumAccessConfig, userState: premiumUserState } = usePremiumAccessSnapshot();
 
   useEffect(() => {
     let timer: number | null = null;
@@ -49,6 +52,7 @@ export function WatchHistoryClickBridge({ home }: { home: HomePayload }) {
       const session = getStoredSession();
       const token = session?.access_token;
       if (!token) return;
+      if (!canUsePremiumFeature('history', premiumUserState, premiumAccessConfig)) return;
 
       const response = await fetch('/api/watch-history', {
         method: 'POST',
@@ -88,7 +92,7 @@ export function WatchHistoryClickBridge({ home }: { home: HomePayload }) {
       document.removeEventListener('click', onClick, true);
       if (timer) window.clearTimeout(timer);
     };
-  }, [items]);
+  }, [items, premiumAccessConfig, premiumUserState]);
 
   if (!message) return null;
 

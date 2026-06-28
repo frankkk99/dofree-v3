@@ -6,6 +6,8 @@ import type { HomePayload, MovieItem, MovieSection } from '@/lib/tmdb';
 import { HomeExperienceV3 } from '@/components/home-experience-v3';
 import { MovieCard } from '@/components/movie-card';
 import { DetailWindow } from '@/components/window-system';
+import { canUsePremiumFeature } from '@/lib/premium-access-config';
+import { usePremiumAccessSnapshot } from '@/lib/premium-access-client';
 import { getStoredSession, signOut, type DofreeUser } from '@/lib/supabase-auth-browser';
 
 const FULL_SECTION_BATCH_SIZE = 24;
@@ -125,10 +127,37 @@ function HeaderAccountMenuPortal() {
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [user, setUser] = useState<DofreeUser | null>(null);
   const [role, setRole] = useState<string>('');
+  const { config: premiumAccessConfig, userState: premiumUserState } = usePremiumAccessSnapshot();
   const menuRef = useRef<HTMLDivElement | null>(null);
   const isSignedIn = Boolean(user?.id || user?.email || user?.phone);
   const isAdmin = isSignedIn && roleIsAdmin(role);
   const userLabel = user?.email || user?.phone || (user?.id ? `User ${user.id.slice(0, 8)}` : 'Guest');
+  const accessUserState = { ...premiumUserState, isSignedIn, isAdmin: isAdmin || premiumUserState.isAdmin };
+  const favoritesAllowed = canUsePremiumFeature('favorites', accessUserState, premiumAccessConfig);
+  const historyAllowed = canUsePremiumFeature('history', accessUserState, premiumAccessConfig);
+  const memberLinks = [
+    {
+      href: isSignedIn ? (favoritesAllowed ? '/favorites' : '/membership') : '/auth?mode=signin',
+      title: '♡ รายการโปรด',
+      desc: favoritesAllowed ? 'เก็บหนังที่อยากดูไว้ในบัญชี' : 'Premium เท่านั้น',
+      locked: isSignedIn && !favoritesAllowed,
+      badge: favoritesAllowed && isSignedIn && !premiumUserState.hasPremiumAccess ? premiumAccessConfig.label : '',
+    },
+    {
+      href: isSignedIn ? (historyAllowed ? '/history' : '/membership') : '/auth?mode=signin',
+      title: '⏱ ประวัติการรับชม',
+      desc: historyAllowed ? 'ดูเรื่องที่เปิดล่าสุดและดูต่อ' : 'Premium เท่านั้น',
+      locked: isSignedIn && !historyAllowed,
+      badge: historyAllowed && isSignedIn && !premiumUserState.hasPremiumAccess ? premiumAccessConfig.label : '',
+    },
+    {
+      href: '/membership',
+      title: '♛ สมัครสมาชิก',
+      desc: 'Premium / ไม่มีโฆษณา / ดูต่อทุกอุปกรณ์',
+      locked: false,
+      badge: '',
+    },
+  ];
 
   useEffect(() => {
     setBodyHost(document.body);
@@ -232,13 +261,12 @@ function HeaderAccountMenuPortal() {
               <span className="mt-1 block text-xs font-semibold text-white/72">จัดการหนัง หมวดหมู่ ระบบหลังบ้าน</span>
             </a>
           ) : null}
-          {[
-            ['/favorites', '♡ รายการโปรด', 'เก็บหนังที่อยากดูไว้ในบัญชี'],
-            ['/history', '⏱ ประวัติการรับชม', 'ดูเรื่องที่เปิดล่าสุดและดูต่อ'],
-            ['/membership', '♛ สมัครสมาชิก', 'Premium / ไม่มีโฆษณา / ดูต่อทุกอุปกรณ์'],
-          ].map(([href, title, desc]) => (
+          {memberLinks.map(({ href, title, desc, locked, badge }) => (
             <a key={href} href={href} className="rounded-[24px] bg-white/[0.065] px-4 py-4 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] transition hover:bg-white/[0.105]">
-              <span className="block text-base font-black text-white/92">{title}</span>
+              <span className="flex items-center justify-between gap-3 text-base font-black text-white/92">
+                <span>{title}</span>
+                {locked ? <span className="rounded-full bg-white/[0.1] px-2 py-1 text-[9px] text-white/58">Premium</span> : badge ? <span className="rounded-full bg-[#e50914]/18 px-2 py-1 text-[9px] text-red-100">{badge}</span> : null}
+              </span>
               <span className="mt-1 block text-xs font-semibold text-white/42">{desc}</span>
             </a>
           ))}

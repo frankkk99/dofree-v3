@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { supabaseRest as supabaseServiceRest } from '@/lib/supabase-rest';
 
 type AuthUser = {
   id: string;
@@ -11,6 +12,13 @@ type ProfileRecord = {
   display_name?: string | null;
   avatar_url?: string | null;
   role?: string | null;
+};
+
+type MembershipRecord = {
+  user_id: string;
+  plan?: string | null;
+  status?: string | null;
+  expires_at?: string | null;
 };
 
 function supabaseUrl() {
@@ -65,6 +73,14 @@ async function supabaseRest(path: string, token: string, init: RequestInit = {})
   });
 }
 
+function membershipIsActive(membership?: MembershipRecord | null) {
+  if (!membership) return false;
+  if (membership.plan !== 'premium' || membership.status !== 'active') return false;
+  if (!membership.expires_at) return true;
+  const expiresAt = new Date(membership.expires_at).getTime();
+  return Number.isFinite(expiresAt) && expiresAt > Date.now();
+}
+
 export async function GET(request: Request) {
   try {
     const token = bearer(request);
@@ -82,14 +98,21 @@ export async function GET(request: Request) {
     const profile = data[0] || null;
     const role = profile?.role || 'viewer';
     const isAdmin = role === 'admin' || role === 'super_admin';
+    const membership = await supabaseServiceRest<MembershipRecord[]>(
+      `memberships?user_id=eq.${encodeURIComponent(user.id)}&select=user_id,plan,status,expires_at&limit=1`,
+      { mode: 'service', cache: 'no-store' },
+    ).then((rows) => rows?.[0] || null).catch(() => null);
+    const isPremium = role === 'premium' || membershipIsActive(membership) || isAdmin;
 
     return NextResponse.json({
       ok: true,
       user,
       profile,
+      membership,
       role,
       isAdmin,
-      isPremium: role === 'premium' || isAdmin,
+      isPremium,
+      hasPremiumAccess: isPremium,
     });
   } catch (error) {
     return jsonError(error instanceof Error ? error.message : 'Cannot load profile', 500);

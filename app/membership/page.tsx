@@ -1,4 +1,6 @@
 import { BackLink } from '@/components/back-link';
+import { premiumFreeAccessStatus } from '@/lib/premium-access-config';
+import { readPremiumFreeAccessConfig } from '@/lib/premium-access-store';
 
 const plans = [
   {
@@ -24,7 +26,15 @@ const plans = [
   },
 ];
 
-export default function MembershipPage() {
+export default async function MembershipPage() {
+  const premiumAccessConfig = await readPremiumFreeAccessConfig();
+  const promoStatus = premiumFreeAccessStatus(premiumAccessConfig);
+  const promoMessage = promoStatus === 'all'
+    ? 'ตอนนี้เปิดฟีเจอร์ Premium ให้ผู้ใช้ Free ทดลองใช้งาน'
+    : promoStatus === 'partial'
+      ? 'ตอนนี้เปิดฟีเจอร์ Premium บางส่วนให้ทดลองใช้งาน'
+      : '';
+
   return (
     <main className="min-h-screen bg-[#030303] px-4 py-24 text-white md:px-8">
       <BackLink />
@@ -34,6 +44,13 @@ export default function MembershipPage() {
         <p className="mt-3 max-w-2xl text-sm font-semibold leading-7 text-white/48 md:text-base">
           เลือกสิทธิ์การใช้งานที่เหมาะกับคุณ ระหว่าง Free สำหรับการดูและค้นหา กับ Premium สำหรับประสบการณ์เต็มแบบไม่มีโฆษณาและฟีเจอร์พิเศษ
         </p>
+
+        {promoMessage ? (
+          <div className="mt-6 rounded-[24px] border border-[#e50914]/25 bg-[#e50914]/12 px-5 py-4 shadow-[0_18px_70px_rgba(229,9,20,0.14)]">
+            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-red-100/70">{premiumAccessConfig.label}</p>
+            <p className="mt-2 text-sm font-black text-white md:text-base">{promoMessage}</p>
+          </div>
+        ) : null}
 
         <div className="mt-8 grid gap-4 md:grid-cols-2">
           {plans.map((plan) => (
