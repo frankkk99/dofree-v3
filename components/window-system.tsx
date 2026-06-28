@@ -12,6 +12,9 @@ const modalTabs = [
   { id: 'spoiler', label: 'สปอยหนัง' },
 ] as const;
 
+const MODAL_REC_BATCH_SIZE = 6;
+const MODAL_REC_LOAD_THRESHOLD = 260;
+
 type ModalTab = (typeof modalTabs)[number]['id'];
 
 type CastPerson = {
@@ -299,7 +302,7 @@ function ModalWatchSection({
             <div className="grid max-h-28 grid-cols-3 gap-2 overflow-y-auto pr-1 sm:grid-cols-4 md:grid-cols-6">
               {readyEpisodes.map((episode) => (
                 <a key={`${episode.seasonNumber}-${episode.episodeNumber}`} href={episode.href} target="_blank" rel="noreferrer" title={episode.title || `EP ${episode.episodeNumber}`} className="rounded-xl border border-white/10 bg-white/[0.07] px-2.5 py-2 text-center text-[11px] font-black text-white/76 transition hover:border-[#e50914]/70 hover:bg-[#e50914] hover:text-white">
-                  S{episode.seasonNumber}E{episode.episodeNumber}
+                  S{episode.seasonNumber}E{episode.episodeNumber}{episode.title ? ` · ${episode.title}` : ''}
                 </a>
               ))}
             </div>
@@ -362,18 +365,14 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
   const [reported, setReported] = useState(false);
   const [activeTab, setActiveTab] = useState<ModalTab>('recommend');
   const [expanded, setExpanded] = useState(false);
-  const [visibleRecCount, setVisibleRecCount] = useState(8);
+  const [visibleRecCount, setVisibleRecCount] = useState(MODAL_REC_BATCH_SIZE);
   const [detailItem, setDetailItem] = useState<MovieItem>(item);
   const [realCast, setRealCast] = useState<CastPerson[]>([]);
   const [detailRecommendations, setDetailRecommendations] = useState<MovieItem[]>(recommendations);
   const [detailLoading, setDetailLoading] = useState(false);
   const [seriesEpisodes, setSeriesEpisodes] = useState<PublicEpisode[]>([]);
   const [seriesEpisodesLoading, setSeriesEpisodesLoading] = useState(false);
-  const recLoadRef = useRef<HTMLDivElement | null>(null);
   const recRailRef = useRef<HTMLDivElement | null>(null);
-  const recFrameRef = useRef<number | null>(null);
-  const recLastFrameRef = useRef(0);
-  const recPausedUntilRef = useRef(0);
   const watchSectionRef = useRef<HTMLDivElement | null>(null);
 
   const displayItem = detailItem;
@@ -387,7 +386,7 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
     setActiveTab('recommend');
     setExpanded(false);
     setReported(false);
-    setVisibleRecCount(8);
+    setVisibleRecCount(MODAL_REC_BATCH_SIZE);
     setDetailItem(item);
     setRealCast([]);
     setDetailRecommendations(recommendations);
@@ -432,57 +431,22 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
   }, [item.id, item.mediaType, recommendations]);
 
   useEffect(() => {
-    if (activeTab !== 'recommend' || visibleRecCount >= detailRecommendations.length || typeof IntersectionObserver === 'undefined') return;
-    const node = recLoadRef.current;
-    if (!node) return;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) setVisibleRecCount((count) => Math.min(count + 8, detailRecommendations.length));
-    }, { rootMargin: '420px' });
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [activeTab, detailRecommendations.length, visibleRecCount]);
-
-  useEffect(() => {
     const rail = recRailRef.current;
-    if (activeTab !== 'recommend' || !rail || visibleRecommendations.length < 4) return;
+    if (activeTab !== 'recommend' || !rail) return;
 
-    function pauseAfterInteraction() {
-      recPausedUntilRef.current = performance.now() + 2600;
-    }
-
-    function tick(now: number) {
+    function maybeLoadMore() {
       const currentRail = recRailRef.current;
       if (!currentRail) return;
-      const last = recLastFrameRef.current || now;
-      const delta = Math.min(now - last, 64);
-      recLastFrameRef.current = now;
-      const canScroll = currentRail.scrollWidth > currentRail.clientWidth + 8;
-      if (canScroll && now >= recPausedUntilRef.current) {
-        currentRail.scrollLeft += (42 * delta) / 1000;
-        const maxScroll = currentRail.scrollWidth - currentRail.clientWidth;
-        if (currentRail.scrollLeft >= maxScroll - 4) currentRail.scrollLeft = 0;
+      const remaining = currentRail.scrollWidth - currentRail.clientWidth - currentRail.scrollLeft;
+      if (remaining <= MODAL_REC_LOAD_THRESHOLD) {
+        setVisibleRecCount((count) => Math.min(count + MODAL_REC_BATCH_SIZE, detailRecommendations.length));
       }
-      recFrameRef.current = window.requestAnimationFrame(tick);
     }
 
-    rail.addEventListener('pointerdown', pauseAfterInteraction, { passive: true });
-    rail.addEventListener('pointerup', pauseAfterInteraction, { passive: true });
-    rail.addEventListener('touchstart', pauseAfterInteraction, { passive: true });
-    rail.addEventListener('touchmove', pauseAfterInteraction, { passive: true });
-    rail.addEventListener('wheel', pauseAfterInteraction, { passive: true });
-    recFrameRef.current = window.requestAnimationFrame(tick);
-
-    return () => {
-      if (recFrameRef.current) window.cancelAnimationFrame(recFrameRef.current);
-      recFrameRef.current = null;
-      recLastFrameRef.current = 0;
-      rail.removeEventListener('pointerdown', pauseAfterInteraction);
-      rail.removeEventListener('pointerup', pauseAfterInteraction);
-      rail.removeEventListener('touchstart', pauseAfterInteraction);
-      rail.removeEventListener('touchmove', pauseAfterInteraction);
-      rail.removeEventListener('wheel', pauseAfterInteraction);
-    };
-  }, [activeTab, visibleRecommendations.length]);
+    rail.addEventListener('scroll', maybeLoadMore, { passive: true });
+    window.setTimeout(maybeLoadMore, 120);
+    return () => rail.removeEventListener('scroll', maybeLoadMore);
+  }, [activeTab, detailRecommendations.length, visibleRecCount]);
 
   async function reportIssue() {
     setReported(true);
@@ -570,9 +534,38 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
 
             {activeTab === 'recommend' && (
               <div>
-                <h3 className="text-base font-black md:text-xl">แนะนำสำหรับคุณ</h3>
-                <div ref={recRailRef} className="movie-rail mt-3 flex gap-2 overflow-x-auto pb-2 md:gap-3">{visibleRecommendations.map((movie, index) => <MovieCard key={`modal-rec-${movie.mediaType}-${movie.id}-${index}`} item={movie} compact onSelect={(nextItem) => { onSelect(nextItem); setActiveTab('recommend'); setExpanded(false); }} priorityBadge={index % 2 === 0 ? 'แนะนำ' : undefined} />)}</div>
-                {visibleRecommendations.length < detailRecommendations.length ? <div ref={recLoadRef} className="py-4 text-center text-[10px] font-black text-white/35">กำลังโหลดเพิ่ม...</div> : null}
+                <div className="flex items-end justify-between gap-3">
+                  <h3 className="text-base font-black md:text-xl">แนะนำสำหรับคุณ</h3>
+                  <span className="text-[10px] font-black text-white/35">แสดง {visibleRecommendations.length}/{detailRecommendations.length}</span>
+                </div>
+                <div
+                  ref={recRailRef}
+                  className="movie-rail mt-3 flex max-w-full gap-2 overflow-x-auto overflow-y-hidden scroll-smooth pb-2 md:gap-3"
+                  style={{ WebkitOverflowScrolling: 'touch' }}
+                >
+                  {visibleRecommendations.map((movie, index) => (
+                    <MovieCard
+                      key={`modal-rec-${movie.mediaType}-${movie.id}-${index}`}
+                      item={movie}
+                      compact
+                      onSelect={(nextItem) => {
+                        onSelect(nextItem);
+                        setActiveTab('recommend');
+                        setExpanded(false);
+                      }}
+                      priorityBadge={index % 2 === 0 ? 'แนะนำ' : undefined}
+                    />
+                  ))}
+                  {visibleRecommendations.length < detailRecommendations.length ? (
+                    <button
+                      type="button"
+                      onClick={() => setVisibleRecCount((count) => Math.min(count + MODAL_REC_BATCH_SIZE, detailRecommendations.length))}
+                      className="grid h-[176px] w-[88px] shrink-0 place-items-center rounded-[10px] bg-white/[0.055] px-2 text-center text-[10px] font-black text-white/42 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl hover:bg-white/[0.095] hover:text-white md:h-[220px] md:w-[112px]"
+                    >
+                      โหลดอีก 6 เรื่อง
+                    </button>
+                  ) : null}
+                </div>
               </div>
             )}
 
