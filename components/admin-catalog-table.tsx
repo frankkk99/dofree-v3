@@ -94,6 +94,10 @@ type EpisodeDraft = {
   status: Status;
 };
 
+type EpisodeDraftRow = EpisodeDraft & {
+  draft_key: string;
+};
+
 type FilterPreset = {
   label: string;
   q?: string;
@@ -235,6 +239,93 @@ function episodeToForm(episode: SeriesEpisode): EpisodeForm {
   };
 }
 
+function draftToForm(episode: EpisodeDraft): EpisodeForm {
+  return {
+    season_number: String(episode.season_number || 1),
+    episode_number: String(episode.episode_number || 1),
+    episode_title: episode.episode_title || '',
+    watch_url: episode.watch_url || '',
+    trailer_url: episode.trailer_url || '',
+    provider: episode.provider || 'bunny',
+    notes: episode.notes || '',
+    status: episode.status || 'published',
+  };
+}
+
+function formToDraft(form: EpisodeForm): EpisodeDraft {
+  const watchUrl = form.watch_url.trim();
+  return {
+    season_number: Number(form.season_number) || 1,
+    episode_number: Number(form.episode_number) || 1,
+    episode_title: form.episode_title || `EP ${form.episode_number || 1}`,
+    watch_url: watchUrl,
+    trailer_url: form.trailer_url.trim(),
+    provider: form.provider || 'admin',
+    notes: form.notes,
+    status: watchUrl && form.status === 'draft' ? 'published' : form.status,
+  };
+}
+
+function episodeRowKey(episode: Pick<SeriesEpisode, 'id' | 'season_number' | 'episode_number'>) {
+  return episode.id ? `episode-${episode.id}` : `episode-${episode.season_number}-${episode.episode_number}`;
+}
+
+function episodeStatusMeta(episode: Pick<SeriesEpisode, 'watch_url' | 'status'> | EpisodeDraft) {
+  if (episode.status === 'broken') return { label: 'Broken', className: 'bg-[#e50914]/18 text-red-100 ring-[#e50914]/30' };
+  if (episode.status === 'hidden') return { label: 'Hidden', className: 'bg-white/[0.06] text-white/42 ring-white/10' };
+  if (episode.status === 'review') return { label: 'Review', className: 'bg-[#f4c46b]/16 text-[#f4c46b] ring-[#f4c46b]/25' };
+  if (episode.watch_url && episode.status === 'published') return { label: 'Ready', className: 'bg-emerald-400/16 text-emerald-100 ring-emerald-300/25' };
+  return { label: episode.watch_url ? 'Draft' : 'Empty', className: 'bg-white/[0.08] text-white/50 ring-white/10' };
+}
+
+function sortedEpisodes<T extends { season_number: number; episode_number: number }>(items: T[]) {
+  return [...items].sort((a, b) => a.season_number - b.season_number || a.episode_number - b.episode_number);
+}
+
+function nextEpisodeDrafts(episodes: SeriesEpisode[], drafts: EpisodeDraftRow[], count: number, provider: string): EpisodeDraftRow[] {
+  const rows = [...episodes, ...drafts];
+  const latestSeason = rows.length ? Math.max(...rows.map((episode) => Number(episode.season_number) || 1)) : 1;
+  const latestEpisode = rows
+    .filter((episode) => Number(episode.season_number) === latestSeason)
+    .reduce((max, episode) => Math.max(max, Number(episode.episode_number) || 0), 0);
+  return Array.from({ length: count }, (_, index) => {
+    const episodeNumber = latestEpisode + index + 1;
+    return {
+      draft_key: `draft-${latestSeason}-${episodeNumber}-${Date.now()}-${index}`,
+      season_number: latestSeason,
+      episode_number: episodeNumber,
+      episode_title: `EP ${episodeNumber}`,
+      watch_url: '',
+      trailer_url: '',
+      provider: provider || 'admin',
+      notes: '',
+      status: 'draft',
+    };
+  });
+}
+
+function mergeEpisodeDrafts(...groups: EpisodeDraft[][]) {
+  const seen = new Set<string>();
+  return groups.flat().filter((episode) => {
+    const key = `${episode.season_number}-${episode.episode_number}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function openTestUrl(url?: string | null) {
+  const value = url?.trim();
+  if (!value) return;
+  window.open(value, '_blank', 'noopener,noreferrer');
+}
+
+async function copyUrl(url?: string | null) {
+  const value = url?.trim();
+  if (!value || !navigator.clipboard) return;
+  await navigator.clipboard.writeText(value);
+}
+
 function parseEpisodeLine(line: string, index: number, provider: string): EpisodeDraft | null {
   const raw = line.trim();
   if (!raw) return null;
@@ -301,6 +392,34 @@ function statusLabel(item: Item) {
   return 'ไม่มีลิงก์';
 }
 
+function UrlInputRow({
+  label,
+  value,
+  onChange,
+  onClear,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  onClear: () => void;
+  placeholder: string;
+}) {
+  const hasValue = Boolean(value.trim());
+
+  return (
+    <label className="grid gap-1">
+      <span className="text-[10px] font-black uppercase tracking-[0.18em] text-white/36">{label}</span>
+      <div className="grid gap-2 md:grid-cols-[1fr_auto_auto_auto]">
+        <input value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className={cls} />
+        <button type="button" onClick={() => openTestUrl(value)} disabled={!hasValue} className="rounded-xl bg-white/10 px-3 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-35">Test</button>
+        <button type="button" onClick={() => void copyUrl(value)} disabled={!hasValue} className="rounded-xl bg-white/10 px-3 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-35">Copy</button>
+        <button type="button" onClick={onClear} disabled={!hasValue} className="rounded-xl bg-white/10 px-3 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-35">Clear</button>
+      </div>
+    </label>
+  );
+}
+
 function Edit({
   item,
   form,
@@ -314,11 +433,18 @@ function Edit({
   episodeBulkText,
   setEpisodeBulkText,
   episodeBulkDrafts,
+  episodeDraftRows,
+  allEpisodeDrafts,
+  expandedEpisodeKey,
+  onAddEpisodeDrafts,
   onSaveEpisode,
   onSaveBulkEpisodes,
   episodeSaving,
   episodeLoading,
   onEditEpisode,
+  onEditEpisodeDraft,
+  onUpdateEpisodeDraft,
+  onCancelEpisodeEdit,
 }: {
   item: Item;
   form: Form;
@@ -332,12 +458,37 @@ function Edit({
   episodeBulkText: string;
   setEpisodeBulkText: (value: string) => void;
   episodeBulkDrafts: EpisodeDraft[];
+  episodeDraftRows: EpisodeDraftRow[];
+  allEpisodeDrafts: EpisodeDraft[];
+  expandedEpisodeKey: string;
+  onAddEpisodeDrafts: (count: number) => void;
   onSaveEpisode: () => void;
   onSaveBulkEpisodes: () => void;
   episodeSaving: boolean;
   episodeLoading: boolean;
   onEditEpisode: (episode: SeriesEpisode) => void;
+  onEditEpisodeDraft: (episode: EpisodeDraftRow) => void;
+  onUpdateEpisodeDraft: (key: string, form: EpisodeForm) => void;
+  onCancelEpisodeEdit: () => void;
 }) {
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const episodeRows = [
+    ...sortedEpisodes(episodes).map((episode) => ({ kind: 'saved' as const, key: episodeRowKey(episode), episode })),
+    ...sortedEpisodes(episodeDraftRows).map((episode) => ({ kind: 'draft' as const, key: episode.draft_key, episode })),
+  ];
+  const currentSeason = episodeRows[0]?.episode.season_number || 1;
+  const hasUnsaved = Boolean(expandedEpisodeKey || episodeDraftRows.length || episodeBulkText.trim());
+
+  function handleClose() {
+    if (hasUnsaved && !window.confirm('มีข้อมูลที่ยังไม่ได้บันทึก ต้องการปิดหน้าต่างนี้หรือไม่?')) return;
+    onClose();
+  }
+
+  function updateEpisodeForm(next: EpisodeForm) {
+    setEpisodeForm(next);
+    if (expandedEpisodeKey.startsWith('draft-')) onUpdateEpisodeDraft(expandedEpisodeKey, next);
+  }
+
   return (
     <div className="fixed inset-0 z-50 overflow-auto bg-black/80 p-4 text-white backdrop-blur-xl">
       <form onSubmit={onSave} className="mx-auto max-w-3xl rounded-3xl border border-white/10 bg-[#060606] p-5 shadow-[0_28px_120px_rgba(0,0,0,0.78)]">
@@ -350,15 +501,24 @@ function Edit({
             <p className="mt-1 text-xs text-white/36">{item.genres?.join(' / ') || item.section_slug || '-'}</p>
             <p className="mt-1 text-xs text-white/30">Bucket: {item.source_buckets?.join(' / ') || item.source_bucket || '-'}</p>
           </div>
-          <button type="button" onClick={onClose} className="h-10 w-10 rounded-full bg-white/10 text-xl">×</button>
+          <button type="button" onClick={handleClose} className="h-10 w-10 rounded-full bg-white/10 text-xl">×</button>
         </div>
 
         <div className="mt-5 grid gap-3">
-          <label className="grid gap-1">
-            <span className="text-[10px] font-black uppercase tracking-[0.18em] text-white/36">Watch URL / Embed URL / HLS URL</span>
-            <input value={form.watch_url} onChange={(event) => setForm({ ...form, watch_url: event.target.value, status: event.target.value.trim() ? 'published' : form.status })} placeholder="ลิงก์รับชม" className={cls} />
-          </label>
-          <input value={form.trailer_url} onChange={(event) => setForm({ ...form, trailer_url: event.target.value })} placeholder="Trailer URL" className={cls} />
+          <UrlInputRow
+            label="Watch URL / Embed URL / HLS URL"
+            value={form.watch_url}
+            onChange={(value) => setForm({ ...form, watch_url: value, status: value.trim() ? 'published' : form.status })}
+            onClear={() => setForm({ ...form, watch_url: '', status: 'draft' })}
+            placeholder="ลิงก์รับชม"
+          />
+          <UrlInputRow
+            label="Trailer URL"
+            value={form.trailer_url}
+            onChange={(value) => setForm({ ...form, trailer_url: value })}
+            onClear={() => setForm({ ...form, trailer_url: '' })}
+            placeholder="Trailer URL"
+          />
           <div className="grid gap-3 md:grid-cols-2">
             <input value={form.title_th} onChange={(event) => setForm({ ...form, title_th: event.target.value })} placeholder="ชื่อไทย" className={cls} />
             <input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="ชื่ออังกฤษ" className={cls} />
@@ -390,7 +550,89 @@ function Edit({
               <span className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-black text-white/60">{episodeLoading ? 'Loading...' : `${episodes.length} episodes`}</span>
             </div>
 
-            {episodes.length ? (
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button type="button" onClick={() => onAddEpisodeDrafts(1)} className="rounded-xl bg-white/10 px-3 py-2 text-xs font-black text-white hover:bg-white/15">+ เพิ่มตอน</button>
+              <button type="button" onClick={() => onAddEpisodeDrafts(5)} className="rounded-xl bg-white/10 px-3 py-2 text-xs font-black text-white hover:bg-white/15">+ เพิ่ม 5 ตอน</button>
+              <button type="button" onClick={() => onAddEpisodeDrafts(10)} className="rounded-xl bg-white/10 px-3 py-2 text-xs font-black text-white hover:bg-white/15">+ เพิ่ม 10 ตอน</button>
+              <button type="button" onClick={() => setBulkOpen((value) => !value)} className="rounded-xl bg-white/10 px-3 py-2 text-xs font-black text-white hover:bg-white/15">Bulk Paste</button>
+              <button type="button" onClick={onSaveBulkEpisodes} disabled={episodeSaving || !allEpisodeDrafts.length} className="ml-auto rounded-xl bg-[#e50914] px-4 py-2 text-xs font-black text-white disabled:opacity-45">
+                {episodeSaving ? 'Saving...' : `บันทึกทั้งหมด ${allEpisodeDrafts.length}`}
+              </button>
+            </div>
+
+            {hasUnsaved ? <p className="mt-3 rounded-xl border border-[#f4c46b]/20 bg-[#f4c46b]/10 px-3 py-2 text-xs font-black text-[#f4c46b]">มีข้อมูลที่ยังไม่ได้บันทึก</p> : null}
+
+            <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-black/24">
+              <div className="grid grid-cols-[72px_1fr_88px_92px_92px_120px] gap-2 border-b border-white/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-white/36 max-lg:hidden">
+                <span>EP</span>
+                <span>Title</span>
+                <span>Status</span>
+                <span>Watch</span>
+                <span>Trailer</span>
+                <span>Action</span>
+              </div>
+              <div className="divide-y divide-white/8">
+                {episodeRows.map((row) => {
+                  const statusMeta = episodeStatusMeta(row.episode);
+                  const watchReady = Boolean(row.episode.watch_url?.trim());
+                  const trailerReady = Boolean(row.episode.trailer_url?.trim());
+                  const isOpen = expandedEpisodeKey === row.key;
+                  return (
+                    <div key={row.key} className="bg-black/10">
+                      <div className="grid gap-3 px-3 py-3 lg:grid-cols-[72px_1fr_88px_92px_92px_120px] lg:items-center">
+                        <div className="text-sm font-black text-white">S{row.episode.season_number}E{String(row.episode.episode_number).padStart(2, '0')}</div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-black text-white/88">{row.episode.episode_title || `EP ${row.episode.episode_number}`}</p>
+                          {row.kind === 'draft' ? <p className="mt-1 text-[10px] font-black uppercase tracking-[0.12em] text-[#f4c46b]">Draft row</p> : null}
+                        </div>
+                        <span className={`inline-flex w-fit rounded-full px-2.5 py-1 text-[10px] font-black ring-1 ${statusMeta.className}`}>{statusMeta.label}</span>
+                        <span className={`w-fit rounded-full px-2.5 py-1 text-[10px] font-black ${watchReady ? 'bg-emerald-400/16 text-emerald-100' : 'bg-white/[0.07] text-white/42'}`}>{watchReady ? 'Watch' : 'Empty'}</span>
+                        <span className={`w-fit rounded-full px-2.5 py-1 text-[10px] font-black ${trailerReady ? 'bg-sky-400/16 text-sky-100' : 'bg-white/[0.07] text-white/42'}`}>{trailerReady ? 'Trailer' : 'Empty'}</span>
+                        <div className="flex flex-wrap gap-2">
+                          <button type="button" onClick={() => openTestUrl(row.episode.watch_url)} disabled={!watchReady} className="rounded-lg bg-white/10 px-2.5 py-1.5 text-[10px] font-black text-white disabled:opacity-35">Test</button>
+                          <button type="button" onClick={() => row.kind === 'draft' ? onEditEpisodeDraft(row.episode) : onEditEpisode(row.episode)} className="rounded-lg bg-[#e50914] px-2.5 py-1.5 text-[10px] font-black text-white">{watchReady ? 'แก้' : 'ใส่ลิงก์'}</button>
+                        </div>
+                      </div>
+
+                      {isOpen ? (
+                        <div className="border-t border-white/8 bg-black/28 p-3">
+                          <div className="grid gap-3 md:grid-cols-[90px_90px_1fr]">
+                            <input value={episodeForm.season_number} onChange={(event) => updateEpisodeForm({ ...episodeForm, season_number: event.target.value })} placeholder="Season" inputMode="numeric" className={cls} />
+                            <input value={episodeForm.episode_number} onChange={(event) => updateEpisodeForm({ ...episodeForm, episode_number: event.target.value })} placeholder="Episode" inputMode="numeric" className={cls} />
+                            <input value={episodeForm.episode_title} onChange={(event) => updateEpisodeForm({ ...episodeForm, episode_title: event.target.value })} placeholder="ชื่อตอน เช่น ตอนที่ 1" className={cls} />
+                          </div>
+                          <div className="mt-3 grid gap-3 md:grid-cols-2">
+                            <UrlInputRow label="Episode Watch URL" value={episodeForm.watch_url} onChange={(value) => updateEpisodeForm({ ...episodeForm, watch_url: value, status: value.trim() ? (episodeForm.status === 'draft' ? 'published' : episodeForm.status) : 'draft' })} onClear={() => updateEpisodeForm({ ...episodeForm, watch_url: '', status: 'draft' })} placeholder="Episode Watch URL" />
+                            <UrlInputRow label="Episode Trailer URL" value={episodeForm.trailer_url} onChange={(value) => updateEpisodeForm({ ...episodeForm, trailer_url: value })} onClear={() => updateEpisodeForm({ ...episodeForm, trailer_url: '' })} placeholder="Episode Trailer URL" />
+                          </div>
+                          <div className="mt-3 grid gap-3 md:grid-cols-[180px_1fr_150px]">
+                            <input value={episodeForm.provider} onChange={(event) => updateEpisodeForm({ ...episodeForm, provider: event.target.value })} placeholder="provider" className={cls} />
+                            <input value={episodeForm.notes} onChange={(event) => updateEpisodeForm({ ...episodeForm, notes: event.target.value })} placeholder="หมายเหตุของตอนนี้" className={cls} />
+                            <select value={episodeForm.status} onChange={(event) => updateEpisodeForm({ ...episodeForm, status: event.target.value as Status })} className={selectCls}>
+                              <option value="draft">draft</option>
+                              <option value="review">review</option>
+                              <option value="published">published</option>
+                              <option value="broken">broken</option>
+                              <option value="hidden">hidden</option>
+                            </select>
+                          </div>
+                          <div className="mt-3 flex flex-wrap justify-end gap-2">
+                            <button type="button" onClick={onCancelEpisodeEdit} className="rounded-xl bg-white/10 px-4 py-2 text-xs font-black text-white">ยกเลิก</button>
+                            <button type="button" onClick={onSaveEpisode} disabled={episodeSaving} className="rounded-xl bg-[#e50914] px-4 py-2 text-xs font-black text-white disabled:opacity-50">{episodeSaving ? 'Saving...' : 'บันทึกตอนนี้'}</button>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+
+                {!episodeRows.length ? (
+                  <div className="px-3 py-8 text-center text-xs font-black text-white/38">ยังไม่มีตอน กด + เพิ่มตอน เพื่อเริ่มที่ S1E1</div>
+                ) : null}
+              </div>
+            </div>
+
+            {false && episodes.length ? (
               <div className="mt-3 flex max-h-24 flex-wrap gap-2 overflow-y-auto pr-1">
                 {episodes.map((episode) => (
                   <button key={`${episode.season_number}-${episode.episode_number}`} type="button" onClick={() => onEditEpisode(episode)} className="rounded-full border border-white/10 bg-black/35 px-3 py-1.5 text-[11px] font-black text-white/68 hover:border-[#e50914]/60 hover:text-white">
@@ -399,9 +641,10 @@ function Edit({
                 ))}
               </div>
             ) : (
-              <p className="mt-3 rounded-xl bg-black/28 px-3 py-2 text-xs font-bold text-white/36">ยังไม่มีตอนในระบบ เริ่มจาก S1 E1 ได้เลย</p>
+              <p className="hidden mt-3 rounded-xl bg-black/28 px-3 py-2 text-xs font-bold text-white/36">ยังไม่มีตอนในระบบ เริ่มจาก S1 E1 ได้เลย</p>
             )}
 
+            {(bulkOpen || episodeBulkText || episodeBulkDrafts.length) ? (
             <div className="mt-4 rounded-2xl border border-[#e50914]/20 bg-black/26 p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
@@ -428,8 +671,9 @@ function Edit({
                 </div>
               ) : null}
             </div>
+            ) : null}
 
-            <details className="mt-3 rounded-2xl border border-white/10 bg-black/20 p-3">
+            <details className="hidden mt-3 rounded-2xl border border-white/10 bg-black/20 p-3">
               <summary className="cursor-pointer text-sm font-black text-white/76">แก้ทีละตอน</summary>
               <div className="mt-3 grid gap-3 md:grid-cols-[90px_90px_1fr]">
                 <input value={episodeForm.season_number} onChange={(event) => setEpisodeForm({ ...episodeForm, season_number: event.target.value })} placeholder="Season" inputMode="numeric" className={cls} />
@@ -461,7 +705,7 @@ function Edit({
         <div className="mt-5 flex flex-wrap justify-end gap-2">
           <a href={form.watch_url || '#'} target="_blank" rel="noreferrer" className={`rounded-xl bg-white/10 px-4 py-2 text-sm ${form.watch_url ? '' : 'pointer-events-none opacity-40'}`}>เปิด Preview</a>
           <button type="button" onClick={() => setForm({ ...form, watch_url: '', status: 'draft' })} className="rounded-xl bg-white/10 px-4 py-2 text-sm">ล้างลิงก์</button>
-          <button type="button" onClick={onClose} className="rounded-xl bg-white/10 px-4 py-2 text-sm">ยกเลิก</button>
+          <button type="button" onClick={handleClose} className="rounded-xl bg-white/10 px-4 py-2 text-sm">ยกเลิก</button>
           <button disabled={saving} className="rounded-xl bg-[#e50914] px-5 py-2 text-sm font-black disabled:opacity-50">{saving ? 'กำลังบันทึก' : 'บันทึก'}</button>
         </div>
       </form>
@@ -503,6 +747,8 @@ export function AdminCatalogTable() {
   const [episodes, setEpisodes] = useState<SeriesEpisode[]>([]);
   const [episodeForm, setEpisodeForm] = useState<EpisodeForm>(emptyEpisodeForm());
   const [episodeBulkText, setEpisodeBulkText] = useState('');
+  const [episodeDraftRows, setEpisodeDraftRows] = useState<EpisodeDraftRow[]>([]);
+  const [expandedEpisodeKey, setExpandedEpisodeKey] = useState('');
 
   function currentFilters(overrides: Partial<FilterPreset> = {}) {
     return {
@@ -543,6 +789,7 @@ export function AdminCatalogTable() {
   ].filter(Boolean), [genre, language, maxRating, media, minRating, month, poster, provider, q, section, source, status, view, year]);
 
   const episodeBulkDrafts = useMemo(() => parseEpisodeBulk(episodeBulkText, form?.provider || 'admin'), [episodeBulkText, form?.provider]);
+  const allEpisodeDrafts = useMemo(() => mergeEpisodeDrafts(episodeDraftRows, episodeBulkDrafts), [episodeDraftRows, episodeBulkDrafts]);
 
   useEffect(() => {
     void load();
@@ -673,6 +920,10 @@ export function AdminCatalogTable() {
       const data = (await response.json()) as { ok?: boolean; error?: string };
       if (!response.ok || !data.ok) throw new Error(data.error || 'Save episode failed');
       setMsg(`บันทึก S${episodeForm.season_number} E${episodeForm.episode_number} แล้ว`);
+      setEpisodeDraftRows((current) => current.filter((episode) => (
+        episode.season_number !== Number(episodeForm.season_number) || episode.episode_number !== Number(episodeForm.episode_number)
+      )));
+      setExpandedEpisodeKey('');
       setEpisodeForm(emptyEpisodeForm(form?.provider || 'bunny'));
       await loadEpisodes(active);
       await load(0, false);
@@ -684,7 +935,7 @@ export function AdminCatalogTable() {
   }
 
   async function saveBulkEpisodes() {
-    if (!active || active.media_type !== 'tv' || !episodeBulkDrafts.length) return;
+    if (!active || active.media_type !== 'tv' || !allEpisodeDrafts.length) return;
 
     setEpisodeSaving(true);
     setErr('');
@@ -694,7 +945,7 @@ export function AdminCatalogTable() {
         headers: adminSessionHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify({
           tmdb_id: active.tmdb_id,
-          episodes: episodeBulkDrafts.map((episode) => ({
+          episodes: allEpisodeDrafts.map((episode) => ({
             ...episode,
             tmdb_id: active.tmdb_id,
           })),
@@ -702,7 +953,9 @@ export function AdminCatalogTable() {
       });
       const data = (await response.json()) as { ok?: boolean; saved?: number; error?: string };
       if (!response.ok || !data.ok) throw new Error(data.error || 'Save episodes failed');
-      setMsg(`บันทึก ${data.saved || episodeBulkDrafts.length} ตอนแล้ว`);
+      setMsg(`บันทึก ${data.saved || allEpisodeDrafts.length} ตอนแล้ว`);
+      setEpisodeDraftRows([]);
+      setExpandedEpisodeKey('');
       setEpisodeBulkText('');
       await loadEpisodes(active);
       await load(0, false);
@@ -750,11 +1003,39 @@ export function AdminCatalogTable() {
     setForm(toForm(item));
     setEpisodeForm(emptyEpisodeForm(item.provider || 'bunny'));
     setEpisodeBulkText('');
+    setEpisodeDraftRows([]);
+    setExpandedEpisodeKey('');
     void loadEpisodes(item);
   }
 
   function editEpisode(episode: SeriesEpisode) {
     setEpisodeForm(episodeToForm(episode));
+    setExpandedEpisodeKey(episodeRowKey(episode));
+  }
+
+  function editEpisodeDraft(episode: EpisodeDraftRow) {
+    setEpisodeForm(draftToForm(episode));
+    setExpandedEpisodeKey(episode.draft_key);
+  }
+
+  function updateEpisodeDraft(key: string, nextForm: EpisodeForm) {
+    setEpisodeDraftRows((current) => current.map((episode) => (
+      episode.draft_key === key ? { ...formToDraft(nextForm), draft_key: key } : episode
+    )));
+  }
+
+  function addEpisodeDrafts(count: number) {
+    const drafts = nextEpisodeDrafts(episodes, episodeDraftRows, count, form?.provider || 'admin');
+    setEpisodeDraftRows((current) => [...current, ...drafts]);
+    if (drafts[0]) {
+      setEpisodeForm(draftToForm(drafts[0]));
+      setExpandedEpisodeKey(drafts[0].draft_key);
+    }
+  }
+
+  function cancelEpisodeEdit() {
+    setExpandedEpisodeKey('');
+    setEpisodeForm(emptyEpisodeForm(form?.provider || 'bunny'));
   }
 
   function applyPreset(preset: FilterPreset) {
@@ -902,7 +1183,7 @@ export function AdminCatalogTable() {
           item={active}
           form={form}
           setForm={setForm}
-          onClose={() => { setActive(null); setForm(null); setEpisodes([]); setEpisodeBulkText(''); }}
+          onClose={() => { setActive(null); setForm(null); setEpisodes([]); setEpisodeBulkText(''); setEpisodeDraftRows([]); setExpandedEpisodeKey(''); }}
           onSave={save}
           saving={saving}
           episodes={episodes}
@@ -911,11 +1192,18 @@ export function AdminCatalogTable() {
           episodeBulkText={episodeBulkText}
           setEpisodeBulkText={setEpisodeBulkText}
           episodeBulkDrafts={episodeBulkDrafts}
+          episodeDraftRows={episodeDraftRows}
+          allEpisodeDrafts={allEpisodeDrafts}
+          expandedEpisodeKey={expandedEpisodeKey}
+          onAddEpisodeDrafts={addEpisodeDrafts}
           onSaveEpisode={saveEpisode}
           onSaveBulkEpisodes={saveBulkEpisodes}
           episodeSaving={episodeSaving}
           episodeLoading={episodeLoading}
           onEditEpisode={editEpisode}
+          onEditEpisodeDraft={editEpisodeDraft}
+          onUpdateEpisodeDraft={updateEpisodeDraft}
+          onCancelEpisodeEdit={cancelEpisodeEdit}
         />
       ) : null}
     </section>

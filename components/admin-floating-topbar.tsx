@@ -3,24 +3,28 @@
 import { useEffect, useState } from 'react';
 import { getStoredSession, type DofreeSession } from '@/lib/supabase-auth-browser';
 
+export type AdminModuleId = 'dashboard' | 'content' | 'homepage' | 'premium' | 'series' | 'audit';
+
 const modules = [
-  { href: '#admin-dashboard-root', label: 'Dashboard' },
-  { href: '#catalog-manager', label: 'Content' },
-  { href: '#admin-control-center', label: 'Homepage' },
-  { href: '/admin/users', label: 'Users' },
-  { href: '/admin/memberships', label: 'Membership' },
-  { href: '#admin-premium-access', label: 'Premium Controls' },
-  { href: '#maintenance', label: 'Reports', muted: true },
-  { href: '#analytics', label: 'Analytics' },
-  { href: '#health', label: 'Settings', muted: true },
-  { href: '#admin-audit-log', label: 'Audit Log' },
-];
+  { id: 'dashboard', label: 'Dashboard' },
+  { id: 'content', label: 'Content' },
+  { id: 'homepage', label: 'Homepage' },
+  { id: 'premium', label: 'Premium' },
+  { id: 'series', label: 'Series' },
+  { id: 'audit', label: 'Audit' },
+] satisfies { id: AdminModuleId; label: string }[];
 
 function accountLabel(session: DofreeSession | null) {
   return session?.profile?.display_name || session?.user?.email || session?.user?.phone || 'Admin session';
 }
 
-export function AdminFloatingTopbar() {
+export function AdminFloatingTopbar({
+  activeModule,
+  onModuleChange,
+}: {
+  activeModule: AdminModuleId;
+  onModuleChange: (module: AdminModuleId) => void;
+}) {
   const [session, setSession] = useState<DofreeSession | null>(null);
 
   useEffect(() => {
@@ -44,16 +48,17 @@ export function AdminFloatingTopbar() {
         </div>
         <nav aria-label="Admin modules" className="mt-2 flex gap-2 overflow-x-auto pb-1">
           {modules.map((module) => (
-            <a
-              key={module.label}
-              href={module.href}
-              aria-disabled={module.muted ? 'true' : undefined}
-              className={`shrink-0 rounded-2xl px-4 py-2 text-xs font-black transition ${module.muted ? 'border border-dashed border-white/10 bg-white/[0.035] text-white/38 hover:text-white/55' : 'bg-white/[0.08] text-white/72 hover:bg-white/[0.14] hover:text-white'}`}
+            <button
+              key={module.id}
+              type="button"
+              onClick={() => onModuleChange(module.id)}
+              className={`shrink-0 rounded-2xl px-4 py-2 text-xs font-black transition ${activeModule === module.id ? 'bg-white text-black shadow-[0_12px_36px_rgba(255,255,255,0.16)]' : 'bg-white/[0.08] text-white/72 hover:bg-white/[0.14] hover:text-white'}`}
             >
               {module.label}
-              {module.muted ? <span className="ml-2 text-[9px] uppercase tracking-[0.16em] text-white/25">soon</span> : null}
-            </a>
+            </button>
           ))}
+          <a href="/admin/users" className="shrink-0 rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-2 text-xs font-black text-white/50 hover:bg-white/[0.08] hover:text-white">Users</a>
+          <a href="/admin/memberships" className="shrink-0 rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-2 text-xs font-black text-white/50 hover:bg-white/[0.08] hover:text-white">Membership</a>
         </nav>
       </div>
     </div>
