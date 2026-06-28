@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 export default function AdminPage() {
   return (
     <AdminAuthGuard>
-      <main className="min-h-screen bg-[#030303] text-white">
+      <main className="min-h-screen scroll-smooth bg-[#030303] text-white">
         <AdminFloatingTopbar />
         <section id="admin-dashboard-root">
           <AdminDashboard />

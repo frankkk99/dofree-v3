@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { adminSessionHeaders } from '@/lib/admin-session-browser';
+import { adminInputClassSm, adminSelectClassSm } from '@/lib/admin-ui-classes';
 
 type Media = 'movie' | 'tv';
 type Status = 'draft' | 'review' | 'published' | 'broken' | 'hidden';
@@ -113,7 +114,8 @@ type FilterPreset = {
 };
 
 const sections = ['watch-ready', 'top-rated', 'popular', 'now-playing', 'series', 'thai', 'action', 'horror', 'comedy', 'korea', 'japan', 'china', 'documentary'];
-const cls = 'rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-sm text-white outline-none focus:border-[#e50914]';
+const cls = adminInputClassSm;
+const selectCls = adminSelectClassSm;
 const limit = 240;
 
 const emptyOptions: FilterOptions = {
@@ -362,10 +364,10 @@ function Edit({
             <input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="ชื่ออังกฤษ" className={cls} />
           </div>
           <div className="grid gap-3 md:grid-cols-3">
-            <select value={form.section_slug} onChange={(event) => setForm({ ...form, section_slug: event.target.value })} className={cls}>
+            <select value={form.section_slug} onChange={(event) => setForm({ ...form, section_slug: event.target.value })} className={selectCls}>
               {sections.map((section) => <option key={section} value={section}>{section}</option>)}
             </select>
-            <select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value as Status })} className={cls}>
+            <select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value as Status })} className={selectCls}>
               <option value="draft">draft</option>
               <option value="review">review</option>
               <option value="published">published</option>
@@ -414,7 +416,7 @@ function Edit({
                 value={episodeBulkText}
                 onChange={(event) => setEpisodeBulkText(event.target.value)}
                 placeholder={'1 | ตอนที่ 1 | https://...\n2 | ตอนที่ 2 | https://...\n3 | ตอนที่ 3 | https://...'}
-                className="mt-3 min-h-28 w-full rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-xs font-semibold leading-5 text-white outline-none placeholder:text-white/28 focus:border-[#e50914]"
+                className="mt-3 min-h-28 w-full rounded-xl border border-white/10 bg-[#080808] px-3 py-2 text-xs font-semibold leading-5 text-white outline-none placeholder:text-white/28 focus:border-[#e50914] focus:ring-1 focus:ring-[#e50914]/35"
               />
               {episodeBulkDrafts.length ? (
                 <div className="mt-3 flex max-h-24 flex-wrap gap-2 overflow-y-auto pr-1">
@@ -438,7 +440,7 @@ function Edit({
               <div className="mt-3 grid gap-3 md:grid-cols-[1fr_1fr_150px]">
                 <input value={episodeForm.watch_url} onChange={(event) => setEpisodeForm({ ...episodeForm, watch_url: event.target.value, status: event.target.value.trim() ? 'published' : episodeForm.status })} placeholder="Episode Watch URL" className={cls} />
                 <input value={episodeForm.trailer_url} onChange={(event) => setEpisodeForm({ ...episodeForm, trailer_url: event.target.value })} placeholder="Episode Trailer URL" className={cls} />
-                <select value={episodeForm.status} onChange={(event) => setEpisodeForm({ ...episodeForm, status: event.target.value as Status })} className={cls}>
+                <select value={episodeForm.status} onChange={(event) => setEpisodeForm({ ...episodeForm, status: event.target.value as Status })} className={selectCls}>
                   <option value="draft">draft</option>
                   <option value="review">review</option>
                   <option value="published">published</option>
@@ -815,25 +817,25 @@ export function AdminCatalogTable() {
       <form onSubmit={(event) => { event.preventDefault(); void load(0, false); }} className="mt-6 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
         <div className="grid gap-2 md:grid-cols-[1.4fr_140px_140px_140px_140px]">
           <input value={q} onChange={(event) => setQ(event.target.value)} placeholder="ค้นหาหนัง / ซีรีส์ / TMDB ID / ปี / ภาษา / หมายเหตุ" className={cls} />
-          <select value={genre} onChange={(event) => setGenre(event.target.value)} className={cls}>{options.genres.map((item) => <option key={item} value={item}>{optionLabel(item)}</option>)}</select>
-          <select value={source} onChange={(event) => setSource(event.target.value)} className={cls}>{options.sources.map((item) => <option key={item} value={item}>{optionLabel(item)}</option>)}</select>
-          <select value={year} onChange={(event) => setYear(event.target.value)} className={cls}>{options.years.map((item) => <option key={item} value={item}>{item === 'all' ? 'ทุกปี' : item}</option>)}</select>
-          <select value={month} onChange={(event) => setMonth(event.target.value)} className={cls}>{options.months.map((item) => <option key={item} value={item}>{optionLabel(item, 'month')}</option>)}</select>
+          <select value={genre} onChange={(event) => setGenre(event.target.value)} className={selectCls}>{options.genres.map((item) => <option key={item} value={item}>{optionLabel(item)}</option>)}</select>
+          <select value={source} onChange={(event) => setSource(event.target.value)} className={selectCls}>{options.sources.map((item) => <option key={item} value={item}>{optionLabel(item)}</option>)}</select>
+          <select value={year} onChange={(event) => setYear(event.target.value)} className={selectCls}>{options.years.map((item) => <option key={item} value={item}>{item === 'all' ? 'ทุกปี' : item}</option>)}</select>
+          <select value={month} onChange={(event) => setMonth(event.target.value)} className={selectCls}>{options.months.map((item) => <option key={item} value={item}>{optionLabel(item, 'month')}</option>)}</select>
         </div>
 
         <div className="mt-2 grid gap-2 md:grid-cols-[120px_140px_140px_140px_140px_140px_120px_120px]">
-          <select value={media} onChange={(event) => setMedia(event.target.value)} className={cls}>{options.media.map((item) => <option key={item} value={item}>{optionLabel(item, 'media')}</option>)}</select>
-          <select value={status} onChange={(event) => setStatus(event.target.value)} className={cls}>{options.statuses.map((item) => <option key={item} value={item}>{optionLabel(item, 'status')}</option>)}</select>
-          <select value={language} onChange={(event) => setLanguage(event.target.value)} className={cls}>{options.languages.map((item) => <option key={item} value={item}>{item === 'all' ? 'ทุกภาษา' : item}</option>)}</select>
-          <select value={provider} onChange={(event) => setProvider(event.target.value)} className={cls}>{options.providers.map((item) => <option key={item} value={item}>{item === 'all' ? 'ทุก provider' : item}</option>)}</select>
-          <select value={section} onChange={(event) => setSection(event.target.value)} className={cls}>{options.sections.map((item) => <option key={item} value={item}>{item === 'all' ? 'ทุก section' : item}</option>)}</select>
-          <select value={poster} onChange={(event) => setPoster(event.target.value)} className={cls}>{options.posters.map((item) => <option key={item} value={item}>{optionLabel(item, 'poster')}</option>)}</select>
+          <select value={media} onChange={(event) => setMedia(event.target.value)} className={selectCls}>{options.media.map((item) => <option key={item} value={item}>{optionLabel(item, 'media')}</option>)}</select>
+          <select value={status} onChange={(event) => setStatus(event.target.value)} className={selectCls}>{options.statuses.map((item) => <option key={item} value={item}>{optionLabel(item, 'status')}</option>)}</select>
+          <select value={language} onChange={(event) => setLanguage(event.target.value)} className={selectCls}>{options.languages.map((item) => <option key={item} value={item}>{item === 'all' ? 'ทุกภาษา' : item}</option>)}</select>
+          <select value={provider} onChange={(event) => setProvider(event.target.value)} className={selectCls}>{options.providers.map((item) => <option key={item} value={item}>{item === 'all' ? 'ทุก provider' : item}</option>)}</select>
+          <select value={section} onChange={(event) => setSection(event.target.value)} className={selectCls}>{options.sections.map((item) => <option key={item} value={item}>{item === 'all' ? 'ทุก section' : item}</option>)}</select>
+          <select value={poster} onChange={(event) => setPoster(event.target.value)} className={selectCls}>{options.posters.map((item) => <option key={item} value={item}>{optionLabel(item, 'poster')}</option>)}</select>
           <input value={minRating} onChange={(event) => setMinRating(event.target.value)} placeholder="คะแนนต่ำสุด" className={cls} inputMode="decimal" />
           <input value={maxRating} onChange={(event) => setMaxRating(event.target.value)} placeholder="คะแนนสูงสุด" className={cls} inputMode="decimal" />
         </div>
 
         <div className="mt-2 grid gap-2 md:grid-cols-[160px_160px_1fr_auto_auto_auto]">
-          <select value={sort} onChange={(event) => setSort(event.target.value)} className={cls}>
+          <select value={sort} onChange={(event) => setSort(event.target.value)} className={selectCls}>
             <option value="rating">คะแนนสูง</option>
             <option value="newest">หนังใหม่</option>
             <option value="oldest">เก่าสุด</option>
@@ -841,7 +843,7 @@ export function AdminCatalogTable() {
             <option value="updated">อัปเดตล่าสุด</option>
             <option value="title">เรียงชื่อ</option>
           </select>
-          <select value={view} onChange={(event) => setView(event.target.value)} className={cls}>
+          <select value={view} onChange={(event) => setView(event.target.value)} className={selectCls}>
             <option value="unique">Unique movie</option>
             <option value="rows">ทุกแถว sync</option>
           </select>
