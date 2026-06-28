@@ -115,7 +115,7 @@ function badges(movie: ReleaseMovie, index: number) {
 function toMovieItem(movie: TmdbMovie, index: number): ReleaseMovie {
   const posterUrl = movie.poster_path ? `${posterBase}${movie.poster_path}` : fallbackImage;
   const backdropUrl = movie.backdrop_path ? `${imageBase}${movie.backdrop_path}` : movie.poster_path ? `${posterBase}${movie.poster_path}` : fallbackImage;
-  const title = movie.title || movie.original_title || `TMDB ${movie.id}`;
+  const title = movie.title || movie.original_title || `ภาพยนตร์ ${movie.id}`;
   const rating = Number(movie.vote_average || 0);
   const releaseDate = movie.release_date || '';
   const base: ReleaseMovie = {
@@ -123,7 +123,7 @@ function toMovieItem(movie: TmdbMovie, index: number): ReleaseMovie {
     mediaType: 'movie',
     title,
     titleEn: movie.original_title || title,
-    overview: movie.overview || 'ข้อมูลภาพยนตร์จาก TMDB อัปเดตตามรอบฉายใหม่และกำหนดฉายในอนาคต',
+    overview: movie.overview || 'ข้อมูลภาพยนตร์อัปเดตตามรอบฉายใหม่และกำหนดฉายในอนาคต',
     posterUrl,
     backdropUrl,
     rating,
@@ -188,13 +188,13 @@ export async function decorateHomeWithFreshTmdbReleases(home: HomePayload): Prom
   const upcomingItems = movies.filter((item) => {
     const date = item.releaseDate || '';
     return date >= range.today && date <= range.to;
-  }).slice(0, 18);
+  }).slice(0, 6);
   const comingSoonSection: MovieSection | null = upcomingItems.length
     ? {
       slug: 'coming-soon',
       eyebrow: 'COMING SOON',
       title: 'เร็ว ๆ นี้',
-      description: 'หนังที่ยังไม่เข้าฉาย ดึงข้อมูลสดจาก TMDB ตามกำหนดฉายในอนาคต',
+      description: 'หนังที่ยังไม่เข้าฉายและมีกำหนดฉายในอนาคต',
       items: upcomingItems,
     }
     : null;
