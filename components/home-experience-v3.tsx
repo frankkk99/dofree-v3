@@ -213,19 +213,9 @@ function LazyMovieRail({ section, sectionIndex, onSelect }: { section: MovieSect
   return (
     <div ref={ref} style={{ contentVisibility: 'auto', containIntrinsicSize: '340px 1000px' }}>
       {mounted ? (
-        <div
-          ref={railRef}
-          className="movie-rail flex max-w-full gap-2.5 overflow-x-auto overflow-y-hidden scroll-smooth pb-3 sm:gap-3 md:gap-5 md:pb-4"
-          style={{ WebkitOverflowScrolling: 'touch' }}
-        >
+        <div ref={railRef} className="movie-rail flex max-w-full gap-2.5 overflow-x-auto overflow-y-hidden scroll-smooth pb-3 sm:gap-3 md:gap-5 md:pb-4" style={{ WebkitOverflowScrolling: 'touch' }}>
           {renderedItems.map((item, index) => (
-            <MovieCard
-              key={`${section.slug}-${item.mediaType}-${item.id}-${index}`}
-              item={item}
-              onSelect={onSelect}
-              priority={sectionIndex === 0 && index < 3}
-              priorityBadge={section.slug === 'coming-soon' ? 'เร็ว ๆ นี้' : index % 4 === 0 ? 'ใหม่' : undefined}
-            />
+            <MovieCard key={`${section.slug}-${item.mediaType}-${item.id}-${index}`} item={item} onSelect={onSelect} priority={sectionIndex === 0 && index < 3} priorityBadge={section.slug === 'coming-soon' ? 'เร็ว ๆ นี้' : index % 4 === 0 ? 'ใหม่' : undefined} />
           ))}
           {loadingMore ? Array.from({ length: RAIL_LOAD_STEP }).map((_, index) => (
             <div key={`loading-${section.slug}-${index}`} className="h-[176px] w-[116px] shrink-0 animate-pulse rounded-[8px] bg-white/[0.045] sm:h-[220px] sm:w-[140px] md:h-[280px] md:w-[180px] xl:h-[300px] xl:w-[196px]" aria-hidden="true" />
@@ -278,7 +268,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
       <header className="fixed inset-x-0 top-0 z-50 border-b border-white/[0.07] bg-black/88 backdrop-blur-2xl">
         <nav className="mx-auto flex h-[58px] max-w-[1920px] items-center px-4 md:h-[76px] md:px-7 xl:h-[88px]">
           <a href="/" className="flex items-center gap-1.5 text-[24px] font-black tracking-[-0.08em] text-[#e50914] md:text-[34px] xl:text-[38px]"><span>DOFree</span><span className="rounded bg-[#e50914] px-1 py-0.5 text-[9px] font-black tracking-normal text-white md:rounded-md md:px-1.5 md:text-[13px]">v3</span></a>
-          <div className="ml-auto flex items-center gap-3 md:gap-5"><a href="/watch-ready" className="hidden text-[15px] font-black text-[#f6c56b] md:block">♛ พรีเมียม</a><div data-dofree-menu-host="true" className="grid h-9 w-9 place-items-center md:h-12 md:w-12" /></div>
+          <div className="ml-auto flex items-center gap-3 md:gap-5"><div data-dofree-menu-host="true" className="grid h-9 w-9 place-items-center md:h-12 md:w-12" /></div>
         </nav>
       </header>
 
@@ -306,7 +296,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
         <div className="space-y-8 md:space-y-12">
           {randomizedSections.map((section, sectionIndex) => (
             <div key={section.slug} className="relative" style={{ contentVisibility: sectionIndex > 1 ? 'auto' : 'visible', containIntrinsicSize: '360px 1000px' }}>
-              <div className="mb-3 flex items-center justify-between md:mb-6"><div>{section.eyebrow ? <p className="text-[9px] font-black uppercase tracking-[0.26em] text-[#e50914]/80">{section.eyebrow}</p> : null}<h2 className="text-[20px] font-black tracking-[-0.04em] md:text-[30px]">{section.title}</h2></div><a href={section.slug === 'watch-ready' ? '/watch-ready' : `#${section.slug}`} className="text-[12px] font-black text-white/50 hover:text-white md:text-[16px]">ดูทั้งหมด ›</a></div>
+              <div className="mb-3 flex items-center justify-between md:mb-6"><div>{section.eyebrow ? <p className="text-[9px] font-black uppercase tracking-[0.26em] text-[#e50914]/80">{section.eyebrow}</p> : null}<h2 className="text-[20px] font-black tracking-[-0.04em] md:text-[30px]">{section.title}</h2></div><a href={`#${section.slug}`} className="text-[12px] font-black text-white/50 hover:text-white md:text-[16px]">ดูทั้งหมด ›</a></div>
               <LazyMovieRail section={section} sectionIndex={sectionIndex} onSelect={openMovie} />
             </div>
           ))}
