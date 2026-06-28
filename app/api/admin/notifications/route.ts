@@ -20,8 +20,8 @@ function cleanText(value: unknown) {
 
 async function requireAdmin(request: Request) {
   const auth = await requireAdminAccess(request);
-  if (auth.ok) return { actor: auth };
-  return { response: NextResponse.json({ ok: false, error: auth.error }, { status: auth.status }) };
+  if (auth.ok === false) return { response: NextResponse.json({ ok: false, error: auth.error }, { status: auth.status }) };
+  return { actor: auth };
 }
 
 export async function GET(request: Request) {
