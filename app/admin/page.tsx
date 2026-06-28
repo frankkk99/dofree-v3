@@ -1,12 +1,7 @@
 import type { Metadata } from 'next';
-import { AdminAuditLogPanel } from '@/components/admin-audit-log-panel';
+import { Suspense } from 'react';
 import { AdminAuthGuard } from '@/components/admin-auth-guard';
-import { AdminCatalogBrowser } from '@/components/admin-catalog-browser';
-import { AdminControlCenter } from '@/components/admin-control-center';
-import { AdminDashboard } from '@/components/admin-dashboard';
-import { AdminFloatingTopbar } from '@/components/admin-floating-topbar';
-import { AdminPremiumAccessPanel } from '@/components/admin-premium-access-panel';
-import { AdminSeriesBulkManager } from '@/components/admin-series-bulk-manager';
+import { AdminWorkspace } from '@/components/admin-workspace';
 
 export const metadata: Metadata = {
   title: 'DodeedeeV3 Admin Dashboard',
@@ -21,21 +16,9 @@ export default function AdminPage() {
   return (
     <AdminAuthGuard>
       <main className="min-h-screen scroll-smooth bg-[#030303] text-white">
-        <AdminFloatingTopbar />
-        <section id="admin-dashboard-root">
-          <AdminDashboard />
-        </section>
-        <AdminPremiumAccessPanel />
-        <AdminControlCenter />
-        <section id="series-bulk-manager" className="border-y border-white/10 bg-black/20">
-          <AdminSeriesBulkManager />
-        </section>
-        <section id="admin-audit-log">
-          <AdminAuditLogPanel />
-        </section>
-        <section id="catalog-manager" className="border-t border-white/10">
-          <AdminCatalogBrowser />
-        </section>
+        <Suspense fallback={<div className="mx-auto max-w-7xl px-4 py-8 text-sm font-black text-white/50 md:px-8">Loading admin workspace...</div>}>
+          <AdminWorkspace />
+        </Suspense>
       </main>
     </AdminAuthGuard>
   );
