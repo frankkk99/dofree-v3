@@ -91,6 +91,13 @@ function heroEnglishReleaseLine(item: MovieItem) {
   return `${englishTitle} · เข้าฉาย ${month} ${year}`;
 }
 
+function releaseWindowBadge(item: MovieItem) {
+  const releaseDate = (item as MovieItem & { releaseDate?: string }).releaseDate || '';
+  if (!releaseDate) return 'เร็ว ๆ นี้';
+  const today = new Date().toISOString().slice(0, 10);
+  return releaseDate > today ? 'เร็ว ๆ นี้' : 'เข้าใหม่';
+}
+
 function useLazyMount(rootMargin = RAIL_OBSERVER_MARGIN) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -195,7 +202,7 @@ function LazyMovieRail({ section, sectionIndex, onSelect }: { section: MovieSect
       {mounted ? (
         <div ref={railRef} className="movie-rail flex max-w-full gap-2.5 overflow-x-auto overflow-y-hidden scroll-smooth pb-3 sm:gap-3 md:gap-5 md:pb-4" style={{ WebkitOverflowScrolling: 'touch' }}>
           {items.map((item, index) => (
-            <MovieCard key={`${section.slug}-${item.mediaType}-${item.id}-${index}`} item={item} onSelect={onSelect} priority={sectionIndex === 0 && index < 3} priorityBadge={section.slug === 'coming-soon' ? 'เร็ว ๆ นี้' : index % 4 === 0 ? 'ใหม่' : undefined} />
+            <MovieCard key={`${section.slug}-${item.mediaType}-${item.id}-${index}`} item={item} onSelect={onSelect} priority={sectionIndex === 0 && index < 3} priorityBadge={section.slug === 'coming-soon' ? releaseWindowBadge(item) : index % 4 === 0 ? 'ใหม่' : undefined} />
           ))}
           {loadingMore ? Array.from({ length: Math.min(RAIL_LOAD_STEP, Math.max(1, RAIL_LOAD_STEP - items.length)) }).map((_, index) => (
             <div key={`loading-${section.slug}-${index}`} className="h-[176px] w-[116px] shrink-0 animate-pulse rounded-[8px] bg-white/[0.045] sm:h-[220px] sm:w-[140px] md:h-[280px] md:w-[180px] xl:h-[300px] xl:w-[196px]" aria-hidden="true" />

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCatalogSectionItems, HOME_SECTION_LOAD_LIMIT } from '@/lib/catalog-home';
+import { TMDB_RELEASE_SECTION_LIMIT } from '@/lib/tmdb-release-window';
 
 export const dynamic = 'force-dynamic';
 const CACHE_HEADERS = {
@@ -11,7 +12,8 @@ const CACHE_HEADERS = {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const slug = searchParams.get('slug') || 'top-rated';
-  const limit = Math.min(Math.max(Number(searchParams.get('limit') || HOME_SECTION_LOAD_LIMIT) || HOME_SECTION_LOAD_LIMIT, 1), 24);
+  const maxLimit = slug === 'coming-soon' ? TMDB_RELEASE_SECTION_LIMIT : 24;
+  const limit = Math.min(Math.max(Number(searchParams.get('limit') || HOME_SECTION_LOAD_LIMIT) || HOME_SECTION_LOAD_LIMIT, 1), maxLimit);
   const offset = Math.max(Number(searchParams.get('offset') || 0) || 0, 0);
 
   const items = await getCatalogSectionItems(slug, limit, offset);
