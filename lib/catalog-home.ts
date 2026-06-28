@@ -1,5 +1,6 @@
 import { supabaseRest } from './supabase-rest';
 import { episodeWatchHref, getSeriesEpisodeSummaries } from './series-episodes';
+import { getFreshComingSoonItems } from './tmdb-release-window';
 import { getHomePayload as getTmdbHomePayload, type HomePayload, type MediaType, type MovieItem, type MovieSection } from './tmdb';
 
 type CatalogRow = {
@@ -294,6 +295,7 @@ async function rowsForWatchReady(limit: number, offset = 0) {
 export async function getCatalogSectionItems(slug: string, limit = HOME_SECTION_LOAD_LIMIT, offset = 0) {
   const safeLimit = Math.min(Math.max(Number(limit) || HOME_SECTION_LOAD_LIMIT, 1), 24);
   const safeOffset = Math.max(Number(offset) || 0, 0);
+  if (slug === 'coming-soon') return getFreshComingSoonItems(safeLimit, safeOffset);
   const rows = slug === 'watch-ready'
     ? await rowsForWatchReady(safeLimit, safeOffset)
     : await rowsForBucket(sectionDefs.find((section) => section.slug === slug)?.slug || 'top-rated', safeLimit, safeOffset);
