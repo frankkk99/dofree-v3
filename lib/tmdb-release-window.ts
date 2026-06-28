@@ -26,6 +26,8 @@ type ReleaseMovie = MovieItem & {
 const imageBase = 'https://image.tmdb.org/t/p/original';
 const posterBase = 'https://image.tmdb.org/t/p/w500';
 const fallbackImage = 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1400&q=80';
+export const TMDB_RELEASE_SECTION_LIMIT = 36;
+export const TMDB_HERO_ITEMS_LIMIT = 24;
 
 const genreNames: Record<number, string> = {
   28: 'แอ็กชัน',
@@ -159,6 +161,11 @@ function sortReleaseWindow(items: ReleaseMovie[]) {
   });
 }
 
+function inReleaseWindow(item: ReleaseMovie, range = releaseWindow()) {
+  const date = item.releaseDate || '';
+  return date >= range.from && date <= range.to;
+}
+
 async function getFreshReleaseMovies() {
   const range = releaseWindow();
   const path = `/discover/movie?language=th-TH&region=TH&include_adult=false&sort_by=popularity.desc&primary_release_date.gte=${range.from}&primary_release_date.lte=${range.to}`;
@@ -166,16 +173,13 @@ async function getFreshReleaseMovies() {
   return sortReleaseWindow(unique(rows.filter((movie) => validMovie(movie, range.from, range.to)).map(toMovieItem)));
 }
 
-export async function getFreshComingSoonItems(limit = 18, offset = 0): Promise<MovieItem[]> {
+export async function getFreshComingSoonItems(limit = TMDB_RELEASE_SECTION_LIMIT, offset = 0): Promise<MovieItem[]> {
   const range = releaseWindow();
   const movies = await getFreshReleaseMovies().catch(() => []);
-  const safeLimit = Math.max(1, Math.min(Number(limit) || 18, 24));
+  const safeLimit = Math.max(1, Math.min(Number(limit) || TMDB_RELEASE_SECTION_LIMIT, TMDB_RELEASE_SECTION_LIMIT));
   const safeOffset = Math.max(Number(offset) || 0, 0);
   return movies
-    .filter((item) => {
-      const date = item.releaseDate || '';
-      return date >= range.today && date <= range.to;
-    })
+    .filter((item) => inReleaseWindow(item, range))
     .slice(safeOffset, safeOffset + safeLimit);
 }
 
@@ -184,17 +188,17 @@ export async function decorateHomeWithFreshTmdbReleases(home: HomePayload): Prom
   const movies = await getFreshReleaseMovies().catch(() => []);
   if (!movies.length) return home;
 
-  const heroItems = movies.filter((item) => item.backdropUrl || item.posterUrl).slice(0, 12);
+  const heroItems = movies.filter((item) => item.backdropUrl || item.posterUrl).slice(0, TMDB_HERO_ITEMS_LIMIT);
   const upcomingItems = movies.filter((item) => {
     const date = item.releaseDate || '';
-    return date >= range.today && date <= range.to;
-  }).slice(0, 6);
+    return date >= range.from && date <= range.to;
+  }).slice(0, TMDB_RELEASE_SECTION_LIMIT);
   const comingSoonSection: MovieSection | null = upcomingItems.length
     ? {
       slug: 'coming-soon',
       eyebrow: 'COMING SOON',
       title: 'เร็ว ๆ นี้',
-      description: 'หนังที่ยังไม่เข้าฉายและมีกำหนดฉายในอนาคต',
+      description: 'หนังใหม่ หนังใกล้เข้าฉาย และกำหนดฉายล่าสุดจาก TMDB',
       items: upcomingItems,
     }
     : null;
