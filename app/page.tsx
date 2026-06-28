@@ -6,6 +6,7 @@ import { HomeCardLinkBridge } from '@/components/home-card-link-bridge';
 import { HomeRealtimeWrapper } from '@/components/home-realtime-wrapper';
 import { ModalEpisodeTitleLabels } from '@/components/modal-episode-title-labels';
 import { ModalRecommendationDefault } from '@/components/modal-recommendation-default';
+import { NotificationBellPortal } from '@/components/notification-bell-portal';
 import { WatchHistoryClickBridge } from '@/components/watch-history-click-bridge';
 import { applyAdminHomeConfig } from '@/lib/admin-home-config';
 import { getCatalogHomePayload } from '@/lib/catalog-home';
@@ -32,6 +33,7 @@ export default async function HomePage() {
       <HomeRealtimeWrapper home={home} />
       <AutoHideHeader />
       <FloatingGlassSearch home={home} />
+      <NotificationBellPortal />
       <ActorProfileBridge />
       <ModalEpisodeTitleLabels />
       <ModalRecommendationDefault />
