@@ -7,8 +7,9 @@ import { MovieCard } from '@/components/movie-card';
 import { DetailWindow } from '@/components/window-system';
 import { canUseNextImage } from '@/lib/image-optimizer';
 
-const RAIL_LOAD_STEP = 6;
+const RAIL_LOAD_STEP = 9;
 const RAIL_LOAD_THRESHOLD = 360;
+const RAIL_OBSERVER_MARGIN = '160px';
 const thaiMonthShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
 type SectionItemsResponse = {
@@ -65,9 +66,9 @@ function heroEnglishReleaseLine(item: MovieItem) {
   return `${englishTitle} · เข้าฉาย ${month} ${year}`;
 }
 
-function useLazyMount(initiallyMounted = false, rootMargin = '420px') {
+function useLazyMount(rootMargin = RAIL_OBSERVER_MARGIN) {
   const ref = useRef<HTMLDivElement | null>(null);
-  const [mounted, setMounted] = useState(initiallyMounted);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     if (mounted) return;
@@ -93,36 +94,26 @@ function useLazyMount(initiallyMounted = false, rootMargin = '420px') {
 function RailSkeleton() {
   return (
     <div className="movie-rail flex gap-2.5 overflow-hidden pb-3 sm:gap-3 md:gap-5 md:pb-4" aria-hidden="true">
-      {Array.from({ length: 6 }).map((_, index) => (
+      {Array.from({ length: RAIL_LOAD_STEP }).map((_, index) => (
         <div key={index} className="h-[176px] w-[116px] shrink-0 animate-pulse rounded-[8px] bg-white/[0.045] sm:h-[220px] sm:w-[140px] md:h-[280px] md:w-[180px] xl:h-[300px] xl:w-[196px]" />
       ))}
     </div>
   );
 }
 
-function railSegmentWidth(rail: HTMLElement) {
-  return rail.scrollWidth / 3;
-}
-
 function LazyMovieRail({ section, sectionIndex, onSelect }: { section: MovieSection; sectionIndex: number; onSelect: (item: MovieItem) => void }) {
-  const initiallyMounted = sectionIndex === 0;
-  const { ref, mounted } = useLazyMount(initiallyMounted, '520px');
+  const { ref, mounted } = useLazyMount();
   const railRef = useRef<HTMLDivElement | null>(null);
   const loadGuardRef = useRef(false);
-  const jumpGuardRef = useRef(false);
-  const loopReadyRef = useRef(false);
   const [items, setItems] = useState(section.items.slice(0, RAIL_LOAD_STEP));
   const [hasMore, setHasMore] = useState(section.items.length >= RAIL_LOAD_STEP);
   const [loadingMore, setLoadingMore] = useState(false);
-  const canLoop = items.length > 1;
-  const renderedItems = canLoop ? [...items, ...items, ...items] : items;
 
   useEffect(() => {
     setItems(section.items.slice(0, RAIL_LOAD_STEP));
     setHasMore(section.items.length >= RAIL_LOAD_STEP);
     setLoadingMore(false);
     loadGuardRef.current = false;
-    loopReadyRef.current = false;
   }, [section.items]);
 
   const loadNextBatch = useCallback(async () => {
@@ -147,74 +138,32 @@ function LazyMovieRail({ section, sectionIndex, onSelect }: { section: MovieSect
     }
   }, [hasMore, items.length, loadingMore, mounted, section.slug]);
 
-  const handleLoopBounds = useCallback(() => {
-    const rail = railRef.current;
-    if (!rail || !canLoop || jumpGuardRef.current) return;
-    const segment = railSegmentWidth(rail);
-    if (!segment) return;
-
-    if (rail.scrollLeft < segment * 0.2) {
-      jumpGuardRef.current = true;
-      rail.scrollLeft += segment;
-      window.requestAnimationFrame(() => { jumpGuardRef.current = false; });
-    } else if (rail.scrollLeft > segment * 1.8) {
-      jumpGuardRef.current = true;
-      rail.scrollLeft -= segment;
-      window.requestAnimationFrame(() => { jumpGuardRef.current = false; });
-    }
-  }, [canLoop]);
-
   const maybeLoadMore = useCallback(() => {
     const rail = railRef.current;
     if (!rail || !hasMore || loadingMore || loadGuardRef.current) return;
 
-    if (canLoop) {
-      const segment = railSegmentWidth(rail);
-      if (segment && rail.scrollLeft >= segment * 1.45) loadNextBatch();
-      return;
-    }
-
     const remaining = rail.scrollWidth - rail.clientWidth - rail.scrollLeft;
     const threshold = Math.max(RAIL_LOAD_THRESHOLD, rail.clientWidth * 0.38);
     if (remaining <= threshold) loadNextBatch();
-  }, [canLoop, hasMore, loadNextBatch, loadingMore]);
+  }, [hasMore, loadNextBatch, loadingMore]);
 
   useEffect(() => {
     const rail = railRef.current;
     if (!mounted || !rail) return;
 
     function onScroll() {
-      if (jumpGuardRef.current) return;
       maybeLoadMore();
-      handleLoopBounds();
     }
 
     rail.addEventListener('scroll', onScroll, { passive: true });
-    window.setTimeout(() => {
-      maybeLoadMore();
-      handleLoopBounds();
-    }, 120);
-
     return () => rail.removeEventListener('scroll', onScroll);
-  }, [handleLoopBounds, maybeLoadMore, mounted]);
-
-  useEffect(() => {
-    const rail = railRef.current;
-    if (!mounted || !canLoop || !rail || loopReadyRef.current) return;
-    const id = window.requestAnimationFrame(() => {
-      const currentRail = railRef.current;
-      if (!currentRail) return;
-      currentRail.scrollLeft = railSegmentWidth(currentRail);
-      loopReadyRef.current = true;
-    });
-    return () => window.cancelAnimationFrame(id);
-  }, [canLoop, mounted, section.slug]);
+  }, [maybeLoadMore, mounted]);
 
   return (
     <div ref={ref} style={{ contentVisibility: 'auto', containIntrinsicSize: '340px 1000px' }}>
       {mounted ? (
         <div ref={railRef} className="movie-rail flex max-w-full gap-2.5 overflow-x-auto overflow-y-hidden scroll-smooth pb-3 sm:gap-3 md:gap-5 md:pb-4" style={{ WebkitOverflowScrolling: 'touch' }}>
-          {renderedItems.map((item, index) => (
+          {items.map((item, index) => (
             <MovieCard key={`${section.slug}-${item.mediaType}-${item.id}-${index}`} item={item} onSelect={onSelect} priority={sectionIndex === 0 && index < 3} priorityBadge={section.slug === 'coming-soon' ? 'เร็ว ๆ นี้' : index % 4 === 0 ? 'ใหม่' : undefined} />
           ))}
           {loadingMore ? Array.from({ length: RAIL_LOAD_STEP }).map((_, index) => (
