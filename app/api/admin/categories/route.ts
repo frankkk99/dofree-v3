@@ -21,6 +21,7 @@ type CategoryRow = {
 
 type DefaultCategory = [string, string, string, number];
 const defaultCategories: DefaultCategory[] = [
+  ['watch-ready', 'แนะนำสำหรับคุณ', 'พร้อมรับชม', 0],
   ['top-rated', 'คะแนน 6.5+ น่าดู', 'คะแนนสูง', 10],
   ['popular', 'ยอดนิยมคะแนนดี', 'กำลังนิยม', 20],
   ['now-playing', 'ภาพยนตร์มาใหม่คะแนนดี', 'มาใหม่', 30],
