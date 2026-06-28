@@ -2,8 +2,6 @@
 
 import Image from 'next/image';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { FormEvent } from 'react';
-import { categoryChips } from '@/lib/catalog';
 import type { HomePayload, MovieItem, MovieSection } from '@/lib/tmdb';
 import { MovieCard } from '@/components/movie-card';
 import { DetailWindow } from '@/components/window-system';
@@ -16,11 +14,6 @@ type SectionItemsResponse = {
   ok?: boolean;
   items?: MovieItem[];
   hasMore?: boolean;
-};
-
-type SearchItemsResponse = {
-  ok?: boolean;
-  items?: MovieItem[];
 };
 
 function uniqueMovies(items: MovieItem[]) {
@@ -45,10 +38,7 @@ function shuffleMovies(items: MovieItem[], seed: number, scope: string) {
   if (!items.length) return items;
 
   return [...items]
-    .map((item, index) => ({
-      item,
-      score: seededMovieScore(item, seed || 1, scope, index),
-    }))
+    .map((item, index) => ({ item, score: seededMovieScore(item, seed || 1, scope, index) }))
     .sort((a, b) => a.score - b.score)
     .map(({ item }) => item);
 }
@@ -62,68 +52,6 @@ function shuffleSections(sections: MovieSection[], seed: number) {
 
 function shortTitle(item: MovieItem) {
   return item.title.length > 14 ? item.title.slice(0, 13) : item.title;
-}
-
-function itemSearchText(item: MovieItem) {
-  return [
-    item.title,
-    item.titleEn,
-    item.year,
-    item.language,
-    item.mediaType,
-    item.status,
-    item.label,
-    ...(item.genres || []),
-    ...(item.badges || []),
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase();
-}
-
-function matchQuery(item: MovieItem, query: string) {
-  const keyword = query.trim().toLowerCase();
-  if (!keyword) return true;
-  return itemSearchText(item).includes(keyword);
-}
-
-function matchCategory(item: MovieItem, category: string | null) {
-  if (!category || category === 'ทั้งหมด') return true;
-
-  const genres = (item.genres || []).join(' ').toLowerCase();
-  const badges = (item.badges || []).join(' ').toLowerCase();
-  const status = (item.status || '').toLowerCase();
-  const label = (item.label || '').toLowerCase();
-  const language = (item.language || '').toLowerCase();
-  const year = Number(item.year);
-  const currentYear = new Date().getFullYear();
-
-  switch (category) {
-    case 'หนังไทย':
-      return language === 'th' || genres.includes('ไทย');
-    case 'หนังฝรั่ง':
-      return language === 'en' || language === 'us';
-    case 'พากย์ไทย':
-      return language === 'th' || badges.includes('พากย์ไทย') || label.includes('พากย์ไทย');
-    case 'ซับไทย':
-      return badges.includes('ซับไทย') || label.includes('ซับไทย') || (language !== 'th' && Boolean(language));
-    case 'พร้อมดู':
-      return Boolean(item.isWatchReady || item.watchUrl || status === 'published');
-    case 'คะแนนสูง':
-      return item.rating >= 8;
-    case 'หนังใหม่':
-      return badges.includes('ใหม่') || label.includes('ใหม่') || year >= currentYear - 1;
-    case 'HD':
-      return badges.includes('hd') || label.includes('hd');
-    case 'ZOOM':
-      return badges.includes('zoom') || label.includes('zoom') || status === 'review';
-    case 'ภาพยนตร์':
-      return item.mediaType === 'movie';
-    case 'ซีรีส์':
-      return item.mediaType === 'tv';
-    default:
-      return (item.genres || []).some((genre) => genre.includes(category) || category.includes(genre));
-  }
 }
 
 function useLazyMount(initiallyMounted = false, rootMargin = '420px') {
@@ -321,30 +249,10 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
 
   const [heroIndex, setHeroIndex] = useState(0);
   const [selected, setSelected] = useState<MovieItem | null>(null);
-  const [query, setQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [serverResults, setServerResults] = useState<MovieItem[]>([]);
-  const [searchSubmitted, setSearchSubmitted] = useState(false);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [searchError, setSearchError] = useState('');
-  const [visibleFilterCount, setVisibleFilterCount] = useState(24);
-
-  const filterLoadRef = useRef<HTMLDivElement | null>(null);
 
   const hero = heroItems[heroIndex] || home.hero;
   const heroImage = hero.backdropUrl || hero.posterUrl;
   const optimizeHeroImage = canUseNextImage(heroImage);
-  const filterMode = searchSubmitted;
-
-  const filteredItems = useMemo(
-    () => serverResults,
-    [serverResults],
-  );
-
-  const visibleFilteredItems = useMemo(
-    () => filteredItems.slice(0, visibleFilterCount),
-    [filteredItems, visibleFilterCount],
-  );
 
   const recommendations = selected
     ? allItems.filter((movie) => `${movie.mediaType}-${movie.id}` !== `${selected.mediaType}-${selected.id}`).slice(0, 24)
@@ -357,69 +265,6 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
   useEffect(() => {
     setHeroIndex(0);
   }, [shuffleSeed]);
-
-  useEffect(() => {
-    setVisibleFilterCount(24);
-  }, [activeCategory, query]);
-
-  useEffect(() => {
-    if (!filterMode || visibleFilterCount >= filteredItems.length) return;
-    if (typeof IntersectionObserver === 'undefined') return;
-
-    const node = filterLoadRef.current;
-    if (!node) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisibleFilterCount((count) => Math.min(count + RAIL_LOAD_STEP, filteredItems.length));
-        }
-      },
-      { rootMargin: '520px' },
-    );
-
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [filterMode, filteredItems.length, visibleFilterCount]);
-
-  function jumpToResults() {
-    window.requestAnimationFrame(() => {
-      document.getElementById('sections')?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      });
-    });
-  }
-
-  async function runServerSearch(nextQuery = query, nextCategory = activeCategory) {
-    const trimmedQuery = nextQuery.trim();
-    const category = nextCategory && nextCategory !== 'ทั้งหมด' ? nextCategory : '';
-
-    if (!trimmedQuery && !category) {
-      setSearchSubmitted(false);
-      setServerResults([]);
-      setSearchError('');
-      return;
-    }
-
-    setSearchSubmitted(true);
-    setVisibleFilterCount(24);
-    setSearchLoading(true);
-    setSearchError('');
-    jumpToResults();
-
-    try {
-      const params = new URLSearchParams({ q: trimmedQuery, category, limit: '48' });
-      const response = await fetch(`/api/search?${params.toString()}`);
-      const data = await response.json() as SearchItemsResponse;
-      setServerResults(Array.isArray(data.items) ? data.items : []);
-    } catch {
-      setServerResults([]);
-      setSearchError('ค้นหาไม่สำเร็จ ลองใหม่อีกครั้ง');
-    } finally {
-      setSearchLoading(false);
-    }
-  }
 
   function openMovie(item: MovieItem) {
     setSelected(item);
@@ -437,26 +282,6 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
         watchTab?.click();
       });
     });
-  }
-
-  function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    runServerSearch();
-  }
-
-  function chooseCategory(chip: string) {
-    setActiveCategory(chip);
-    runServerSearch(query, chip);
-  }
-
-  function clearFilters() {
-    setQuery('');
-    setActiveCategory(null);
-    setServerResults([]);
-    setSearchSubmitted(false);
-    setSearchError('');
-    setSearchLoading(false);
   }
 
   return (
@@ -549,167 +374,42 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
         </div>
       </section>
 
-      <section className="sticky top-[58px] z-40 mx-auto -mt-5 max-w-[1920px] px-4 pb-2 md:top-[76px] md:-mt-7 md:px-7 xl:top-[88px]">
-        <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-full bg-[linear-gradient(180deg,rgba(3,3,3,0.92),rgba(3,3,3,0.72)_68%,rgba(3,3,3,0))] backdrop-blur-sm" />
-        <div className="mx-auto max-w-[760px] rounded-[20px] bg-black/42 p-1.5 shadow-[0_22px_85px_rgba(0,0,0,0.72)] backdrop-blur-2xl md:max-w-[980px] md:rounded-[26px] md:p-2.5">
-          <div className="rounded-[17px] bg-white/[0.065] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.045)] backdrop-blur-xl md:rounded-[22px] md:p-2.5">
-            <form
-              onSubmit={onSubmit}
-              className="flex h-8 items-center gap-1.5 rounded-[12px] bg-white/[0.105] px-2.5 text-white shadow-[0_10px_34px_rgba(0,0,0,0.35)] md:h-11 md:rounded-[16px] md:px-3.5"
-            >
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="ค้นหา"
-                className="min-w-0 flex-1 bg-transparent text-[11px] font-bold text-white outline-none placeholder:text-white/50 md:text-[14px]"
-              />
-
-              {query ? (
-                <button
-                  type="button"
-                  onClick={() => setQuery('')}
-                  className="grid h-5 w-5 place-items-center rounded-full bg-black/28 text-[10px] text-white/80"
-                >
-                  ×
-                </button>
-              ) : null}
-
-              <button
-                type="submit"
-                className="rounded-full bg-white/[0.12] px-2 py-1 text-[9px] font-black text-white/72 md:px-3 md:text-[11px]"
-              >
-                ค้นหา
-              </button>
-            </form>
-
-            <div className="mt-2 flex max-h-[138px] flex-wrap gap-1.5 overflow-y-auto pr-1 md:mt-2.5 md:max-h-[96px] md:gap-2 md:overflow-y-auto md:pr-1 xl:max-h-[112px]">
-              {categoryChips.map((chip) => {
-                const active = activeCategory === chip;
-
-                return (
-                  <button
-                    key={chip}
-                    type="button"
-                    onClick={() => chooseCategory(chip)}
-                    className={`inline-flex h-[22px] items-center rounded-full px-2.5 text-[9px] font-black leading-none transition md:h-7 md:px-3 md:text-[11px] ${
-                      active
-                        ? 'bg-[#e50914] text-white shadow-glow'
-                        : 'bg-white/[0.075] text-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] hover:bg-white/[0.13] hover:text-white'
-                    }`}
-                  >
-                    {chip}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </section>
-
       <section
         id="sections"
-        className="mx-auto max-w-[1920px] scroll-mt-[220px] bg-black px-4 py-6 md:scroll-mt-[240px] md:px-7 md:py-8 xl:scroll-mt-[260px]"
+        className="mx-auto max-w-[1920px] scroll-mt-[120px] bg-black px-4 py-7 md:px-7 md:py-10"
       >
-        {filterMode ? (
-          <div style={{ contentVisibility: 'auto', containIntrinsicSize: '780px 1000px' }}>
-            <div className="mb-4 flex items-end justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#e50914]/80">ผลลัพธ์</p>
-                <h2 className="mt-1 text-[21px] font-black tracking-[-0.05em] md:text-[34px]">
-                  {query.trim() ? `ค้นหา “${query.trim()}”` : activeCategory}
-                </h2>
-                <p className="mt-1 text-[11px] font-semibold text-white/44">
-                  พบ {filteredItems.length} เรื่อง • แสดง {visibleFilteredItems.length} เรื่อง
-                </p>
-                {searchError ? <p className="mt-1 text-[11px] font-black text-[#ff6b6b]">{searchError}</p> : null}
+        <div className="space-y-8 md:space-y-12">
+          {randomizedSections.map((section, sectionIndex) => (
+            <div
+              key={section.slug}
+              className="relative"
+              style={{
+                contentVisibility: sectionIndex > 1 ? 'auto' : 'visible',
+                containIntrinsicSize: '360px 1000px',
+              }}
+            >
+              <div className="mb-3 flex items-center justify-between md:mb-6">
+                <div>
+                  {sectionIndex > 0 ? (
+                    <p className="text-[9px] font-black uppercase tracking-[0.26em] text-[#e50914]/80">
+                      {section.eyebrow}
+                    </p>
+                  ) : null}
+                  <h2 className="text-[20px] font-black tracking-[-0.04em] md:text-[30px]">
+                    {sectionIndex === 0 ? 'แนะนำสำหรับคุณ' : section.title}
+                  </h2>
+                </div>
+
+                <a href="/watch-ready" className="text-[12px] font-black text-white/50 hover:text-white md:text-[16px]">
+                  ดูทั้งหมด ›
+                </a>
               </div>
 
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="rounded-full border border-white/12 bg-white/[0.08] px-3 py-2 text-[11px] font-black text-white/72 backdrop-blur-xl"
-              >
-                ล้างค่า
-              </button>
+              <LazyMovieRail section={section} sectionIndex={sectionIndex} onSelect={openMovie} />
             </div>
-
-            {searchLoading && !visibleFilteredItems.length ? (
-              <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-5 md:grid-cols-6 md:gap-4 lg:grid-cols-7 xl:grid-cols-8" aria-hidden="true">
-                {Array.from({ length: 12 }).map((_, index) => (
-                  <div key={`search-skeleton-${index}`} className="aspect-[2/3] w-full animate-pulse rounded-[8px] bg-white/[0.045]" />
-                ))}
-              </div>
-            ) : visibleFilteredItems.length ? (
-              <>
-                <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-5 md:grid-cols-6 md:gap-4 lg:grid-cols-7 xl:grid-cols-8">
-                  {visibleFilteredItems.map((item, index) => (
-                    <MovieCard
-                      key={`filter-${item.mediaType}-${item.id}-${index}`}
-                      item={item}
-                      onSelect={openMovie}
-                      grid
-                      priority={index < 4}
-                      priorityBadge={activeCategory && activeCategory !== 'ทั้งหมด' ? activeCategory : undefined}
-                    />
-                  ))}
-                </div>
-
-                {visibleFilteredItems.length < filteredItems.length ? (
-                  <div ref={filterLoadRef} className="py-6 text-center text-[11px] font-black text-white/38">
-                    กำลังโหลดเพิ่มอีก 9 เรื่อง...
-                  </div>
-                ) : null}
-              </>
-            ) : (
-              <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-6 text-center text-sm font-bold text-white/58">
-                ไม่พบหนังที่ตรงกับเงื่อนไขนี้
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-8 md:space-y-12">
-            {randomizedSections.map((section, sectionIndex) => (
-              <div
-                key={section.slug}
-                className="relative"
-                style={{
-                  contentVisibility: sectionIndex > 1 ? 'auto' : 'visible',
-                  containIntrinsicSize: '360px 1000px',
-                }}
-              >
-                <div className="mb-3 flex items-center justify-between md:mb-6">
-                  <div>
-                    {sectionIndex > 0 ? (
-                      <p className="text-[9px] font-black uppercase tracking-[0.26em] text-[#e50914]/80">
-                        {section.eyebrow}
-                      </p>
-                    ) : null}
-                    <h2 className="text-[20px] font-black tracking-[-0.04em] md:text-[30px]">
-                      {sectionIndex === 0 ? 'แนะนำสำหรับคุณ' : section.title}
-                    </h2>
-                  </div>
-
-                  <a href="/watch-ready" className="text-[12px] font-black text-white/50 hover:text-white md:text-[16px]">
-                    ดูทั้งหมด ›
-                  </a>
-                </div>
-
-                <LazyMovieRail section={section} sectionIndex={sectionIndex} onSelect={openMovie} />
-              </div>
-            ))}
-          </div>
-        )}
+          ))}
+        </div>
       </section>
-
-      {filterMode ? (
-        <button
-          type="button"
-          onClick={clearFilters}
-          className="fixed right-3 top-1/2 z-[60] -translate-y-1/2 rounded-full border border-white/18 bg-black/45 px-3 py-2 text-[11px] font-black text-white/86 shadow-[0_0_28px_rgba(229,9,20,0.44)] backdrop-blur-xl animate-pulse md:right-6 md:px-4 md:py-3 md:text-xs"
-        >
-          ล้างค่า
-        </button>
-      ) : null}
 
       {selected ? (
         <DetailWindow
