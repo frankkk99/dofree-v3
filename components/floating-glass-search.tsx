@@ -68,14 +68,16 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);
 
-  async function runSearch() {
+  async function runSearch(nextQuery = query, nextCategory = activeCategory) {
+    const cleanQuery = nextQuery.trim();
+    const cleanCategory = nextCategory.trim();
     setLoading(true);
     setSearched(true);
     setError('');
     try {
       const params = new URLSearchParams();
-      if (query.trim()) params.set('q', query.trim());
-      if (activeCategory) params.set('category', activeCategory);
+      if (cleanQuery) params.set('q', cleanQuery);
+      if (cleanCategory) params.set('category', cleanCategory);
       params.set('limit', String(SEARCH_LIMIT));
       const response = await fetch(`/api/search?${params.toString()}`, { cache: 'no-store' });
       const payload = (await response.json()) as SearchPayload;
@@ -86,6 +88,12 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
     } finally {
       setLoading(false);
     }
+  }
+
+  function chooseCategory(slug: string) {
+    const nextCategory = activeCategory === slug ? '' : slug;
+    setActiveCategory(nextCategory);
+    void runSearch(query, nextCategory);
   }
 
   function clearSearch() {
@@ -116,7 +124,7 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]">Search</p>
                   <h2 className="mt-1 text-2xl font-black tracking-[-0.06em] md:text-4xl">ค้นหาตามหมวดหลังบ้าน</h2>
-                  <p className="mt-1 text-xs font-bold text-white/42">หมวดที่นี่ดึงจาก Admin Categories โดยตรง</p>
+                  <p className="mt-1 text-xs font-bold text-white/42">เลือกหมวดแล้วระบบจะค้นหาให้อัตโนมัติ</p>
                 </div>
                 <button
                   type="button"
@@ -151,7 +159,7 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   <button
                     type="button"
-                    onClick={() => setActiveCategory('')}
+                    onClick={() => chooseCategory('')}
                     className={`h-8 rounded-full px-3 text-[10px] font-black transition ${!activeCategory ? 'bg-white text-black shadow-[0_10px_35px_rgba(255,255,255,0.18)]' : 'bg-white/[0.075] text-white/68 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-white/[0.12] hover:text-white'}`}
                   >
                     ทั้งหมด
@@ -162,7 +170,7 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
                       <button
                         key={category.slug}
                         type="button"
-                        onClick={() => setActiveCategory((current) => current === category.slug ? '' : category.slug)}
+                        onClick={() => chooseCategory(category.slug)}
                         className={`h-8 rounded-full px-3 text-[10px] font-black transition ${active ? 'bg-[#e50914] text-white shadow-[0_14px_45px_rgba(229,9,20,0.35)]' : 'bg-white/[0.075] text-white/68 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-white/[0.12] hover:text-white'}`}
                         title={category.slug}
                       >
