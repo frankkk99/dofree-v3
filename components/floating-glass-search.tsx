@@ -19,6 +19,7 @@ type CategoryPayload = {
 type SearchPayload = {
   ok?: boolean;
   items?: MovieItem[];
+  total?: number;
 };
 
 type FilterState = {
@@ -31,7 +32,7 @@ type FilterState = {
   sort: string;
 };
 
-const SEARCH_LIMIT = 48;
+const SEARCH_LIMIT = 240;
 const defaultFilters: FilterState = {
   category: '',
   type: '',
@@ -42,7 +43,7 @@ const defaultFilters: FilterState = {
   sort: 'rating-desc',
 };
 
-const selectClass = 'h-9 min-w-0 rounded-[14px] bg-white/[0.085] px-2 text-[10px] font-black text-white outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-xl md:h-10 md:px-3 md:text-xs';
+const selectClass = 'h-11 w-full min-w-0 appearance-none truncate rounded-[16px] bg-white/[0.085] px-3 pr-7 text-[11px] font-black text-white outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-xl md:h-10 md:px-3 md:pr-7 md:text-xs';
 
 const typeOptions = [
   { value: '', label: 'ทุกประเภท' },
@@ -63,7 +64,7 @@ const countryOptions = [
 
 const languageOptions = [
   { value: '', label: 'ทุกภาษา' },
-  { value: 'th', label: 'ภาษาไทย' },
+  { value: 'th', label: 'ไทย' },
   { value: 'en', label: 'อังกฤษ' },
   { value: 'ko', label: 'เกาหลี' },
   { value: 'ja', label: 'ญี่ปุ่น' },
@@ -75,7 +76,7 @@ const qualityOptions = [
   { value: '', label: 'ทุกความชัด' },
   { value: 'ready', label: 'พร้อมดู' },
   { value: 'hd', label: 'HD' },
-  { value: 'review', label: 'รีวิว/ตัวอย่าง' },
+  { value: 'review', label: 'รีวิว' },
 ];
 
 const yearOptions = [
@@ -108,11 +109,12 @@ function fallbackCategories(home: HomePayload): SearchCategory[] {
 
 function FilterSelect({ value, options, onChange, label }: { value: string; options: { value: string; label: string }[]; onChange: (value: string) => void; label: string }) {
   return (
-    <label className="min-w-0">
+    <label className="relative min-w-0">
       <span className="sr-only">{label}</span>
       <select className={selectClass} value={value} onChange={(event) => onChange(event.target.value)}>
         {options.map((option) => <option key={`${label}-${option.value || 'all'}`} value={option.value}>{option.label}</option>)}
       </select>
+      <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-white/45">⌄</span>
     </label>
   );
 }
@@ -146,21 +148,15 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
     fetch('/api/categories', { cache: 'no-store' })
       .then((response) => response.json())
       .then((payload: CategoryPayload) => {
-        if (!cancelled && payload.ok && Array.isArray(payload.categories) && payload.categories.length) {
-          setCategories(payload.categories);
-        }
+        if (!cancelled && payload.ok && Array.isArray(payload.categories) && payload.categories.length) setCategories(payload.categories);
       })
       .catch(() => null);
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
-    };
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);
@@ -224,46 +220,29 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
       </button>
 
       {open ? (
-        <div className="fixed inset-0 z-[95] overflow-y-auto bg-black/50 px-3 py-4 text-white backdrop-blur-[5px]">
-          <div className="mx-auto max-w-6xl rounded-[34px] bg-black/62 p-3 shadow-[0_44px_140px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,255,255,0.16),inset_0_-38px_90px_rgba(255,255,255,0.035)] backdrop-blur-3xl md:p-5">
-            <div className="rounded-[28px] bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.10),inset_0_-24px_70px_rgba(0,0,0,0.35)] md:p-5">
-              <div className="flex items-center justify-between gap-3">
-                <div>
+        <div className="fixed inset-0 z-[95] overflow-y-auto bg-black/50 px-2 py-3 text-white backdrop-blur-[5px] md:px-3 md:py-4">
+          <div className="mx-auto max-w-6xl rounded-[28px] bg-black/62 p-2 shadow-[0_44px_140px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,255,255,0.16),inset_0_-38px_90px_rgba(255,255,255,0.035)] backdrop-blur-3xl md:rounded-[34px] md:p-5">
+            <div className="rounded-[24px] bg-white/[0.045] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.10),inset_0_-24px_70px_rgba(0,0,0,0.35)] md:rounded-[28px] md:p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
                   <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]">Search</p>
-                  <h2 className="mt-1 text-2xl font-black tracking-[-0.06em] md:text-4xl">ค้นหาแบบละเอียด</h2>
-                  <p className="mt-1 text-xs font-bold text-white/42">กรองด้วยหมวด ประเภท ประเทศ ภาษา ความชัด ปี และคะแนน</p>
+                  <h2 className="mt-1 text-[28px] font-black leading-[0.95] tracking-[-0.06em] md:text-4xl">ค้นหาแบบละเอียด</h2>
+                  <p className="mt-2 max-w-[260px] text-xs font-bold leading-5 text-white/42 md:max-w-none">กรองด้วยหมวด ประเภท ประเทศ ภาษา ความชัด ปี และคะแนน</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setOpen(false)}
-                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/[0.08] text-xl font-black text-white/78 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-[#e50914] hover:text-white"
-                >
-                  ×
-                </button>
+                <button type="button" onClick={() => setOpen(false)} className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/[0.08] text-2xl font-black text-white/78 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-[#e50914] hover:text-white">×</button>
               </div>
 
               <form
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  void runSearch();
-                }}
-                className="mt-5 rounded-[26px] bg-black/46 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_22px_80px_rgba(0,0,0,0.34)] backdrop-blur-2xl"
+                onSubmit={(event) => { event.preventDefault(); void runSearch(); }}
+                className="mt-5 rounded-[24px] bg-black/46 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_22px_80px_rgba(0,0,0,0.34)] backdrop-blur-2xl md:rounded-[26px]"
               >
                 <div className="flex h-12 items-center gap-2 rounded-[19px] bg-white/[0.07] px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.10)]">
                   <span className="text-lg text-white/58">⌕</span>
-                  <input
-                    autoFocus
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder="ค้นหาหนัง ซีรีส์ หรือคำสำคัญ"
-                    className="min-w-0 flex-1 bg-transparent text-sm font-bold text-white outline-none placeholder:text-white/36"
-                  />
-                  {query ? (
-                    <button type="button" onClick={() => setQuery('')} className="grid h-8 w-8 place-items-center rounded-full bg-white/[0.10] text-sm text-white/75">×</button>
-                  ) : null}
+                  <input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหาหนัง ซีรีส์ หรือคำสำคัญ" className="min-w-0 flex-1 bg-transparent text-sm font-bold text-white outline-none placeholder:text-white/36" />
+                  {query ? <button type="button" onClick={() => setQuery('')} className="grid h-8 w-8 place-items-center rounded-full bg-white/[0.10] text-sm text-white/75">×</button> : null}
                 </div>
 
-                <div className="mt-3 grid grid-cols-4 gap-1.5 md:grid-cols-[1.35fr_0.95fr_0.95fr_0.95fr_1fr_0.82fr_1.25fr] md:gap-2">
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-[1.35fr_0.95fr_0.95fr_0.95fr_1fr_0.82fr_1.25fr] md:gap-2">
                   <FilterSelect label="หมวดหมู่" value={filters.category} options={categoryOptions} onChange={(value) => updateFilter('category', value)} />
                   <FilterSelect label="ประเภท" value={filters.type} options={typeOptions} onChange={(value) => updateFilter('type', value)} />
                   <FilterSelect label="ประเทศ" value={filters.country} options={countryOptions} onChange={(value) => updateFilter('country', value)} />
@@ -283,9 +262,7 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
                 <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/38">Results</p>
-                    <h3 className="mt-1 text-xl font-black tracking-[-0.04em]">
-                      {filterSummary ? filterSummary : query.trim() ? `ค้นหา “${query.trim()}”` : 'ผลลัพธ์ทั้งหมด'}
-                    </h3>
+                    <h3 className="mt-1 text-xl font-black tracking-[-0.04em]">{filterSummary ? filterSummary : query.trim() ? `ค้นหา “${query.trim()}”` : 'ผลลัพธ์ทั้งหมด'}</h3>
                   </div>
                   <p className="text-[11px] font-bold text-white/38">{loading ? 'กำลังค้นหา...' : searched ? `พบ ${items.length} เรื่อง` : 'เลือกตัวกรองหรือพิมพ์คำค้นหา'}</p>
                 </div>
