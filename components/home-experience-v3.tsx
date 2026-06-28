@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import Image from 'next/image';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -88,7 +88,7 @@ function matchQuery(item: MovieItem, query: string) {
 }
 
 function matchCategory(item: MovieItem, category: string | null) {
-  if (!category || category === 'เธ—เธฑเนเธเธซเธกเธ”') return true;
+  if (!category || category === 'ทั้งหมด') return true;
 
   const genres = (item.genres || []).join(' ').toLowerCase();
   const badges = (item.badges || []).join(' ').toLowerCase();
@@ -99,27 +99,27 @@ function matchCategory(item: MovieItem, category: string | null) {
   const currentYear = new Date().getFullYear();
 
   switch (category) {
-    case 'เธซเธเธฑเธเนเธ—เธข':
-      return language === 'th' || genres.includes('เนเธ—เธข');
-    case 'เธซเธเธฑเธเธเธฃเธฑเนเธ':
+    case 'หนังไทย':
+      return language === 'th' || genres.includes('ไทย');
+    case 'หนังฝรั่ง':
       return language === 'en' || language === 'us';
-    case 'เธเธฒเธเธขเนเนเธ—เธข':
-      return language === 'th' || badges.includes('เธเธฒเธเธขเนเนเธ—เธข') || label.includes('เธเธฒเธเธขเนเนเธ—เธข');
-    case 'เธเธฑเธเนเธ—เธข':
-      return badges.includes('เธเธฑเธเนเธ—เธข') || label.includes('เธเธฑเธเนเธ—เธข') || (language !== 'th' && Boolean(language));
-    case 'เธเธฃเนเธญเธกเธ”เธน':
+    case 'พากย์ไทย':
+      return language === 'th' || badges.includes('พากย์ไทย') || label.includes('พากย์ไทย');
+    case 'ซับไทย':
+      return badges.includes('ซับไทย') || label.includes('ซับไทย') || (language !== 'th' && Boolean(language));
+    case 'พร้อมดู':
       return Boolean(item.isWatchReady || item.watchUrl || status === 'published');
-    case 'เธเธฐเนเธเธเธชเธนเธ':
+    case 'คะแนนสูง':
       return item.rating >= 8;
-    case 'เธซเธเธฑเธเนเธซเธกเน':
-      return badges.includes('เนเธซเธกเน') || label.includes('เนเธซเธกเน') || year >= currentYear - 1;
+    case 'หนังใหม่':
+      return badges.includes('ใหม่') || label.includes('ใหม่') || year >= currentYear - 1;
     case 'HD':
       return badges.includes('hd') || label.includes('hd');
     case 'ZOOM':
       return badges.includes('zoom') || label.includes('zoom') || status === 'review';
-    case 'เธ เธฒเธเธขเธเธ•เธฃเน':
+    case 'ภาพยนตร์':
       return item.mediaType === 'movie';
-    case 'เธเธตเธฃเธตเธชเน':
+    case 'ซีรีส์':
       return item.mediaType === 'tv';
     default:
       return (item.genres || []).some((genre) => genre.includes(category) || category.includes(genre));
@@ -269,7 +269,7 @@ function LazyMovieRail({
               item={item}
               onSelect={onSelect}
               priority={sectionIndex === 0 && index < 3}
-              priorityBadge={index % 4 === 0 ? 'เนเธซเธกเน' : index % 4 === 1 ? 'เธเธฃเธตเน€เธกเธตเธขเธก' : undefined}
+              priorityBadge={index % 4 === 0 ? 'ใหม่' : index % 4 === 1 ? 'พรีเมียม' : undefined}
             />
           ))}
 
@@ -290,7 +290,7 @@ function LazyMovieRail({
               className="grid h-[176px] w-[92px] shrink-0 place-items-center rounded-[8px] border border-white/8 bg-white/[0.025] px-3 text-center text-[10px] font-black text-white/50 backdrop-blur-xl transition hover:border-[#e50914]/60 hover:bg-[#e50914]/10 hover:text-white disabled:cursor-wait disabled:text-white/30 sm:h-[220px] md:h-[280px] md:w-[120px] md:text-xs xl:h-[300px]"
               aria-live="polite"
             >
-              เธเธณเธฅเธฑเธเนเธซเธฅเธ”เธญเธตเธ 9 เน€เธฃเธทเนเธญเธ...
+              กำลังโหลดอีก 9 เรื่อง...
             </button>
           ) : null}
         </div>
@@ -431,7 +431,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
     window.requestAnimationFrame(() => {
       window.requestAnimationFrame(() => {
         const watchTab = Array.from(document.querySelectorAll('button')).find(
-          (button) => button.textContent?.trim() === 'เธฃเธฑเธเธเธก',
+          (button) => button.textContent?.trim() === 'รับชม',
         );
 
         watchTab?.click();
@@ -475,7 +475,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
 
           <div className="ml-auto flex items-center gap-3 md:gap-5">
             <a href="/watch-ready" className="hidden text-[15px] font-black text-[#f6c56b] md:block">
-              โ เธเธฃเธตเน€เธกเธตเธขเธก
+              ♛ พรีเมียม
             </a>
             <div data-dofree-menu-host="true" className="grid h-9 w-9 place-items-center md:h-12 md:w-12" />
           </div>
@@ -513,7 +513,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
         <div className="relative z-10 mx-auto flex min-h-[442px] max-w-[1920px] flex-col justify-end px-4 pb-9 md:min-h-[509px] md:justify-center md:px-7 md:pb-0">
           <div className="max-w-[680px] md:ml-[6vw] xl:ml-[10vw]">
             <p className="mb-3 text-[13px] font-black text-[#e50914] md:mb-5 md:text-[22px]">
-              {hero.status === 'published' ? 'เธ เธฒเธเธขเธเธ•เธฃเนเธเธฃเนเธญเธกเธฃเธฑเธเธเธก' : 'เธ เธฒเธเธขเธเธ•เธฃเนเธชเธธเนเธกเนเธเธฐเธเธณ'}
+              {hero.status === 'published' ? 'ภาพยนตร์พร้อมรับชม' : 'ภาพยนตร์สุ่มแนะนำ'}
             </p>
 
             <h1 className="hero-title max-w-[92vw] text-[42px] font-black leading-[0.88] tracking-[-0.085em] text-white md:whitespace-nowrap md:text-[92px] lg:text-[112px] xl:text-[120px]">
@@ -521,7 +521,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
             </h1>
 
             <h2 className="mt-3 max-w-[92vw] text-[16px] font-black tracking-[-0.04em] text-white md:mt-6 md:text-[28px]">
-              เน€เธกเธทเนเธญเธเธงเธฒเธกเธฅเธฑเธเนเธเธญเธ”เธตเธ•... เธเธฅเธฑเธเธกเธฒเธ—เธงเธเธเธทเธเธ—เธธเธเธชเธดเนเธ
+              เมื่อความลับในอดีต... กลับมาทวงคืนทุกสิ่ง
             </h2>
 
             <p className="mt-2 line-clamp-3 max-w-[92vw] text-[12px] leading-5 text-white/56 md:mt-3 md:max-w-[620px] md:text-[18px] md:leading-7">
@@ -534,7 +534,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
                 onClick={() => openHeroWatch(hero)}
                 className="inline-flex h-[42px] items-center gap-2 rounded-lg bg-[#e50914] px-5 text-[13px] font-black text-white shadow-glow md:h-[55px] md:px-9 md:text-[16px]"
               >
-                โ–ถ เธฃเธฑเธเธเธก
+                ▶ รับชม
               </button>
 
               <button
@@ -542,7 +542,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
                 onClick={() => openMovie(hero)}
                 className="inline-flex h-[42px] items-center gap-2 rounded-lg border border-white/10 bg-white/[0.12] px-5 text-[13px] font-black text-white/86 md:h-[55px] md:px-8 md:text-[16px]"
               >
-                โ“ เธฃเธฒเธขเธฅเธฐเน€เธญเธตเธขเธ”
+                ⓘ รายละเอียด
               </button>
             </div>
           </div>
@@ -560,7 +560,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="เธเนเธเธซเธฒ"
+                placeholder="ค้นหา"
                 className="min-w-0 flex-1 bg-transparent text-[11px] font-bold text-white outline-none placeholder:text-white/50 md:text-[14px]"
               />
 
@@ -570,7 +570,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
                   onClick={() => setQuery('')}
                   className="grid h-5 w-5 place-items-center rounded-full bg-black/28 text-[10px] text-white/80"
                 >
-                  ร—
+                  ×
                 </button>
               ) : null}
 
@@ -578,7 +578,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
                 type="submit"
                 className="rounded-full bg-white/[0.12] px-2 py-1 text-[9px] font-black text-white/72 md:px-3 md:text-[11px]"
               >
-                เธเนเธเธซเธฒ
+                ค้นหา
               </button>
             </form>
 
@@ -614,12 +614,12 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
           <div style={{ contentVisibility: 'auto', containIntrinsicSize: '780px 1000px' }}>
             <div className="mb-4 flex items-end justify-between gap-3">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#e50914]/80">เธเธฅเธฅเธฑเธเธเน</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#e50914]/80">ผลลัพธ์</p>
                 <h2 className="mt-1 text-[21px] font-black tracking-[-0.05em] md:text-[34px]">
-                  {query.trim() ? `เธเนเธเธซเธฒ โ€${query.trim()}โ€` : activeCategory}
+                  {query.trim() ? `ค้นหา “${query.trim()}”` : activeCategory}
                 </h2>
                 <p className="mt-1 text-[11px] font-semibold text-white/44">
-                  เธเธ {filteredItems.length} เน€เธฃเธทเนเธญเธ โ€ข เนเธชเธ”เธ {visibleFilteredItems.length} เน€เธฃเธทเนเธญเธ
+                  พบ {filteredItems.length} เรื่อง • แสดง {visibleFilteredItems.length} เรื่อง
                 </p>
                 {searchError ? <p className="mt-1 text-[11px] font-black text-[#ff6b6b]">{searchError}</p> : null}
               </div>
@@ -629,7 +629,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
                 onClick={clearFilters}
                 className="rounded-full border border-white/12 bg-white/[0.08] px-3 py-2 text-[11px] font-black text-white/72 backdrop-blur-xl"
               >
-                เธฅเนเธฒเธเธเนเธฒ
+                ล้างค่า
               </button>
             </div>
 
@@ -649,20 +649,20 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
                       onSelect={openMovie}
                       grid
                       priority={index < 4}
-                      priorityBadge={activeCategory && activeCategory !== 'เธ—เธฑเนเธเธซเธกเธ”' ? activeCategory : undefined}
+                      priorityBadge={activeCategory && activeCategory !== 'ทั้งหมด' ? activeCategory : undefined}
                     />
                   ))}
                 </div>
 
                 {visibleFilteredItems.length < filteredItems.length ? (
                   <div ref={filterLoadRef} className="py-6 text-center text-[11px] font-black text-white/38">
-                    เธเธณเธฅเธฑเธเนเธซเธฅเธ”เน€เธเธดเนเธกเธญเธตเธ 9 เน€เธฃเธทเนเธญเธ...
+                    กำลังโหลดเพิ่มอีก 9 เรื่อง...
                   </div>
                 ) : null}
               </>
             ) : (
               <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-6 text-center text-sm font-bold text-white/58">
-                เนเธกเนเธเธเธซเธเธฑเธเธ—เธตเนเธ•เธฃเธเธเธฑเธเน€เธเธทเนเธญเธเนเธเธเธตเน
+                ไม่พบหนังที่ตรงกับเงื่อนไขนี้
               </div>
             )}
           </div>
@@ -685,12 +685,12 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
                       </p>
                     ) : null}
                     <h2 className="text-[20px] font-black tracking-[-0.04em] md:text-[30px]">
-                      {sectionIndex === 0 ? 'เนเธเธฐเธเธณเธชเธณเธซเธฃเธฑเธเธเธธเธ“' : section.title}
+                      {sectionIndex === 0 ? 'แนะนำสำหรับคุณ' : section.title}
                     </h2>
                   </div>
 
                   <a href="/watch-ready" className="text-[12px] font-black text-white/50 hover:text-white md:text-[16px]">
-                    เธ”เธนเธ—เธฑเนเธเธซเธกเธ” โ€บ
+                    ดูทั้งหมด ›
                   </a>
                 </div>
 
@@ -707,7 +707,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
           onClick={clearFilters}
           className="fixed right-3 top-1/2 z-[60] -translate-y-1/2 rounded-full border border-white/18 bg-black/45 px-3 py-2 text-[11px] font-black text-white/86 shadow-[0_0_28px_rgba(229,9,20,0.44)] backdrop-blur-xl animate-pulse md:right-6 md:px-4 md:py-3 md:text-xs"
         >
-          เธฅเนเธฒเธเธเนเธฒ
+          ล้างค่า
         </button>
       ) : null}
 
