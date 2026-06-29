@@ -82,6 +82,12 @@ function parseMediaPath(pathname: string) {
   return null;
 }
 
+function parseActorPath(pathname: string) {
+  const [entity, id] = pathname.split('/').filter(Boolean);
+  if ((entity === 'actor' || entity === 'person') && Number(id)) return Number(id);
+  return null;
+}
+
 function mediaPayload(pathname: string): Pick<AnalyticsEvent, 'mediaType' | 'mediaId'> {
   return parseMediaPath(pathname) || {};
 }
@@ -116,10 +122,20 @@ function trackClick(event: MouseEvent) {
       const media = parseMediaPath(url.pathname);
       if (media) {
         postAnalytics({
-          ...currentPayload(url.pathname.startsWith('/watch/') ? 'watch_click' : 'detail_open'),
+          ...currentPayload(url.pathname.startsWith('/watch/') ? 'watch_click' : 'movie_detail_open'),
           ...media,
           title: titleFromElement(link),
           metadata: { href: url.pathname },
+        });
+        return;
+      }
+
+      const actorId = parseActorPath(url.pathname);
+      if (actorId) {
+        postAnalytics({
+          ...currentPayload('actor_open'),
+          title: titleFromElement(link),
+          metadata: { href: url.pathname, actorId },
         });
         return;
       }
@@ -137,12 +153,23 @@ function trackClick(event: MouseEvent) {
   }
 
   if (label.includes('รายการโปรด')) {
-    postAnalytics({ ...currentPayload('favorite_click'), metadata: { label } });
+    const isRemove = /ลบ|เอาออก|remove|unfavorite/i.test(label);
+    postAnalytics({ ...currentPayload(isRemove ? 'favorite_remove' : 'favorite_add'), metadata: { label } });
     return;
   }
 
   if (label.includes('ประวัติ')) {
     postAnalytics({ ...currentPayload('history_click'), metadata: { label } });
+    return;
+  }
+
+  if ((label.includes('ลิงก์เสีย') || label.includes('แจ้ง')) && label.includes('ลิงก์')) {
+    postAnalytics({ ...currentPayload('report_broken_link'), ...mediaPayload(window.location.pathname), metadata: { label } });
+    return;
+  }
+
+  if (/premium|สมาชิก|สมัคร/i.test(label)) {
+    postAnalytics({ ...currentPayload('premium_click'), metadata: { label } });
     return;
   }
 

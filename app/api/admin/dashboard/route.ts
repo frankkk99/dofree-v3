@@ -174,6 +174,10 @@ function rankSearches(events: AnalyticsEvent[]) {
   return [...map.values()].sort((a, b) => b.value - a.value).slice(0, 8);
 }
 
+function isDetailOpen(eventName: string) {
+  return eventName === 'detail_open' || eventName === 'movie_detail_open';
+}
+
 function dailyTraffic(events: AnalyticsEvent[]): DailyTraffic[] {
   const days = Array.from({ length: 7 }, (_, index) => {
     const date = daysAgo(6 - index);
@@ -264,7 +268,7 @@ export async function GET(request: Request) {
     const pageViewsToday = todayEvents.filter((event) => event.event_name === 'page_view').length;
     const pageViews7d = events7d.filter((event) => event.event_name === 'page_view').length;
     const watchClicks7d = events7d.filter((event) => event.event_name === 'watch_click').length;
-    const detailOpens7d = events7d.filter((event) => event.event_name === 'detail_open').length;
+    const detailOpens7d = events7d.filter((event) => isDetailOpen(event.event_name)).length;
     const searches7d = events7d.filter((event) => event.event_name === 'search').length;
     const missingLinks = Math.max(totalCatalog - readyLinks, 0);
 
@@ -303,7 +307,7 @@ export async function GET(request: Request) {
       analytics: {
         enabled: events7d.length > 0,
         dailyTraffic: dailyTraffic(events7d),
-        topContent: rankContent(events7d.filter((event) => event.event_name === 'detail_open' || event.event_name === 'watch_click' || event.media_id)),
+        topContent: rankContent(events7d.filter((event) => isDetailOpen(event.event_name) || event.event_name === 'watch_click' || event.media_id)),
         topSearches: rankSearches(events7d),
       },
       health: {
