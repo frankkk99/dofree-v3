@@ -82,6 +82,73 @@ a {
   box-shadow: 0 0 0 1px rgba(229, 9, 20, 0.1), 0 18px 55px rgba(229, 9, 20, 0.32);
 }
 
+.admin-shell {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(229, 9, 20, 0.16), transparent 28rem),
+    radial-gradient(circle at 88% 8%, rgba(244, 196, 107, 0.11), transparent 24rem),
+    linear-gradient(180deg, #060606 0%, #030303 52%, #050505 100%);
+  color: #fff;
+}
+
+.admin-floating-glass,
+.admin-shell [class*="bg-black/35"],
+.admin-shell [class*="bg-black/32"],
+.admin-shell [class*="bg-black/28"],
+.admin-shell [class*="bg-black/24"],
+.admin-shell [class*="bg-black/20"],
+.admin-shell [class*="bg-white/[0.035]"],
+.admin-shell [class*="bg-white/[0.04]"],
+.admin-shell [class*="bg-white/[0.045]"],
+.admin-shell [class*="bg-white/[0.055]"] {
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.055)) !important;
+  box-shadow:
+    0 18px 70px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16) !important;
+  backdrop-filter: blur(24px) saturate(1.25);
+  -webkit-backdrop-filter: blur(24px) saturate(1.25);
+}
+
+.admin-glass-card {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05));
+  box-shadow: 0 14px 48px rgba(0, 0, 0, 0.36), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+}
+
+.admin-shell .text-white\/28,
+.admin-shell .text-white\/30,
+.admin-shell .text-white\/32,
+.admin-shell .text-white\/35,
+.admin-shell .text-white\/36,
+.admin-shell .text-white\/38,
+.admin-shell .text-white\/40,
+.admin-shell .text-white\/42,
+.admin-shell .text-white\/45,
+.admin-shell .text-white\/48,
+.admin-shell .text-white\/50,
+.admin-shell .text-white\/52,
+.admin-shell .text-white\/58,
+.admin-shell .text-white\/62,
+.admin-shell .text-white\/66 {
+  color: rgba(255, 255, 255, 0.76) !important;
+}
+
+.admin-shell .text-white\/70,
+.admin-shell .text-white\/72,
+.admin-shell .text-white\/75 {
+  color: rgba(255, 255, 255, 0.88) !important;
+}
+
+.admin-shell input,
+.admin-shell select,
+.admin-shell textarea {
+  background-color: rgba(5, 5, 5, 0.62) !important;
+}
+
 .movie-rail {
   scrollbar-width: none;
 }

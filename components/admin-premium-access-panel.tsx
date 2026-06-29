@@ -103,7 +103,7 @@ export function AdminPremiumAccessPanel() {
 
   return (
     <section id="admin-premium-access" className="mx-auto w-full max-w-7xl px-4 py-5 md:px-8 md:py-8">
-      <div className="rounded-2xl border border-white/8 bg-white/[0.04] p-3 shadow-[0_14px_50px_rgba(0,0,0,0.42)] backdrop-blur-2xl md:rounded-[28px] md:p-5">
+      <div className="admin-floating-glass rounded-2xl border border-white/8 p-3 md:rounded-[28px] md:p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-2xl">
             <h2 className="text-2xl font-black tracking-[-0.04em] md:text-3xl">Premium Controls</h2>

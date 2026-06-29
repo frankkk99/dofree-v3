@@ -67,19 +67,19 @@ export function AdminAuthGuard({ children }: { children: ReactNode }) {
 
   if (loading) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#030303] px-4 text-white">
-        <p className="text-sm font-black text-white/50">{message}</p>
+      <main className="admin-shell grid min-h-screen place-items-center px-4 text-white">
+        <p className="admin-floating-glass rounded-2xl px-5 py-4 text-sm font-black text-white/88">{message}</p>
       </main>
     );
   }
 
   if (!isAdmin) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#030303] px-4 text-white">
-        <section className="w-full max-w-lg rounded-[32px] border border-white/10 bg-white/[0.045] p-6 text-center shadow-[0_0_70px_rgba(0,0,0,0.36)]">
+      <main className="admin-shell grid min-h-screen place-items-center px-4 text-white">
+        <section className="admin-floating-glass w-full max-w-lg rounded-[28px] border border-white/10 p-6 text-center">
           <p className="text-[11px] font-black uppercase tracking-[0.26em] text-[#e50914]">Secure Access</p>
           <h1 className="mt-3 text-3xl font-black tracking-[-0.06em]">ต้องเข้าสู่ระบบก่อน</h1>
-          <p className="mt-3 text-sm font-semibold leading-6 text-white/50">{message}</p>
+          <p className="mt-3 text-sm font-semibold leading-6 text-white/78">{message}</p>
           <div className="mt-6 flex justify-center gap-3">
             <a href="/auth?mode=signin&next=/admin" className="rounded-2xl bg-[#e50914] px-5 py-3 text-sm font-black text-white shadow-glow">
               เข้าสู่ระบบ

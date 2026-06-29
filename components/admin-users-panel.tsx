@@ -137,7 +137,7 @@ export function AdminUsersPanel() {
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-5 text-white md:px-8 md:py-8">
-      <div className="rounded-2xl border border-white/8 bg-white/[0.035] p-3 shadow-[0_14px_50px_rgba(0,0,0,0.42)] md:rounded-[28px] md:p-5">
+      <div className="admin-floating-glass rounded-2xl border border-white/8 p-3 md:rounded-[28px] md:p-5">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
             <a href="/admin" className="text-xs font-black text-[#e50914] hover:text-red-300">← กลับแดชบอร์ด</a>
