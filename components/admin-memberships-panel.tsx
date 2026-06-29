@@ -148,9 +148,9 @@ export function AdminMembershipsPanel() {
   }, []);
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-8 text-white md:px-8">
-      <div className="rounded-[36px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(244,196,107,0.18),transparent_34%),rgba(255,255,255,0.045)] p-5 shadow-[0_30px_120px_rgba(0,0,0,0.62)] md:p-8">
-        <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+    <section className="mx-auto max-w-7xl px-4 py-5 text-white md:px-8 md:py-8">
+      <div className="admin-floating-glass rounded-2xl border border-white/8 p-3 md:rounded-[28px] md:p-5">
+        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
             <a href="/admin" className="text-xs font-black text-[#e50914] hover:text-red-300">← กลับแดชบอร์ด</a>
             <p className="mt-5 text-[11px] font-black uppercase tracking-[0.30em] text-[#f4c46b]">Premium Control</p>
@@ -159,11 +159,11 @@ export function AdminMembershipsPanel() {
               อนุมัติ Premium, ตั้งวันหมดอายุ, ปิดสถานะสมาชิก และเตรียมต่อระบบสลิป/แพ็กเกจจริง
             </p>
           </div>
-          <button onClick={loadMemberships} className="rounded-2xl bg-[#e50914] px-5 py-3 text-sm font-black text-white shadow-glow">Refresh</button>
+          <button onClick={loadMemberships} className="rounded-xl bg-[#e50914] px-4 py-2 text-xs font-black text-white">Refresh</button>
         </div>
 
         {stats ? (
-          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
             <div className="rounded-[26px] border border-white/10 bg-black/35 p-5"><p className="text-xs font-bold text-white/36">Users</p><p className="mt-2 text-4xl font-black">{stats.totalUsers}</p></div>
             <div className="rounded-[26px] border border-white/10 bg-black/35 p-5"><p className="text-xs font-bold text-white/36">Active</p><p className="mt-2 text-4xl font-black text-[#f4c46b]">{stats.active}</p></div>
             <div className="rounded-[26px] border border-white/10 bg-black/35 p-5"><p className="text-xs font-bold text-white/36">Pending</p><p className="mt-2 text-4xl font-black text-sky-200">{stats.pending}</p></div>
@@ -172,12 +172,12 @@ export function AdminMembershipsPanel() {
           </div>
         ) : null}
 
-        <div className="mt-6 rounded-[26px] border border-white/10 bg-black/35 p-4">
+        <div className="mt-4 rounded-2xl border border-white/8 bg-black/35 p-3">
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="ค้นหา display name, user id, plan, status, slip"
-            className="h-12 w-full rounded-2xl border border-white/10 bg-black/45 px-4 text-sm font-bold text-white outline-none placeholder:text-white/25 focus:border-[#e50914]"
+            className="h-11 w-full rounded-xl border border-white/10 bg-black/45 px-3 text-sm font-bold text-white outline-none placeholder:text-white/40 focus:border-[#e50914]"
           />
         </div>
 
@@ -187,7 +187,7 @@ export function AdminMembershipsPanel() {
         {loading ? (
           <div className="mt-6 rounded-[28px] bg-black/35 p-6 text-sm font-black text-white/50">กำลังโหลดสมาชิก...</div>
         ) : (
-          <div className="mt-6 overflow-hidden rounded-[28px] border border-white/10 bg-black/35">
+          <div className="mt-4 overflow-hidden rounded-2xl border border-white/8 bg-black/35">
             <div className="grid grid-cols-[1.1fr_0.85fr_0.9fr_1.35fr] gap-3 border-b border-white/10 px-4 py-3 text-[10px] font-black uppercase tracking-[0.16em] text-white/38 max-lg:hidden">
               <span>User</span>
               <span>Membership</span>
@@ -197,7 +197,7 @@ export function AdminMembershipsPanel() {
 
             <div className="divide-y divide-white/8">
               {filtered.map((user) => (
-                <article key={user.id} className="grid gap-4 px-4 py-4 lg:grid-cols-[1.1fr_0.85fr_0.9fr_1.35fr] lg:items-center">
+                <article key={user.id} className="grid gap-3 px-3 py-3 lg:grid-cols-[1.1fr_0.85fr_0.9fr_1.35fr] lg:items-center">
                   <div className="min-w-0">
                     <p className="truncate text-base font-black tracking-[-0.03em]">{user.display_name || `User ${shortId(user.id)}`}</p>
                     <p className="mt-1 break-all text-[11px] font-semibold text-white/36">{user.id}</p>

@@ -126,7 +126,7 @@ export function AdminAuditLogPanel() {
 
   return (
     <section id="update-history" className="mx-auto w-full max-w-7xl px-4 py-5 text-white md:px-8 md:py-8">
-      <div className="rounded-2xl border border-white/8 bg-black/35 p-3 md:rounded-[28px] md:p-5">
+      <div className="admin-floating-glass rounded-2xl border border-white/8 p-3 md:rounded-[28px] md:p-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <h2 className="text-2xl font-black tracking-[-0.04em] md:text-3xl">Audit Log</h2>

@@ -483,8 +483,8 @@ function Edit({
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 p-2 text-white backdrop-blur-xl md:p-4">
-      <form onSubmit={onSave} className="mx-auto flex max-h-[calc(100dvh-16px)] w-[calc(100vw-16px)] max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#060606] shadow-[0_20px_90px_rgba(0,0,0,0.72)] md:rounded-3xl">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 p-2 text-white backdrop-blur-xl md:p-4">
+      <form onSubmit={onSave} className="admin-floating-glass mx-auto flex max-h-[calc(100dvh-16px)] w-[calc(100vw-16px)] max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/10 md:rounded-3xl">
         <div className="shrink-0 border-b border-white/10 p-3 md:p-5">
         <div className="flex gap-3">
           <img src={item.poster_url || ''} alt={name(item)} className="h-24 w-16 rounded-xl bg-white/10 object-cover md:h-40 md:w-28" />
@@ -1042,7 +1042,7 @@ export function AdminCatalogTable() {
   }
 
   return (
-    <section className="bg-[#030303] px-4 py-5 text-white md:px-8 md:py-8">
+    <section className="px-4 py-5 text-white md:px-8 md:py-8">
       <div className="flex flex-wrap items-center justify-between gap-3 md:hidden">
         <a href="/" className="text-xs text-red-200/70">← กลับหน้าแรก</a>
         <div className="flex flex-wrap gap-2">
@@ -1059,7 +1059,7 @@ export function AdminCatalogTable() {
         <button type="button" onClick={clearFilters} className="rounded-xl bg-white/[0.08] px-4 py-2 text-sm font-black text-white/70">รีเซ็ตตัวกรอง</button>
       </div>
 
-      <form onSubmit={(event) => { event.preventDefault(); void load(0, false); }} className="mt-4 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+      <form onSubmit={(event) => { event.preventDefault(); void load(0, false); }} className="admin-floating-glass mt-4 rounded-2xl border border-white/10 p-3">
         <div className="grid gap-2 md:grid-cols-[1.4fr_140px_140px_auto]">
           <input value={q} onChange={(event) => setQ(event.target.value)} placeholder="ค้นหาหนัง / ซีรีส์ / TMDB ID / ปี / ภาษา / หมายเหตุ" className={cls} />
           <select value={status} onChange={(event) => setStatus(event.target.value)} className={selectCls}>{options.statuses.map((item) => <option key={item} value={item}>{optionLabel(item, 'status')}</option>)}</select>

@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 export default function AdminMembershipsPage() {
   return (
     <AdminAuthGuard>
-      <main className="min-h-screen bg-[#030303] text-white">
+      <main className="admin-shell min-h-screen text-white">
         <AdminMembershipsPanel />
       </main>
     </AdminAuthGuard>

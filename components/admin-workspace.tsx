@@ -62,8 +62,10 @@ export function AdminWorkspace() {
     <>
       <AdminFloatingTopbar activeModule={activeModule} onModuleChange={setModule} />
       <section className="mx-auto w-full max-w-7xl px-4 pt-4 text-white md:px-8 md:pt-6">
+        <div className="admin-floating-glass rounded-2xl p-4 md:rounded-[24px] md:p-5">
         <h1 className="text-2xl font-black tracking-[-0.04em] md:text-4xl">{copy.title}</h1>
-        <p className="mt-1 max-w-3xl text-sm font-semibold leading-6 text-white/48">{copy.description}</p>
+        <p className="mt-1 max-w-3xl text-sm font-semibold leading-6 text-white/72">{copy.description}</p>
+        </div>
       </section>
 
       {activeModule === 'dashboard' ? (

@@ -285,7 +285,7 @@ export function AdminControlCenter() {
 
   return (
     <section id="admin-control-center" className="mx-auto w-full max-w-7xl px-4 py-5 md:px-8 md:py-8">
-      <div className="rounded-2xl border border-white/8 bg-white/[0.04] p-3 shadow-[0_14px_50px_rgba(0,0,0,0.42)] backdrop-blur-2xl md:rounded-[28px] md:p-5">
+      <div className="admin-floating-glass rounded-2xl border border-white/8 p-3 md:rounded-[28px] md:p-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-2xl font-black tracking-[-0.04em] md:text-3xl">Homepage</h2>
@@ -367,7 +367,7 @@ export function AdminControlCenter() {
 
       {modalCategory ? (
         <div className="fixed inset-0 z-[120] overflow-y-auto bg-black/70 p-2 text-white backdrop-blur-xl md:p-4">
-          <div className="mx-auto flex max-h-[calc(100dvh-16px)] w-[calc(100vw-16px)] max-w-6xl flex-col overflow-hidden rounded-2xl bg-black/82 shadow-[0_30px_100px_rgba(0,0,0,0.86),inset_0_1px_0_rgba(255,255,255,0.12)] md:rounded-[28px]">
+          <div className="admin-floating-glass mx-auto flex max-h-[calc(100dvh-16px)] w-[calc(100vw-16px)] max-w-6xl flex-col overflow-hidden rounded-2xl md:rounded-[28px]">
             <div className="shrink-0 border-b border-white/10 p-3 md:p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0"><h3 className="truncate text-xl font-black tracking-[-0.04em] md:text-2xl">จัดการการ์ดในหมวด: {modalCategory.title_th}</h3><p className="text-xs font-bold text-white/42">เพิ่ม/ลบการ์ดแล้วกดบันทึก ข้อมูลจะอัปเดตทีเดียว</p></div><button className="grid h-10 w-10 place-items-center rounded-full bg-white/[0.08] text-xl font-black" onClick={closeCategoryModal}>×</button></div></div>
             <div className="min-h-0 flex-1 overflow-y-auto p-3 md:p-5">
             <div className="grid gap-4 lg:grid-cols-2">

@@ -46,7 +46,7 @@ export function AdminFloatingTopbar({
 
   return (
     <div className="sticky top-0 z-[80] mx-auto w-full max-w-7xl px-2 pt-2 md:top-3 md:px-8 md:pt-3">
-      <div className="rounded-2xl border border-white/10 bg-black/82 p-2 shadow-[0_14px_44px_rgba(0,0,0,0.52)] backdrop-blur-2xl md:rounded-[24px]">
+      <div className="admin-floating-glass rounded-2xl border border-white/10 p-2 md:rounded-[24px]">
         <div className="flex items-center gap-2 border-b border-white/8 pb-2">
           <a href="/admin" className="shrink-0 rounded-xl bg-[#e50914] px-3 py-2 text-xs font-black text-white md:rounded-2xl md:px-4">DOFree Admin</a>
           <div className="ml-auto min-w-0 text-right text-[10px] font-bold text-white/42 max-sm:hidden">
@@ -63,7 +63,7 @@ export function AdminFloatingTopbar({
               ...
             </button>
             {menuOpen ? (
-              <div className="absolute right-0 top-11 z-10 grid min-w-44 gap-1 rounded-2xl border border-white/10 bg-[#080808] p-2 shadow-[0_20px_80px_rgba(0,0,0,0.72)]">
+              <div className="admin-floating-glass absolute right-0 top-11 z-10 grid min-w-44 gap-1 rounded-2xl border border-white/10 p-2">
                 <a href="/" className="rounded-xl px-3 py-2 text-xs font-black text-white/72 hover:bg-white/[0.08] hover:text-white">Back to site</a>
                 <button type="button" onClick={() => window.location.reload()} className="rounded-xl px-3 py-2 text-left text-xs font-black text-white/72 hover:bg-white/[0.08] hover:text-white">Refresh</button>
                 <a href="/admin/users" className="rounded-xl px-3 py-2 text-xs font-black text-white/72 hover:bg-white/[0.08] hover:text-white">Users</a>

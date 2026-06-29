@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 export default function AdminPage() {
   return (
     <AdminAuthGuard>
-      <main className="min-h-screen scroll-smooth bg-[#030303] text-white">
+      <main className="admin-shell min-h-screen scroll-smooth text-white">
         <Suspense fallback={<div className="mx-auto max-w-7xl px-4 py-8 text-sm font-black text-white/50 md:px-8">Loading admin workspace...</div>}>
           <AdminWorkspace />
         </Suspense>
