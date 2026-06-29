@@ -124,7 +124,6 @@ function HeaderAccountMenuPortal() {
   const [host, setHost] = useState<HTMLElement | null>(null);
   const [bodyHost, setBodyHost] = useState<HTMLElement | null>(null);
   const [open, setOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [user, setUser] = useState<DofreeUser | null>(null);
   const [role, setRole] = useState<string>('');
   const { config: premiumAccessConfig, userState: premiumUserState } = usePremiumAccessSnapshot();
@@ -240,7 +239,7 @@ function HeaderAccountMenuPortal() {
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.30em] text-[#e50914]">Account</p>
               <h3 className="mt-2 text-[27px] font-black tracking-[-0.06em] md:text-[32px]">{isSignedIn ? 'บัญชีของฉัน' : 'เมนูผู้ใช้'}</h3>
-              <p className="mt-2 break-all text-sm font-semibold leading-5 text-white/58">{isSignedIn ? userLabel : 'บัญชี รายการโปรด ประวัติ และสมาชิก'}</p>
+              <p className="mt-2 break-all text-sm font-semibold leading-5 text-white/58">{isSignedIn ? userLabel : 'เข้าสู่ระบบหรือสมัครสมาชิกกับดูดีดี.online'}</p>
             </div>
             <button type="button" aria-label="ปิดเมนู" onClick={() => setOpen(false)} className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/[0.09] text-2xl font-black text-white/82 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] transition hover:bg-[#e50914] hover:text-white">×</button>
           </div>
@@ -273,28 +272,10 @@ function HeaderAccountMenuPortal() {
         </div>
 
         {!isSignedIn ? (
-          <>
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <a href="/auth?mode=signin" onClick={() => setAuthMode('signin')} className={`rounded-[22px] px-4 py-3 text-center text-xs font-black ${authMode === 'signin' ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.075] text-white/72 hover:bg-white/[0.12]'}`}>Sign in</a>
-              <a href="/auth?mode=signup" onClick={() => setAuthMode('signup')} className={`rounded-[22px] px-4 py-3 text-center text-xs font-black ${authMode === 'signup' ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.075] text-white/72 hover:bg-white/[0.12]'}`}>Sign up</a>
-            </div>
-
-            <div className="mt-4 rounded-[26px] bg-white/[0.045] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-              <p className="mb-2 text-[10px] font-black uppercase tracking-[0.22em] text-white/42">เข้าสู่ระบบด้วย</p>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  ['Google', '/auth?provider=google'],
-                  ['Facebook', '/auth?provider=facebook'],
-                  ['Apple', '/auth?provider=apple'],
-                  ['LINE', '/auth?provider=line'],
-                  ['Email', '/auth?method=email'],
-                  ['เบอร์โทร', '/auth?method=phone'],
-                ].map(([label, href]) => (
-                  <a key={label} href={href} className="rounded-[16px] bg-black/38 px-3 py-2.5 text-center text-[11px] font-black text-white/76 transition hover:bg-[#e50914] hover:text-white">{label}</a>
-                ))}
-              </div>
-            </div>
-          </>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <a href="/auth?mode=signin" className="rounded-[22px] bg-[#e50914] px-4 py-3 text-center text-xs font-black text-white shadow-glow">เข้าสู่ระบบ</a>
+            <a href="/auth?mode=signup" className="rounded-[22px] bg-white/[0.075] px-4 py-3 text-center text-xs font-black text-white/72 hover:bg-white/[0.12]">สมัครสมาชิก</a>
+          </div>
         ) : null}
       </aside>
     </div>,
