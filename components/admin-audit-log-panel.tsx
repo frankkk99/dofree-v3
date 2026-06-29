@@ -106,7 +106,7 @@ export function AdminAuditLogPanel() {
     setError('');
 
     try {
-      const response = await fetch('/api/admin/audit-logs?limit=120', {
+      const response = await fetch('/api/admin/audit-logs?limit=20', {
         headers: adminSessionHeaders(),
         cache: 'no-store',
       });
@@ -125,30 +125,27 @@ export function AdminAuditLogPanel() {
   }, []);
 
   return (
-    <section id="update-history" className="mx-auto w-full max-w-7xl px-4 py-8 text-white md:px-8">
-      <div className="rounded-[32px] border border-white/10 bg-black/35 p-5 md:p-6">
+    <section id="update-history" className="mx-auto w-full max-w-7xl px-4 py-5 text-white md:px-8 md:py-8">
+      <div className="rounded-2xl border border-white/8 bg-black/35 p-3 md:rounded-[28px] md:p-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#e50914]">Admin Update History</p>
-            <h2 className="mt-2 text-3xl font-black tracking-[-0.06em]">ประวัติการแก้ไขข้อมูล</h2>
-            <p className="mt-2 max-w-2xl text-sm font-semibold text-white/45">
-              บันทึกการเพิ่มลิงก์ แก้สถานะ Import, Sync, Role และ Membership จากฝั่งแอดมิน
-            </p>
+            <h2 className="text-2xl font-black tracking-[-0.04em] md:text-3xl">Audit Log</h2>
+            <p className="mt-1 max-w-2xl text-sm font-semibold text-white/45">ล่าสุด 20 รายการ</p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="ค้นหา action, admin, id"
-              className="h-11 rounded-2xl border border-white/10 bg-black/45 px-4 text-sm font-bold text-white outline-none placeholder:text-white/25 focus:border-[#e50914]"
+              className="h-10 rounded-xl border border-white/10 bg-black/45 px-3 text-sm font-bold text-white outline-none placeholder:text-white/25 focus:border-[#e50914]"
             />
-            <button onClick={loadLogs} className="h-11 rounded-2xl bg-[#e50914] px-5 text-sm font-black text-white shadow-glow">Refresh</button>
+            <button onClick={loadLogs} className="h-10 rounded-xl bg-[#e50914] px-4 text-xs font-black text-white">Refresh</button>
           </div>
         </div>
 
         {error ? <p className="mt-4 rounded-2xl bg-red-500/10 px-4 py-3 text-sm font-bold text-red-100">{error}</p> : null}
 
-        <div className="mt-5 overflow-hidden rounded-[24px] border border-white/10">
+        <div className="mt-4 overflow-hidden rounded-2xl border border-white/8">
           <div className="grid grid-cols-[0.9fr_0.8fr_0.85fr_0.8fr_1.2fr] gap-3 border-b border-white/10 bg-white/[0.04] px-4 py-3 text-[10px] font-black uppercase tracking-[0.14em] text-white/36 max-lg:hidden">
             <span>Time</span>
             <span>Admin</span>
@@ -165,7 +162,8 @@ export function AdminAuditLogPanel() {
                 const fields = changedFields(log);
                 const after = asRecord(log.after_data);
                 return (
-                  <article key={log.id} className="grid gap-3 px-4 py-4 lg:grid-cols-[0.9fr_0.8fr_0.85fr_0.8fr_1.2fr] lg:items-start">
+                  <details key={log.id} className="group px-3 py-3 lg:px-4">
+                    <summary className="grid cursor-pointer gap-1 marker:text-white/30 lg:grid-cols-[0.9fr_0.8fr_0.85fr_0.8fr_1.2fr] lg:gap-3">
                     <div>
                       <p className="text-sm font-black text-white/82">{formatDate(log.created_at)}</p>
                       <p className="mt-1 text-[11px] font-semibold text-white/30">{log.ip_address || '-'}</p>
@@ -179,7 +177,7 @@ export function AdminAuditLogPanel() {
                       <p className="text-sm font-black text-[#f4c46b]">{entityLabel(log.entity_type)}</p>
                       <p className="mt-1 break-all text-[11px] font-semibold text-white/34">{log.entity_id || '-'}</p>
                     </div>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="hidden flex-wrap gap-2 lg:flex">
                       {fields.length ? fields.map((field) => (
                         <span key={field} className="rounded-full bg-white/[0.07] px-3 py-1.5 text-[11px] font-bold text-white/62">
                           {field}: {displayValue(field, after?.[field])}
@@ -188,7 +186,17 @@ export function AdminAuditLogPanel() {
                         <span className="rounded-full bg-white/[0.07] px-3 py-1.5 text-[11px] font-bold text-white/40">summary</span>
                       )}
                     </div>
-                  </article>
+                    </summary>
+                    <div className="mt-3 flex flex-wrap gap-2 rounded-xl bg-white/[0.04] p-3 lg:hidden">
+                      {fields.length ? fields.map((field) => (
+                        <span key={field} className="rounded-full bg-white/[0.07] px-3 py-1.5 text-[11px] font-bold text-white/62">
+                          {field}: {displayValue(field, after?.[field])}
+                        </span>
+                      )) : (
+                        <span className="rounded-full bg-white/[0.07] px-3 py-1.5 text-[11px] font-bold text-white/40">summary</span>
+                      )}
+                    </div>
+                  </details>
                 );
               })}
             </div>
