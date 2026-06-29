@@ -10,8 +10,8 @@ import { canUseNextImage } from '@/lib/image-optimizer';
 const RAIL_LOAD_STEP = 9;
 const RAIL_LOAD_THRESHOLD = 360;
 const RAIL_OBSERVER_MARGIN = '160px';
+const HERO_CANDIDATE_LIMIT = 32;
 const thaiMonthShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-const heroSectionPriority = ['coming-soon', 'watch-ready', 'new-release', 'new-releases', 'latest', 'popular'];
 
 type SectionItemsResponse = {
   ok?: boolean;
@@ -69,9 +69,7 @@ function shuffleSections(sections: MovieSection[], seed: number) {
 }
 
 function heroCandidatesFromSections(sections: MovieSection[]) {
-  const priorityItems = heroSectionPriority.flatMap((slug) => sections.find((section) => section.slug === slug)?.items || []);
-  const fallbackItems = sections.slice(0, 4).flatMap((section) => section.items || []);
-  return uniqueMovies([...priorityItems, ...fallbackItems]).filter(isRecentEnoughForHero).sort((a, b) => heroScore(b) - heroScore(a));
+  return uniqueMovies(sections.flatMap((section) => section.items || [])).filter(isRecentEnoughForHero);
 }
 
 function shortTitle(item: MovieItem) {
@@ -217,12 +215,15 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
   const [shuffleSeed, setShuffleSeed] = useState(1);
   const randomizedSections = useMemo(() => shuffleSections(home.sections, shuffleSeed), [home.sections, shuffleSeed]);
   const heroItems = useMemo(() => {
-    const explicitHeroItems = uniqueMovies(home.heroItems || []).filter(isRecentEnoughForHero).sort((a, b) => heroScore(b) - heroScore(a));
-    const sectionHeroItems = heroCandidatesFromSections(randomizedSections);
-    const fallbackHero = isRecentEnoughForHero(home.hero) ? [home.hero] : [];
-    const candidates = uniqueMovies([...explicitHeroItems, ...sectionHeroItems, ...fallbackHero]);
-    return candidates.length ? candidates.slice(0, 24) : [home.hero];
-  }, [home.hero, home.heroItems, randomizedSections]);
+    const sectionHeroItems = randomizedSections.flatMap((section) => section.items || []);
+    const candidates = uniqueMovies([
+      ...(home.heroItems || []),
+      ...sectionHeroItems,
+      home.hero,
+    ]).filter((item) => (item.backdropUrl || item.posterUrl) && isRecentEnoughForHero(item));
+    const shuffledCandidates = shuffleMovies(candidates, shuffleSeed + 97, 'homepage-hero');
+    return shuffledCandidates.length ? shuffledCandidates.slice(0, HERO_CANDIDATE_LIMIT) : [home.hero];
+  }, [home.hero, home.heroItems, randomizedSections, shuffleSeed]);
   const allItems = useMemo(() => uniqueMovies([...heroItems, ...randomizedSections.flatMap((section) => section.items)]), [heroItems, randomizedSections]);
   const [heroIndex, setHeroIndex] = useState(0);
   const [selected, setSelected] = useState<MovieItem | null>(null);
