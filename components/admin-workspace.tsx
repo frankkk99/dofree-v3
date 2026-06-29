@@ -8,7 +8,6 @@ import { AdminControlCenter } from '@/components/admin-control-center';
 import { AdminDashboard } from '@/components/admin-dashboard';
 import { AdminFloatingTopbar, type AdminModuleId } from '@/components/admin-floating-topbar';
 import { AdminPremiumAccessPanel } from '@/components/admin-premium-access-panel';
-import { AdminSeriesBulkManager } from '@/components/admin-series-bulk-manager';
 
 const moduleCopy: Record<AdminModuleId, { title: string; description: string }> = {
   dashboard: {
@@ -27,17 +26,13 @@ const moduleCopy: Record<AdminModuleId, { title: string; description: string }> 
     title: 'Premium Controls',
     description: 'Control free premium access flags without changing real payment logic.',
   },
-  series: {
-    title: 'Series Bulk Tools',
-    description: 'Paste and save many episodes for one series in a focused workspace.',
-  },
   audit: {
     title: 'Audit Log',
     description: 'Review admin update history only when this module is open.',
   },
 };
 
-const validModules = new Set<AdminModuleId>(['dashboard', 'content', 'homepage', 'premium', 'series', 'audit']);
+const validModules = new Set<AdminModuleId>(['dashboard', 'content', 'homepage', 'premium', 'audit']);
 
 function normalizeModule(value: string | null): AdminModuleId {
   return validModules.has(value as AdminModuleId) ? (value as AdminModuleId) : 'dashboard';
@@ -66,8 +61,8 @@ export function AdminWorkspace() {
   return (
     <>
       <AdminFloatingTopbar activeModule={activeModule} onModuleChange={setModule} />
-      <section className="mx-auto w-full max-w-7xl px-4 pt-6 md:px-8">
-        <div className="rounded-[28px] border border-white/10 bg-white/[0.035] p-5 shadow-[0_24px_90px_rgba(0,0,0,0.38)]">
+      <section className="mx-auto w-full max-w-7xl px-4 pt-5 md:px-8 md:pt-6">
+        <div className="rounded-[28px] border border-white/10 bg-white/[0.035] p-4 shadow-[0_24px_90px_rgba(0,0,0,0.38)] md:p-5">
           <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#e50914]">Admin Workspace</p>
           <h1 className="mt-2 text-3xl font-black tracking-[-0.06em] md:text-5xl">{copy.title}</h1>
           <p className="mt-2 max-w-3xl text-sm font-bold leading-6 text-white/48">{copy.description}</p>
@@ -86,11 +81,6 @@ export function AdminWorkspace() {
       ) : null}
       {activeModule === 'homepage' ? <AdminControlCenter /> : null}
       {activeModule === 'premium' ? <AdminPremiumAccessPanel /> : null}
-      {activeModule === 'series' ? (
-        <section id="series-bulk-manager" className="border-y border-white/10 bg-black/20">
-          <AdminSeriesBulkManager />
-        </section>
-      ) : null}
       {activeModule === 'audit' ? (
         <section id="admin-audit-log">
           <AdminAuditLogPanel />
