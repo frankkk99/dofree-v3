@@ -396,6 +396,24 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
   const premiumPromoLabel = hasWatchLink && canWatch && !premiumUserState.hasPremiumAccess ? premiumAccessConfig.label : '';
 
   useEffect(() => {
+    function closeFromOverlayRequest() {
+      onClose();
+    }
+
+    function onKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') onClose();
+    }
+
+    window.addEventListener('dofree-close-content-overlays', closeFromOverlayRequest);
+    document.addEventListener('keydown', onKey);
+
+    return () => {
+      window.removeEventListener('dofree-close-content-overlays', closeFromOverlayRequest);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [onClose]);
+
+  useEffect(() => {
     let cancelled = false;
     const controller = new AbortController();
     setActiveTab('recommend');

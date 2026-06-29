@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MovieItem } from '@/lib/tmdb';
 import { MovieCard } from '@/components/movie-card';
 import { DetailWindow } from '@/components/window-system';
@@ -39,6 +39,7 @@ type ActorPayload = {
 };
 
 const emptyPayload: ActorPayload = { works: [], collaborators: [] };
+const closeContentOverlaysEvent = 'dofree-close-content-overlays';
 
 function findActorName(target: EventTarget | null) {
   if (!(target instanceof Element)) return '';
@@ -81,12 +82,17 @@ export function ActorProfileBridge() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [selectedMovie, setSelectedMovie] = useState<MovieItem | null>(null);
+  const [selectedMovieRecommendations, setSelectedMovieRecommendations] = useState<MovieItem[]>([]);
   const [upsell, setUpsell] = useState('');
   const { config: premiumAccessConfig, userState: premiumUserState } = usePremiumAccessSnapshot();
+  const modalContentRef = useRef<HTMLDivElement | null>(null);
 
   const works = payload.works || [];
   const collaborators = payload.collaborators || [];
-  const recommendations = useMemo(() => works.filter((item) => selectedMovie ? `${item.mediaType}-${item.id}` !== `${selectedMovie.mediaType}-${selectedMovie.id}` : true).slice(0, 24), [selectedMovie, works]);
+  const recommendations = useMemo(() => {
+    const source = selectedMovieRecommendations.length ? selectedMovieRecommendations : works;
+    return source.filter((item) => selectedMovie ? `${item.mediaType}-${item.id}` !== `${selectedMovie.mediaType}-${selectedMovie.id}` : true).slice(0, 24);
+  }, [selectedMovie, selectedMovieRecommendations, works]);
 
   const openActor = useCallback((next: ActorRef, pushHistory = true) => {
     if (!next.id && !next.name.trim()) return;
@@ -98,7 +104,9 @@ export function ActorProfileBridge() {
       return;
     }
     setUpsell('');
+    window.dispatchEvent(new CustomEvent(closeContentOverlaysEvent));
     setSelectedMovie(null);
+    setSelectedMovieRecommendations([]);
     setCurrent((prev) => {
       if (pushHistory && prev) setHistory((stack) => [...stack.slice(-10), prev]);
       return next;
@@ -151,12 +159,33 @@ export function ActorProfileBridge() {
     };
   }, [current]);
 
-  function close() {
+  useEffect(() => {
+    if (!current) return;
+    modalContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [current]);
+
+  useEffect(() => {
+    if (!current) return;
+
+    function onKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') close();
+    }
+
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [current]);
+
+  function closeActor() {
     setCurrent(null);
     setHistory([]);
     setPayload(emptyPayload);
     setError('');
+  }
+
+  function close() {
+    closeActor();
     setSelectedMovie(null);
+    setSelectedMovieRecommendations([]);
   }
 
   function goBack() {
@@ -166,22 +195,33 @@ export function ActorProfileBridge() {
     openActor(previous, false);
   }
 
+  function openMovieFromActor(movie: MovieItem) {
+    setSelectedMovieRecommendations(works);
+    closeActor();
+    window.requestAnimationFrame(() => setSelectedMovie(movie));
+  }
+
   if (!current) {
-    return upsell ? (
-      <div className="fixed bottom-24 left-1/2 z-[1200] -translate-x-1/2 rounded-full bg-[#e50914] px-5 py-3 text-xs font-black text-white shadow-[0_18px_70px_rgba(229,9,20,0.45)]">
-        {upsell}
-      </div>
-    ) : null;
+    return (
+      <>
+        {upsell ? (
+          <div className="fixed bottom-24 left-1/2 z-[1200] -translate-x-1/2 rounded-full bg-[#e50914] px-5 py-3 text-xs font-black text-white shadow-[0_18px_70px_rgba(229,9,20,0.45)]">
+            {upsell}
+          </div>
+        ) : null}
+        {selectedMovie ? <DetailWindow item={selectedMovie} recommendations={recommendations} onClose={() => setSelectedMovie(null)} onSelect={setSelectedMovie} /> : null}
+      </>
+    );
   }
 
   return (
     <>
       <div data-actor-profile-window="true" className="fixed inset-0 z-[140] overflow-y-auto bg-black/68 px-3 py-4 text-white backdrop-blur-[12px] md:px-6 md:py-8" role="dialog" aria-modal="true" onClick={close}>
         <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_18%_8%,rgba(229,9,20,0.26),transparent_24rem),radial-gradient(circle_at_90%_90%,rgba(255,255,255,0.08),transparent_28rem)]" />
-        <div onClick={(event) => event.stopPropagation()} className="relative mx-auto w-full max-w-6xl overflow-hidden rounded-[34px] bg-white/[0.072] p-3 shadow-[0_42px_160px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,255,255,0.16),inset_0_-40px_90px_rgba(0,0,0,0.42)] backdrop-blur-3xl md:p-5">
+        <div ref={modalContentRef} onClick={(event) => event.stopPropagation()} className="relative mx-auto max-h-[calc(100svh-32px)] w-full max-w-6xl overflow-y-auto rounded-[34px] bg-white/[0.072] p-3 shadow-[0_42px_160px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,255,255,0.16),inset_0_-40px_90px_rgba(0,0,0,0.42)] backdrop-blur-3xl md:max-h-[calc(100svh-64px)] md:p-5">
           <div className="flex flex-wrap items-center justify-between gap-2 pb-3">
             <div className="flex gap-2">
-              {history.length ? <button type="button" onClick={goBack} className="h-10 rounded-full bg-white/[0.08] px-4 text-xs font-black text-white/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] hover:bg-white/[0.13]">ย้อนกลับ</button> : null}
+              {history.length ? <button type="button" onClick={goBack} className="h-10 rounded-full bg-white/[0.08] px-4 text-xs font-black text-white/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] hover:bg-white/[0.13]">← กลับ</button> : null}
               <span className="inline-flex h-10 items-center rounded-full bg-[#e50914]/18 px-4 text-[10px] font-black uppercase tracking-[0.24em] text-red-100/78">Actor Profile</span>
             </div>
             <button type="button" onClick={close} className="grid h-11 w-11 place-items-center rounded-full bg-white/[0.09] text-2xl font-black text-white/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-[#e50914] hover:text-white">×</button>
@@ -207,7 +247,7 @@ export function ActorProfileBridge() {
               <span className="text-xs font-black text-white/35">{works.length} เรื่อง</span>
             </div>
             <div className="movie-rail flex max-w-full gap-2.5 overflow-x-auto overflow-y-hidden pb-2 md:gap-4" style={{ WebkitOverflowScrolling: 'touch' }}>
-              {loading ? Array.from({ length: 6 }).map((_, index) => <div key={index} className="h-[176px] w-[116px] shrink-0 animate-pulse rounded-[10px] bg-white/[0.055] md:h-[220px] md:w-[146px]" />) : works.map((movie, index) => <MovieCard key={`actor-work-${movie.mediaType}-${movie.id}-${index}`} item={movie} compact onSelect={setSelectedMovie} priorityBadge={index < 3 ? 'ผลงาน' : undefined} />)}
+              {loading ? Array.from({ length: 6 }).map((_, index) => <div key={index} className="h-[176px] w-[116px] shrink-0 animate-pulse rounded-[10px] bg-white/[0.055] md:h-[220px] md:w-[146px]" />) : works.map((movie, index) => <MovieCard key={`actor-work-${movie.mediaType}-${movie.id}-${index}`} item={movie} compact onSelect={openMovieFromActor} priorityBadge={index < 3 ? 'ผลงาน' : undefined} />)}
               {!loading && !works.length ? <p className="py-8 text-sm font-bold text-white/42">ยังไม่มีผลงานให้แสดง</p> : null}
             </div>
           </section>
@@ -215,7 +255,7 @@ export function ActorProfileBridge() {
           <section className="mt-4 rounded-[28px] bg-black/30 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
             <div className="mb-3 flex items-end justify-between gap-3">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#e50914]/80">Collaborators</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#e50914]/80">เพื่อนร่วมงาน</p>
                 <h3 className="mt-1 text-2xl font-black tracking-[-0.05em]">เพื่อนร่วมงาน</h3>
               </div>
               <span className="text-xs font-black text-white/35">กดต่อได้เรื่อย ๆ</span>
@@ -236,8 +276,6 @@ export function ActorProfileBridge() {
           </section>
         </div>
       </div>
-
-      {selectedMovie ? <DetailWindow item={selectedMovie} recommendations={recommendations} onClose={() => setSelectedMovie(null)} onSelect={setSelectedMovie} /> : null}
     </>
   );
 }
