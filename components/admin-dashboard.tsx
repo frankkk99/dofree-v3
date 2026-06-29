@@ -169,25 +169,10 @@ export function AdminDashboard() {
   }, []);
 
   return (
-    <section className="mx-auto w-full max-w-7xl px-4 py-8 text-white md:px-8">
-      <div className="rounded-[36px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(229,9,20,0.20),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.07),rgba(255,255,255,0.025))] p-5 shadow-[0_30px_120px_rgba(0,0,0,0.62)] md:p-8">
-        <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-[11px] font-black uppercase tracking-[0.30em] text-[#e50914]">Admin Command Center</p>
-            <h1 className="mt-3 text-4xl font-black tracking-[-0.08em] md:text-7xl">ดูดีดี Dashboard</h1>
-            <p className="mt-3 max-w-2xl text-sm font-semibold leading-7 text-white/52 md:text-base">
-              ศูนย์ควบคุมหลังบ้านสำหรับวัดคนดู ดูแลคลังหนัง เติมลิงก์ ตรวจปัญหา และติดตามสุขภาพระบบ
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <a href="/" className="rounded-2xl bg-white/[0.08] px-4 py-3 text-xs font-black text-white/75 hover:bg-white/[0.14]">หน้าเว็บ</a>
-            <a href="#analytics" className="rounded-2xl bg-white/[0.08] px-4 py-3 text-xs font-black text-white/75 hover:bg-white/[0.14]">Analytics</a>
-            <a href="#update-history" className="rounded-2xl bg-white/[0.08] px-4 py-3 text-xs font-black text-white/75 hover:bg-white/[0.14]">History</a>
-            <a href="#catalog-manager" className="rounded-2xl bg-white/[0.08] px-4 py-3 text-xs font-black text-white/75 hover:bg-white/[0.14]">Catalog</a>
-            <a href="/admin/users" className="rounded-2xl bg-white/[0.08] px-4 py-3 text-xs font-black text-white/75 hover:bg-white/[0.14]">Users</a>
-            <button onClick={loadDashboard} className="rounded-2xl bg-[#e50914] px-4 py-3 text-xs font-black text-white shadow-glow">Refresh</button>
-          </div>
+    <section className="mx-auto w-full max-w-7xl px-4 py-4 text-white md:px-8 md:py-6">
+      <div className="rounded-2xl border border-white/8 bg-white/[0.035] p-3 shadow-[0_14px_50px_rgba(0,0,0,0.42)] md:rounded-[28px] md:p-5">
+        <div className="flex justify-end">
+          <button onClick={loadDashboard} className="rounded-xl bg-[#e50914] px-3 py-2 text-xs font-black text-white">Refresh</button>
         </div>
 
         {loading ? (
@@ -196,22 +181,37 @@ export function AdminDashboard() {
           <div className="mt-8 rounded-[28px] border border-[#e50914]/30 bg-[#170203]/70 p-6 text-sm font-black text-red-100">{error}</div>
         ) : data ? (
           <>
-            <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
               {metricLabels.map((item) => (
-                <article key={item.key} className="rounded-[28px] border border-white/10 bg-black/35 p-5">
-                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/36">{item.label}</p>
-                  <p className={`mt-3 text-4xl font-black tracking-[-0.08em] ${item.accent || ''}`}>{formatNumber(data.metrics[item.key])}</p>
-                  <p className="mt-2 text-xs font-semibold text-white/40">{item.hint}</p>
+                <article key={item.key} className="min-h-[92px] rounded-2xl border border-white/8 bg-black/32 p-3">
+                  <p className="truncate text-[10px] font-black text-white/42">{item.label}</p>
+                  <p className={`mt-2 text-2xl font-black tracking-[-0.04em] md:text-3xl ${item.accent || ''}`}>{formatNumber(data.metrics[item.key])}</p>
+                  <p className="mt-1 truncate text-[11px] font-semibold text-white/36">{item.hint}</p>
                 </article>
               ))}
             </div>
 
-            <div id="analytics" className="mt-5 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-              <article className="rounded-[30px] border border-white/10 bg-black/35 p-5">
+            <div id="maintenance" className="mt-3 rounded-2xl border border-white/8 bg-black/35 p-3 md:p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/36">Priority Tasks</p>
+              <h2 className="mt-1 text-lg font-black tracking-[-0.03em]">งานด่วนเพื่อดูแลเว็บ</h2>
+              <div className="mt-3 grid gap-2 md:grid-cols-2">
+                {data.tasks.map((task) => (
+                  <div key={task.title} className={`rounded-xl border p-3 ${toneClass(task.tone)}`}>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-black">{task.title}</p>
+                      <p className="text-xl font-black tracking-[-0.04em]">{formatNumber(task.value)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div id="analytics" className="mt-4 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+              <article className="rounded-2xl border border-white/8 bg-black/35 p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/36">Visitor Analytics</p>
-                    <h2 className="mt-2 text-2xl font-black tracking-[-0.05em]">คนเข้าเว็บ 7 วันล่าสุด</h2>
+                    <h2 className="mt-1 text-lg font-black tracking-[-0.03em]">คนเข้าเว็บ 7 วันล่าสุด</h2>
                     <p className="mt-1 text-xs font-semibold text-white/38">
                       {analyticsReady ? `${formatNumber(data.metrics.totalEvents7d)} events` : 'รอ migration analytics_events และ event แรก'}
                     </p>
@@ -243,9 +243,9 @@ export function AdminDashboard() {
                 ) : <EmptyState>ยังไม่มีข้อมูล analytics ในช่วง 7 วันล่าสุด</EmptyState>}
               </article>
 
-              <article className="rounded-[30px] border border-white/10 bg-black/35 p-5">
+              <article className="rounded-2xl border border-white/8 bg-black/35 p-4">
                 <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/36">Search Demand</p>
-                <h2 className="mt-2 text-2xl font-black tracking-[-0.05em]">คำค้นยอดนิยม</h2>
+                <h2 className="mt-1 text-lg font-black tracking-[-0.03em]">คำค้นยอดนิยม</h2>
                 <div className="mt-4 grid gap-2">
                   {data.analytics?.topSearches?.length ? data.analytics.topSearches.map((item, index) => (
                     <div key={`${item.label}-${index}`} className="flex items-center justify-between gap-3 rounded-2xl bg-white/[0.055] px-4 py-3">
@@ -257,10 +257,10 @@ export function AdminDashboard() {
               </article>
             </div>
 
-            <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_1fr]">
-              <article className="rounded-[30px] border border-white/10 bg-black/35 p-5">
+            <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1fr]">
+              <article className="rounded-2xl border border-white/8 bg-black/35 p-4">
                 <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/36">Top Content</p>
-                <h2 className="mt-2 text-2xl font-black tracking-[-0.05em]">หนัง/ซีรีส์ที่คนสนใจ</h2>
+                <h2 className="mt-1 text-lg font-black tracking-[-0.03em]">หนัง/ซีรีส์ที่คนสนใจ</h2>
                 <div className="mt-4 grid gap-2">
                   {data.analytics?.topContent?.length ? data.analytics.topContent.map((item) => (
                     <a key={`${item.mediaType}-${item.mediaId}`} href={item.mediaType && item.mediaId ? `/${item.mediaType}/${item.mediaId}` : '#'} className="flex items-center justify-between gap-3 rounded-2xl bg-white/[0.055] px-4 py-3 transition hover:bg-white/[0.09]">
@@ -274,26 +274,9 @@ export function AdminDashboard() {
                 </div>
               </article>
 
-              <article id="maintenance" className="rounded-[30px] border border-white/10 bg-black/35 p-5">
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/36">Priority Tasks</p>
-                <h2 className="mt-2 text-2xl font-black tracking-[-0.05em]">งานด่วนเพื่อดูแลเว็บ</h2>
-                <div className="mt-4 grid gap-3">
-                  {data.tasks.map((task) => (
-                    <div key={task.title} className={`rounded-2xl border p-4 ${toneClass(task.tone)}`}>
-                      <div className="flex items-center justify-between gap-4">
-                        <p className="text-sm font-black">{task.title}</p>
-                        <p className="text-2xl font-black tracking-[-0.06em]">{formatNumber(task.value)}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </article>
-            </div>
-
-            <div className="mt-5 grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
-              <article className="rounded-[30px] border border-white/10 bg-black/35 p-5">
+              <article className="rounded-2xl border border-white/8 bg-black/35 p-4">
                 <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/36">Admin Modules</p>
-                <h2 className="mt-2 text-2xl font-black tracking-[-0.05em]">เมนูดูแลระบบ</h2>
+                <h2 className="mt-1 text-lg font-black tracking-[-0.03em]">เมนูดูแลระบบ</h2>
                 <div className="mt-4 grid gap-2">
                   {adminModules.map((item) => (
                     <a key={item.label} href={item.href} className="rounded-2xl bg-white/[0.055] px-4 py-3 text-sm font-black text-white/70 transition hover:bg-[#170203] hover:text-white">
@@ -304,11 +287,14 @@ export function AdminDashboard() {
                 </div>
               </article>
 
-              <article className="rounded-[30px] border border-white/10 bg-black/35 p-5">
+            </div>
+
+            <div className="mt-4 grid gap-4 lg:grid-cols-[1.2fr]">
+              <article className="rounded-2xl border border-white/8 bg-black/35 p-4">
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/36">High Rating Queue</p>
-                    <h2 className="mt-2 text-2xl font-black tracking-[-0.05em]">หนังคะแนนสูงที่ควรเติมลิงก์ก่อน</h2>
+                    <h2 className="mt-1 text-lg font-black tracking-[-0.03em]">หนังคะแนนสูงที่ควรเติมลิงก์ก่อน</h2>
                   </div>
                   <a href="#catalog-manager" className="text-xs font-black text-[#e50914] hover:text-red-300">ไปจัดการ</a>
                 </div>
@@ -328,9 +314,9 @@ export function AdminDashboard() {
               </article>
             </div>
 
-            <article id="health" className="mt-5 rounded-[30px] border border-white/10 bg-black/35 p-5">
+            <article id="health" className="mt-4 rounded-2xl border border-white/8 bg-black/35 p-4">
               <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/36">System Health</p>
-              <h2 className="mt-2 text-2xl font-black tracking-[-0.05em]">สุขภาพระบบ</h2>
+              <h2 className="mt-1 text-lg font-black tracking-[-0.03em]">สุขภาพระบบ</h2>
               <div className="mt-4 grid gap-3 md:grid-cols-3">
                 {[
                   ['Supabase', data.health?.supabaseConfigured, 'URL + service role'],

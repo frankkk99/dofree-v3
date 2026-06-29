@@ -284,13 +284,12 @@ export function AdminControlCenter() {
   }, []);
 
   return (
-    <section id="admin-control-center" className="mx-auto w-full max-w-7xl px-4 py-8 md:px-8">
-      <div className="rounded-[30px] border border-white/10 bg-white/[0.045] p-4 shadow-[0_28px_100px_rgba(0,0,0,0.55)] backdrop-blur-2xl md:p-6">
+    <section id="admin-control-center" className="mx-auto w-full max-w-7xl px-4 py-5 md:px-8 md:py-8">
+      <div className="rounded-2xl border border-white/8 bg-white/[0.04] p-3 shadow-[0_14px_50px_rgba(0,0,0,0.42)] backdrop-blur-2xl md:rounded-[28px] md:p-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#e50914]">Control Center</p>
-            <h2 className="mt-1 text-2xl font-black tracking-[-0.05em] md:text-4xl">ควบคุมหน้าเว็บ / หมวด / การ์ด</h2>
-            <p className="mt-1 text-xs font-semibold text-white/42">เลือกหลายรายการแล้วเปิด/ปิด ย้ายหมวด หรือลบได้ทีเดียว</p>
+            <h2 className="text-2xl font-black tracking-[-0.04em] md:text-3xl">Homepage</h2>
+            <p className="mt-1 text-xs font-semibold text-white/42">Hero, หมวดหน้าแรก และการ์ดในแต่ละหมวด</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button onClick={seedCategories} disabled={loading} className={ghostBtn}>เติมหมวด default</button>
@@ -301,7 +300,7 @@ export function AdminControlCenter() {
         {message ? <div className="mt-4 rounded-2xl border border-white/10 bg-black/45 px-4 py-3 text-xs font-bold text-white/70">{message}</div> : null}
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[0.95fr_1.3fr]">
-          <div className="rounded-[24px] border border-white/10 bg-black/35 p-4">
+          <div className="rounded-2xl border border-white/8 bg-black/35 p-3 md:p-4">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div><h3 className="text-lg font-black">หมวดหมู่หน้าแรก</h3><p className="text-[10px] font-black text-white/35">{categories.length} หมวด · เลือก {selectedCategoryCount}</p></div>
               <div className="flex flex-wrap gap-1.5"><button className={ghostBtn} onClick={() => setSelectedCategories(categories.map((cat) => cat.slug))}>เลือกทั้งหมด</button><button className={ghostBtn} onClick={() => setSelectedCategories([])}>ไม่เลือกทั้งหมด</button></div>
@@ -332,7 +331,7 @@ export function AdminControlCenter() {
             </div>
           </div>
 
-          <div className="rounded-[24px] border border-white/10 bg-black/35 p-4">
+          <div className="rounded-2xl border border-white/8 bg-black/35 p-3 md:p-4">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-lg font-black">การ์ดหนัง / ซีรีส์</h3><p className="text-[10px] font-black text-white/35">{cards.length} รายการ · เลือก {selectedCardCount}</p></div><div className="flex gap-1.5"><button className={ghostBtn} onClick={() => setSelectedCards(cards.map(cardKey))}>เลือกทั้งหมด</button><button className={ghostBtn} onClick={() => setSelectedCards([])}>ไม่เลือกทั้งหมด</button></div></div>
             <div className="mb-4 grid gap-2 md:grid-cols-[1fr_160px_130px_auto]">
               <input className={input} value={q} onChange={(event) => setQ(event.target.value)} placeholder="ค้นหาชื่อหนัง" />
@@ -367,10 +366,11 @@ export function AdminControlCenter() {
       </div>
 
       {modalCategory ? (
-        <div className="fixed inset-0 z-[120] overflow-y-auto bg-black/70 p-4 text-white backdrop-blur-xl">
-          <div className="mx-auto max-w-6xl rounded-[34px] bg-black/72 p-4 shadow-[0_40px_140px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,255,255,0.14)] md:p-6">
-            <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#e50914]">Category Modal</p><h3 className="mt-1 text-2xl font-black tracking-[-0.05em]">จัดการการ์ดในหมวด: {modalCategory.title_th}</h3><p className="text-xs font-bold text-white/42">เพิ่ม/ลบการ์ดแล้วกดบันทึก ข้อมูลจะอัปเดตทีเดียว</p></div><button className="grid h-10 w-10 place-items-center rounded-full bg-white/[0.08] text-xl font-black" onClick={closeCategoryModal}>×</button></div>
-            <div className="mt-5 grid gap-5 lg:grid-cols-2">
+        <div className="fixed inset-0 z-[120] overflow-y-auto bg-black/70 p-2 text-white backdrop-blur-xl md:p-4">
+          <div className="mx-auto flex max-h-[calc(100dvh-16px)] w-[calc(100vw-16px)] max-w-6xl flex-col overflow-hidden rounded-2xl bg-black/82 shadow-[0_30px_100px_rgba(0,0,0,0.86),inset_0_1px_0_rgba(255,255,255,0.12)] md:rounded-[28px]">
+            <div className="shrink-0 border-b border-white/10 p-3 md:p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0"><h3 className="truncate text-xl font-black tracking-[-0.04em] md:text-2xl">จัดการการ์ดในหมวด: {modalCategory.title_th}</h3><p className="text-xs font-bold text-white/42">เพิ่ม/ลบการ์ดแล้วกดบันทึก ข้อมูลจะอัปเดตทีเดียว</p></div><button className="grid h-10 w-10 place-items-center rounded-full bg-white/[0.08] text-xl font-black" onClick={closeCategoryModal}>×</button></div></div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-3 md:p-5">
+            <div className="grid gap-4 lg:grid-cols-2">
               <div className="rounded-[24px] bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h4 className="font-black">การ์ดในหมวดนี้ ({modalAssigned.length})</h4><div className="flex gap-1.5"><button className={ghostBtn} onClick={() => setModalSelectedAssigned(modalAssigned.map(cardKey))}>เลือกทั้งหมด</button><button className={ghostBtn} onClick={() => setModalSelectedAssigned([])}>ไม่เลือกทั้งหมด</button><button className={redBtn} disabled={!modalSelectedAssigned.length} onClick={() => modalRemoveCards(modalSelectedAssigned)}>ลบที่เลือกออก</button></div></div>
                 <div className="grid max-h-[520px] gap-2 overflow-y-auto pr-1">{modalAssigned.map((card) => { const key = cardKey(card); const selected = modalSelectedAssigned.includes(key); return <article key={key} className={`grid grid-cols-[18px_42px_1fr_auto] items-center gap-2 rounded-2xl p-2 ${selected ? 'bg-[#e50914]/12' : 'bg-black/35'}`}><input type="checkbox" checked={selected} onChange={(event) => setModalSelectedAssigned((current) => event.target.checked ? [...new Set([...current, key])] : current.filter((item) => item !== key))} className="h-4 w-4 accent-[#e50914]" /><div className="h-14 w-10 overflow-hidden rounded bg-white/[0.06]">{card.poster_url ? <img src={card.poster_url} alt="" className="h-full w-full object-cover" /> : null}</div><div className="min-w-0"><p className="truncate text-xs font-black">{card.title_en || card.title}</p><p className="text-[10px] text-white/38">{card.release_year || '-'} · ★ {Number(card.rating || 0).toFixed(1)}</p></div><button className={ghostBtn} onClick={() => modalRemoveCards([key])}>ลบ</button></article>; })}</div>
@@ -381,7 +381,8 @@ export function AdminControlCenter() {
                 <div className="grid max-h-[520px] gap-2 overflow-y-auto pr-1">{modalSearchCards.map((card) => { const key = cardKey(card); const selected = modalSelectedSearch.includes(key); const alreadyIn = modalAssigned.some((item) => cardKey(item) === key); return <article key={key} className={`grid grid-cols-[18px_42px_1fr_auto] items-center gap-2 rounded-2xl p-2 ${selected ? 'bg-[#e50914]/12' : 'bg-black/35'}`}><input type="checkbox" checked={selected} onChange={(event) => setModalSelectedSearch((current) => event.target.checked ? [...new Set([...current, key])] : current.filter((item) => item !== key))} className="h-4 w-4 accent-[#e50914]" /><div className="h-14 w-10 overflow-hidden rounded bg-white/[0.06]">{card.poster_url ? <img src={card.poster_url} alt="" className="h-full w-full object-cover" /> : null}</div><div className="min-w-0"><p className="truncate text-xs font-black">{card.title_en || card.title}</p><p className="text-[10px] text-white/38">{card.source_bucket || 'ไม่ระบุหมวด'} · {card.release_year || '-'}</p></div><button className={alreadyIn ? ghostBtn : redBtn} disabled={alreadyIn} onClick={() => modalAddCards([key])}>{alreadyIn ? 'อยู่แล้ว' : 'เพิ่ม'}</button></article>; })}</div>
               </div>
             </div>
-            <div className="mt-5 flex flex-wrap justify-end gap-2"><button className={ghostBtn} onClick={closeCategoryModal}>ยกเลิก</button><button className={redBtn} disabled={modalLoading} onClick={() => void saveModalCategoryCards()}>บันทึกและปิด Modal</button></div>
+            </div>
+            <div className="shrink-0 border-t border-white/10 p-3 md:p-5"><div className="flex flex-wrap justify-end gap-2"><button className={ghostBtn} onClick={closeCategoryModal}>ยกเลิก</button><button className={redBtn} disabled={modalLoading} onClick={() => void saveModalCategoryCards()}>บันทึกและปิด Modal</button></div></div>
           </div>
         </div>
       ) : null}

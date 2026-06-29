@@ -430,9 +430,6 @@ function Edit({
   episodes,
   episodeForm,
   setEpisodeForm,
-  episodeBulkText,
-  setEpisodeBulkText,
-  episodeBulkDrafts,
   episodeDraftRows,
   allEpisodeDrafts,
   expandedEpisodeKey,
@@ -455,9 +452,6 @@ function Edit({
   episodes: SeriesEpisode[];
   episodeForm: EpisodeForm;
   setEpisodeForm: (form: EpisodeForm) => void;
-  episodeBulkText: string;
-  setEpisodeBulkText: (value: string) => void;
-  episodeBulkDrafts: EpisodeDraft[];
   episodeDraftRows: EpisodeDraftRow[];
   allEpisodeDrafts: EpisodeDraft[];
   expandedEpisodeKey: string;
@@ -471,13 +465,12 @@ function Edit({
   onUpdateEpisodeDraft: (key: string, form: EpisodeForm) => void;
   onCancelEpisodeEdit: () => void;
 }) {
-  const [bulkOpen, setBulkOpen] = useState(false);
   const episodeRows = [
     ...sortedEpisodes(episodes).map((episode) => ({ kind: 'saved' as const, key: episodeRowKey(episode), episode })),
     ...sortedEpisodes(episodeDraftRows).map((episode) => ({ kind: 'draft' as const, key: episode.draft_key, episode })),
   ];
   const currentSeason = episodeRows[0]?.episode.season_number || 1;
-  const hasUnsaved = Boolean(expandedEpisodeKey || episodeDraftRows.length || episodeBulkText.trim());
+  const hasUnsaved = Boolean(expandedEpisodeKey || episodeDraftRows.length);
 
   function handleClose() {
     if (hasUnsaved && !window.confirm('มีข้อมูลที่ยังไม่ได้บันทึก ต้องการปิดหน้าต่างนี้หรือไม่?')) return;
@@ -490,21 +483,24 @@ function Edit({
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-auto bg-black/80 p-4 text-white backdrop-blur-xl">
-      <form onSubmit={onSave} className="mx-auto max-w-3xl rounded-3xl border border-white/10 bg-[#060606] p-5 shadow-[0_28px_120px_rgba(0,0,0,0.78)]">
-        <div className="flex gap-4">
-          <img src={item.poster_url || ''} alt={name(item)} className="h-40 w-28 rounded-xl bg-white/10 object-cover" />
-          <div className="flex-1">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 p-2 text-white backdrop-blur-xl md:p-4">
+      <form onSubmit={onSave} className="mx-auto flex max-h-[calc(100dvh-16px)] w-[calc(100vw-16px)] max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#060606] shadow-[0_20px_90px_rgba(0,0,0,0.72)] md:rounded-3xl">
+        <div className="shrink-0 border-b border-white/10 p-3 md:p-5">
+        <div className="flex gap-3">
+          <img src={item.poster_url || ''} alt={name(item)} className="h-24 w-16 rounded-xl bg-white/10 object-cover md:h-40 md:w-28" />
+          <div className="min-w-0 flex-1">
             <p className="text-xs font-black text-[#e50914]">EDIT MOVIE</p>
-            <h2 className="mt-2 text-3xl font-black leading-tight">{form.title_th || form.title || name(item)}</h2>
+            <h2 className="mt-1 truncate text-xl font-black leading-tight md:mt-2 md:text-3xl">{form.title_th || form.title || name(item)}</h2>
             <p className="mt-2 text-xs text-white/50">TMDB {item.tmdb_id} • {item.media_type} • ★ {Number(item.rating || 0).toFixed(1)} • {item.year || '-'}</p>
-            <p className="mt-1 text-xs text-white/36">{item.genres?.join(' / ') || item.section_slug || '-'}</p>
-            <p className="mt-1 text-xs text-white/30">Bucket: {item.source_buckets?.join(' / ') || item.source_bucket || '-'}</p>
+            <p className="mt-1 truncate text-xs text-white/36">{item.genres?.join(' / ') || item.section_slug || '-'}</p>
+            <p className="mt-1 truncate text-xs text-white/30">Bucket: {item.source_buckets?.join(' / ') || item.source_bucket || '-'}</p>
           </div>
           <button type="button" onClick={handleClose} className="h-10 w-10 rounded-full bg-white/10 text-xl">×</button>
         </div>
+        </div>
 
-        <div className="mt-5 grid gap-3">
+        <div className="min-h-0 flex-1 overflow-y-auto p-3 md:p-5">
+        <div className="grid gap-3">
           <UrlInputRow
             label="Watch URL / Embed URL / HLS URL"
             value={form.watch_url}
@@ -540,7 +536,7 @@ function Edit({
         </div>
 
         {item.media_type === 'tv' ? (
-          <section className="mt-5 rounded-2xl border border-white/10 bg-white/[0.045] p-4">
+          <section className="mt-5 rounded-2xl border border-white/10 bg-white/[0.045] p-3 md:p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#e50914]">Series Episodes</p>
@@ -554,8 +550,7 @@ function Edit({
               <button type="button" onClick={() => onAddEpisodeDrafts(1)} className="rounded-xl bg-white/10 px-3 py-2 text-xs font-black text-white hover:bg-white/15">+ เพิ่มตอน</button>
               <button type="button" onClick={() => onAddEpisodeDrafts(5)} className="rounded-xl bg-white/10 px-3 py-2 text-xs font-black text-white hover:bg-white/15">+ เพิ่ม 5 ตอน</button>
               <button type="button" onClick={() => onAddEpisodeDrafts(10)} className="rounded-xl bg-white/10 px-3 py-2 text-xs font-black text-white hover:bg-white/15">+ เพิ่ม 10 ตอน</button>
-              <button type="button" onClick={() => setBulkOpen((value) => !value)} className="rounded-xl bg-white/10 px-3 py-2 text-xs font-black text-white hover:bg-white/15">Bulk Paste</button>
-              <button type="button" onClick={onSaveBulkEpisodes} disabled={episodeSaving || !allEpisodeDrafts.length} className="ml-auto rounded-xl bg-[#e50914] px-4 py-2 text-xs font-black text-white disabled:opacity-45">
+              <button type="button" onClick={onSaveBulkEpisodes} disabled={episodeSaving || !allEpisodeDrafts.length} className="rounded-xl bg-[#e50914] px-4 py-2 text-xs font-black text-white disabled:opacity-45 md:ml-auto">
                 {episodeSaving ? 'Saving...' : `บันทึกทั้งหมด ${allEpisodeDrafts.length}`}
               </button>
             </div>
@@ -579,7 +574,7 @@ function Edit({
                   const isOpen = expandedEpisodeKey === row.key;
                   return (
                     <div key={row.key} className="bg-black/10">
-                      <div className="grid gap-3 px-3 py-3 lg:grid-cols-[72px_1fr_88px_92px_92px_120px] lg:items-center">
+                      <div className="grid gap-2 px-3 py-3 lg:grid-cols-[72px_1fr_88px_92px_92px_120px] lg:items-center">
                         <div className="text-sm font-black text-white">S{row.episode.season_number}E{String(row.episode.episode_number).padStart(2, '0')}</div>
                         <div className="min-w-0">
                           <p className="truncate text-sm font-black text-white/88">{row.episode.episode_title || `EP ${row.episode.episode_number}`}</p>
@@ -644,35 +639,6 @@ function Edit({
               <p className="hidden mt-3 rounded-xl bg-black/28 px-3 py-2 text-xs font-bold text-white/36">ยังไม่มีตอนในระบบ เริ่มจาก S1 E1 ได้เลย</p>
             )}
 
-            {(bulkOpen || episodeBulkText || episodeBulkDrafts.length) ? (
-            <div className="mt-4 rounded-2xl border border-[#e50914]/20 bg-black/26 p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <h4 className="text-sm font-black">เพิ่มหลายตอนในครั้งเดียว</h4>
-                  <p className="mt-1 text-[11px] font-bold text-white/38">ใส่ 1 บรรทัดต่อ 1 ตอน เช่น 1 | ตอนที่ 1 | ลิงก์รับชม หรือ S1E2 | ตอนที่ 2 | ลิงก์รับชม</p>
-                </div>
-                <button type="button" onClick={onSaveBulkEpisodes} disabled={episodeSaving || !episodeBulkDrafts.length} className="rounded-xl bg-[#e50914] px-4 py-2 text-xs font-black text-white disabled:opacity-45">
-                  {episodeSaving ? 'Saving...' : `บันทึก ${episodeBulkDrafts.length || 0} ตอน`}
-                </button>
-              </div>
-              <textarea
-                value={episodeBulkText}
-                onChange={(event) => setEpisodeBulkText(event.target.value)}
-                placeholder={'1 | ตอนที่ 1 | https://...\n2 | ตอนที่ 2 | https://...\n3 | ตอนที่ 3 | https://...'}
-                className="mt-3 min-h-28 w-full rounded-xl border border-white/10 bg-[#080808] px-3 py-2 text-xs font-semibold leading-5 text-white outline-none placeholder:text-white/28 focus:border-[#e50914] focus:ring-1 focus:ring-[#e50914]/35"
-              />
-              {episodeBulkDrafts.length ? (
-                <div className="mt-3 flex max-h-24 flex-wrap gap-2 overflow-y-auto pr-1">
-                  {episodeBulkDrafts.map((episode) => (
-                    <span key={`draft-${episode.season_number}-${episode.episode_number}`} className={`rounded-full px-3 py-1.5 text-[10px] font-black ${episode.watch_url ? 'bg-emerald-400/16 text-emerald-100' : 'bg-white/10 text-white/50'}`}>
-                      S{episode.season_number} E{episode.episode_number} {episode.watch_url ? 'พร้อม' : 'ร่าง'}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-            ) : null}
-
             <details className="hidden mt-3 rounded-2xl border border-white/10 bg-black/20 p-3">
               <summary className="cursor-pointer text-sm font-black text-white/76">แก้ทีละตอน</summary>
               <div className="mt-3 grid gap-3 md:grid-cols-[90px_90px_1fr]">
@@ -702,11 +668,14 @@ function Edit({
           </section>
         ) : null}
 
-        <div className="mt-5 flex flex-wrap justify-end gap-2">
+        </div>
+        <div className="shrink-0 border-t border-white/10 p-3 md:p-5">
+        <div className="flex flex-wrap justify-end gap-2">
           <a href={form.watch_url || '#'} target="_blank" rel="noreferrer" className={`rounded-xl bg-white/10 px-4 py-2 text-sm ${form.watch_url ? '' : 'pointer-events-none opacity-40'}`}>เปิด Preview</a>
           <button type="button" onClick={() => setForm({ ...form, watch_url: '', status: 'draft' })} className="rounded-xl bg-white/10 px-4 py-2 text-sm">ล้างลิงก์</button>
           <button type="button" onClick={handleClose} className="rounded-xl bg-white/10 px-4 py-2 text-sm">ยกเลิก</button>
           <button disabled={saving} className="rounded-xl bg-[#e50914] px-5 py-2 text-sm font-black disabled:opacity-50">{saving ? 'กำลังบันทึก' : 'บันทึก'}</button>
+        </div>
         </div>
       </form>
     </div>
@@ -746,7 +715,6 @@ export function AdminCatalogTable() {
   const [form, setForm] = useState<Form | null>(null);
   const [episodes, setEpisodes] = useState<SeriesEpisode[]>([]);
   const [episodeForm, setEpisodeForm] = useState<EpisodeForm>(emptyEpisodeForm());
-  const [episodeBulkText, setEpisodeBulkText] = useState('');
   const [episodeDraftRows, setEpisodeDraftRows] = useState<EpisodeDraftRow[]>([]);
   const [expandedEpisodeKey, setExpandedEpisodeKey] = useState('');
 
@@ -788,8 +756,7 @@ export function AdminCatalogTable() {
     q.trim() ? `คำค้น “${q.trim()}”` : null,
   ].filter(Boolean), [genre, language, maxRating, media, minRating, month, poster, provider, q, section, source, status, view, year]);
 
-  const episodeBulkDrafts = useMemo(() => parseEpisodeBulk(episodeBulkText, form?.provider || 'admin'), [episodeBulkText, form?.provider]);
-  const allEpisodeDrafts = useMemo(() => mergeEpisodeDrafts(episodeDraftRows, episodeBulkDrafts), [episodeDraftRows, episodeBulkDrafts]);
+  const allEpisodeDrafts = episodeDraftRows;
 
   useEffect(() => {
     void load();
@@ -956,7 +923,6 @@ export function AdminCatalogTable() {
       setMsg(`บันทึก ${data.saved || allEpisodeDrafts.length} ตอนแล้ว`);
       setEpisodeDraftRows([]);
       setExpandedEpisodeKey('');
-      setEpisodeBulkText('');
       await loadEpisodes(active);
       await load(0, false);
     } catch (error) {
@@ -1002,7 +968,6 @@ export function AdminCatalogTable() {
     setActive(item);
     setForm(toForm(item));
     setEpisodeForm(emptyEpisodeForm(item.provider || 'bunny'));
-    setEpisodeBulkText('');
     setEpisodeDraftRows([]);
     setExpandedEpisodeKey('');
     void loadEpisodes(item);
@@ -1077,8 +1042,8 @@ export function AdminCatalogTable() {
   }
 
   return (
-    <section className="min-h-screen bg-[#030303] p-4 text-white md:p-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <section className="bg-[#030303] px-4 py-5 text-white md:px-8 md:py-8">
+      <div className="flex flex-wrap items-center justify-between gap-3 md:hidden">
         <a href="/" className="text-xs text-red-200/70">← กลับหน้าแรก</a>
         <div className="flex flex-wrap gap-2">
           <a href="/admin" className="rounded-xl bg-white/[0.08] px-3 py-2 text-xs font-black text-white/70">Dashboard</a>
@@ -1086,36 +1051,38 @@ export function AdminCatalogTable() {
         </div>
       </div>
 
-      <div className="mt-6 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+      <div className="mt-2 flex flex-col gap-2 md:mt-6 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#e50914]">Admin Workflow</p>
-          <h1 className="mt-2 text-4xl font-black tracking-[-0.07em] md:text-6xl">Admin Catalog</h1>
-          <p className="mt-2 text-sm font-semibold text-white/42">กรองละเอียดจากข้อมูลทั้งหมด: หมวดหน้าแรก, bucket, ปี, เดือน, ภาษา, provider, status, rating และ export รายละเอียดครบ</p>
+          <h1 className="text-2xl font-black tracking-[-0.04em] md:text-4xl">Content</h1>
+          <p className="mt-1 text-sm font-semibold text-white/42">จัดการหนัง ซีรีส์ และลิงก์</p>
         </div>
         <button type="button" onClick={clearFilters} className="rounded-xl bg-white/[0.08] px-4 py-2 text-sm font-black text-white/70">รีเซ็ตตัวกรอง</button>
       </div>
 
-      <form onSubmit={(event) => { event.preventDefault(); void load(0, false); }} className="mt-6 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
-        <div className="grid gap-2 md:grid-cols-[1.4fr_140px_140px_140px_140px]">
+      <form onSubmit={(event) => { event.preventDefault(); void load(0, false); }} className="mt-4 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+        <div className="grid gap-2 md:grid-cols-[1.4fr_140px_140px_auto]">
           <input value={q} onChange={(event) => setQ(event.target.value)} placeholder="ค้นหาหนัง / ซีรีส์ / TMDB ID / ปี / ภาษา / หมายเหตุ" className={cls} />
-          <select value={genre} onChange={(event) => setGenre(event.target.value)} className={selectCls}>{options.genres.map((item) => <option key={item} value={item}>{optionLabel(item)}</option>)}</select>
-          <select value={source} onChange={(event) => setSource(event.target.value)} className={selectCls}>{options.sources.map((item) => <option key={item} value={item}>{optionLabel(item)}</option>)}</select>
-          <select value={year} onChange={(event) => setYear(event.target.value)} className={selectCls}>{options.years.map((item) => <option key={item} value={item}>{item === 'all' ? 'ทุกปี' : item}</option>)}</select>
-          <select value={month} onChange={(event) => setMonth(event.target.value)} className={selectCls}>{options.months.map((item) => <option key={item} value={item}>{optionLabel(item, 'month')}</option>)}</select>
-        </div>
-
-        <div className="mt-2 grid gap-2 md:grid-cols-[120px_140px_140px_140px_140px_140px_120px_120px]">
-          <select value={media} onChange={(event) => setMedia(event.target.value)} className={selectCls}>{options.media.map((item) => <option key={item} value={item}>{optionLabel(item, 'media')}</option>)}</select>
           <select value={status} onChange={(event) => setStatus(event.target.value)} className={selectCls}>{options.statuses.map((item) => <option key={item} value={item}>{optionLabel(item, 'status')}</option>)}</select>
-          <select value={language} onChange={(event) => setLanguage(event.target.value)} className={selectCls}>{options.languages.map((item) => <option key={item} value={item}>{item === 'all' ? 'ทุกภาษา' : item}</option>)}</select>
-          <select value={provider} onChange={(event) => setProvider(event.target.value)} className={selectCls}>{options.providers.map((item) => <option key={item} value={item}>{item === 'all' ? 'ทุก provider' : item}</option>)}</select>
-          <select value={section} onChange={(event) => setSection(event.target.value)} className={selectCls}>{options.sections.map((item) => <option key={item} value={item}>{item === 'all' ? 'ทุก section' : item}</option>)}</select>
-          <select value={poster} onChange={(event) => setPoster(event.target.value)} className={selectCls}>{options.posters.map((item) => <option key={item} value={item}>{optionLabel(item, 'poster')}</option>)}</select>
-          <input value={minRating} onChange={(event) => setMinRating(event.target.value)} placeholder="คะแนนต่ำสุด" className={cls} inputMode="decimal" />
-          <input value={maxRating} onChange={(event) => setMaxRating(event.target.value)} placeholder="คะแนนสูงสุด" className={cls} inputMode="decimal" />
+          <select value={media} onChange={(event) => setMedia(event.target.value)} className={selectCls}>{options.media.map((item) => <option key={item} value={item}>{optionLabel(item, 'media')}</option>)}</select>
+          <button type="submit" disabled={loading} className="rounded-xl bg-[#e50914] px-4 py-2 font-black disabled:opacity-50">{loading ? 'โหลด' : 'ค้นหา'}</button>
         </div>
 
-        <div className="mt-2 grid gap-2 md:grid-cols-[160px_160px_1fr_auto_auto_auto]">
+        <details className="mt-2 rounded-xl border border-white/10 bg-black/20 p-2 md:open">
+          <summary className="cursor-pointer px-1 text-xs font-black text-white/60">ตัวกรองเพิ่มเติม</summary>
+          <div className="mt-2 grid gap-2 md:grid-cols-[120px_140px_140px_140px_140px_140px_120px_120px]">
+            <select value={genre} onChange={(event) => setGenre(event.target.value)} className={selectCls}>{options.genres.map((item) => <option key={item} value={item}>{optionLabel(item)}</option>)}</select>
+            <select value={source} onChange={(event) => setSource(event.target.value)} className={selectCls}>{options.sources.map((item) => <option key={item} value={item}>{optionLabel(item)}</option>)}</select>
+            <select value={year} onChange={(event) => setYear(event.target.value)} className={selectCls}>{options.years.map((item) => <option key={item} value={item}>{item === 'all' ? 'ทุกปี' : item}</option>)}</select>
+            <select value={month} onChange={(event) => setMonth(event.target.value)} className={selectCls}>{options.months.map((item) => <option key={item} value={item}>{optionLabel(item, 'month')}</option>)}</select>
+            <select value={language} onChange={(event) => setLanguage(event.target.value)} className={selectCls}>{options.languages.map((item) => <option key={item} value={item}>{item === 'all' ? 'ทุกภาษา' : item}</option>)}</select>
+            <select value={provider} onChange={(event) => setProvider(event.target.value)} className={selectCls}>{options.providers.map((item) => <option key={item} value={item}>{item === 'all' ? 'ทุก provider' : item}</option>)}</select>
+            <select value={section} onChange={(event) => setSection(event.target.value)} className={selectCls}>{options.sections.map((item) => <option key={item} value={item}>{item === 'all' ? 'ทุก section' : item}</option>)}</select>
+            <select value={poster} onChange={(event) => setPoster(event.target.value)} className={selectCls}>{options.posters.map((item) => <option key={item} value={item}>{optionLabel(item, 'poster')}</option>)}</select>
+            <input value={minRating} onChange={(event) => setMinRating(event.target.value)} placeholder="คะแนนต่ำสุด" className={cls} inputMode="decimal" />
+            <input value={maxRating} onChange={(event) => setMaxRating(event.target.value)} placeholder="คะแนนสูงสุด" className={cls} inputMode="decimal" />
+          </div>
+
+        <div className="mt-2 grid gap-2 md:grid-cols-[160px_160px_1fr_auto_auto]">
           <select value={sort} onChange={(event) => setSort(event.target.value)} className={selectCls}>
             <option value="rating">คะแนนสูง</option>
             <option value="newest">หนังใหม่</option>
@@ -1129,15 +1096,15 @@ export function AdminCatalogTable() {
             <option value="rows">ทุกแถว sync</option>
           </select>
           <div className="hidden md:block" />
-          <button type="submit" disabled={loading} className="rounded-xl bg-[#e50914] px-4 py-2 font-black disabled:opacity-50">{loading ? 'โหลด' : 'ค้นหา'}</button>
           <button type="button" onClick={() => exportCatalog('filtered')} disabled={exporting} className="rounded-xl bg-white/[0.10] px-4 py-2 font-black text-white disabled:opacity-50">{exporting ? 'Export...' : 'Export ตามกรอง'}</button>
           <button type="button" onClick={() => exportCatalog('all')} disabled={exporting} className="rounded-xl bg-[#f4c46b] px-4 py-2 font-black text-black disabled:opacity-50">Export ทั้งหมด</button>
         </div>
+        </details>
       </form>
 
       <div className="mt-3 flex flex-wrap gap-2">
-        {presets.map((preset) => (
-          <button key={preset.label} type="button" onClick={() => applyPreset(preset)} className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-black text-white/66 hover:bg-white/[0.12] hover:text-white">
+        {presets.map((preset, index) => (
+          <button key={preset.label} type="button" onClick={() => applyPreset(preset)} className={`rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-black text-white/66 hover:bg-white/[0.12] hover:text-white ${index > 5 ? 'max-md:hidden' : ''}`}>
             {preset.label}
           </button>
         ))}
@@ -1183,15 +1150,12 @@ export function AdminCatalogTable() {
           item={active}
           form={form}
           setForm={setForm}
-          onClose={() => { setActive(null); setForm(null); setEpisodes([]); setEpisodeBulkText(''); setEpisodeDraftRows([]); setExpandedEpisodeKey(''); }}
+          onClose={() => { setActive(null); setForm(null); setEpisodes([]); setEpisodeDraftRows([]); setExpandedEpisodeKey(''); }}
           onSave={save}
           saving={saving}
           episodes={episodes}
           episodeForm={episodeForm}
           setEpisodeForm={setEpisodeForm}
-          episodeBulkText={episodeBulkText}
-          setEpisodeBulkText={setEpisodeBulkText}
-          episodeBulkDrafts={episodeBulkDrafts}
           episodeDraftRows={episodeDraftRows}
           allEpisodeDrafts={allEpisodeDrafts}
           expandedEpisodeKey={expandedEpisodeKey}

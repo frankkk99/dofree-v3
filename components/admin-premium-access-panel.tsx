@@ -102,15 +102,12 @@ export function AdminPremiumAccessPanel() {
   }, []);
 
   return (
-    <section id="admin-premium-access" className="mx-auto w-full max-w-7xl px-4 py-8 md:px-8">
-      <div className="rounded-[30px] border border-white/10 bg-white/[0.045] p-4 shadow-[0_28px_100px_rgba(0,0,0,0.55)] backdrop-blur-2xl md:p-6">
+    <section id="admin-premium-access" className="mx-auto w-full max-w-7xl px-4 py-5 md:px-8 md:py-8">
+      <div className="rounded-2xl border border-white/8 bg-white/[0.04] p-3 shadow-[0_14px_50px_rgba(0,0,0,0.42)] backdrop-blur-2xl md:rounded-[28px] md:p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-2xl">
-            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#e50914]">Premium Free Access</p>
-            <h2 className="mt-1 text-2xl font-black tracking-[-0.05em] md:text-4xl">เปิดฟีเจอร์ Premium ให้ใช้ฟรี</h2>
-            <p className="mt-2 text-sm font-semibold leading-6 text-white/50">
-              ควบคุมฟีเจอร์ Premium ที่เปิดให้ผู้ใช้ Free ทดลองใช้งาน
-            </p>
+            <h2 className="text-2xl font-black tracking-[-0.04em] md:text-3xl">Premium Controls</h2>
+            <p className="mt-1 text-sm font-semibold leading-6 text-white/50">Free Premium Access</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => void loadConfig()} disabled={loading || saving} className={`${panelButton} bg-white/[0.08] text-white/72 hover:bg-white/[0.14]`}>
@@ -123,7 +120,7 @@ export function AdminPremiumAccessPanel() {
         </div>
 
         <div className="mt-5 grid gap-3 md:grid-cols-[1fr_240px]">
-          <label className="rounded-[24px] border border-white/10 bg-black/35 p-4">
+          <label className="rounded-2xl border border-white/8 bg-black/35 p-3">
             <span className="text-xs font-black text-white/42">Label ที่ผู้ใช้เห็น</span>
             <input
               value={config.label}
@@ -133,14 +130,14 @@ export function AdminPremiumAccessPanel() {
               placeholder="Premium ฟรีช่วงโปร"
             />
           </label>
-          <div className="rounded-[24px] border border-white/10 bg-black/35 p-4">
+          <div className="rounded-2xl border border-white/8 bg-black/35 p-3">
             <p className="text-xs font-black text-white/42">สถานะ</p>
             <p className="mt-2 text-2xl font-black text-white">{statusLabel(config)}</p>
             <p className="mt-1 text-xs font-bold text-white/42">{enabledCount}/{premiumAccessFeatures.length} features • {formatUpdatedAt(config.updated_at)}</p>
           </div>
         </div>
 
-        <div className="mt-4 rounded-[24px] border border-white/10 bg-black/35 p-4">
+        <div className="mt-4 rounded-2xl border border-white/8 bg-black/35 p-3">
           <label className="flex cursor-pointer items-center justify-between gap-4">
             <span>
               <span className="block text-base font-black text-white">เปิดให้ใช้ฟรีทั้งหมด</span>
@@ -155,11 +152,11 @@ export function AdminPremiumAccessPanel() {
           </label>
         </div>
 
-        <div className={`mt-4 grid gap-3 md:grid-cols-5 ${config.enabled ? '' : 'opacity-55'}`}>
+        <div className={`mt-4 grid gap-2 md:grid-cols-5 ${config.enabled ? '' : 'opacity-55'}`}>
           {premiumAccessFeatures.map((feature) => (
-            <label key={feature} className="flex min-h-[92px] cursor-pointer flex-col justify-between rounded-[22px] border border-white/10 bg-black/35 p-4">
+            <label key={feature} className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-white/8 bg-black/35 p-3">
               <span className="text-sm font-black text-white">{featureLabels[feature]}</span>
-              <span className="mt-3 flex items-center justify-between gap-2 text-[11px] font-black text-white/40">
+              <span className="flex items-center gap-2 text-[11px] font-black text-white/40">
                 {config.features[feature] ? 'เปิด' : 'ปิด'}
                 <input
                   type="checkbox"
@@ -178,4 +175,3 @@ export function AdminPremiumAccessPanel() {
     </section>
   );
 }
-
