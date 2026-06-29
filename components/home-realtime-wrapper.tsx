@@ -124,7 +124,6 @@ function HeaderAccountMenuPortal() {
   const [host, setHost] = useState<HTMLElement | null>(null);
   const [bodyHost, setBodyHost] = useState<HTMLElement | null>(null);
   const [open, setOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [user, setUser] = useState<DofreeUser | null>(null);
   const [role, setRole] = useState<string>('');
   const { config: premiumAccessConfig, userState: premiumUserState } = usePremiumAccessSnapshot();
@@ -138,22 +137,22 @@ function HeaderAccountMenuPortal() {
   const memberLinks = [
     {
       href: isSignedIn ? (favoritesAllowed ? '/favorites' : '/membership') : '/auth?mode=signin',
-      title: '♡ รายการโปรด',
-      desc: favoritesAllowed ? 'เก็บหนังที่อยากดูไว้ในบัญชี' : 'Premium เท่านั้น',
+      title: 'รายการโปรด',
+      desc: favoritesAllowed ? 'เก็บเรื่องที่อยากดูไว้ในบัญชีของคุณ' : 'สำหรับสมาชิกเท่านั้น',
       locked: isSignedIn && !favoritesAllowed,
       badge: favoritesAllowed && isSignedIn && !premiumUserState.hasPremiumAccess ? premiumAccessConfig.label : '',
     },
     {
       href: isSignedIn ? (historyAllowed ? '/history' : '/membership') : '/auth?mode=signin',
-      title: '⏱ ประวัติการรับชม',
-      desc: historyAllowed ? 'ดูเรื่องที่เปิดล่าสุดและดูต่อ' : 'Premium เท่านั้น',
+      title: 'ประวัติการรับชม',
+      desc: historyAllowed ? 'กลับไปดูเรื่องที่เปิดล่าสุดได้ง่ายขึ้น' : 'สำหรับสมาชิกเท่านั้น',
       locked: isSignedIn && !historyAllowed,
       badge: historyAllowed && isSignedIn && !premiumUserState.hasPremiumAccess ? premiumAccessConfig.label : '',
     },
     {
       href: '/membership',
-      title: '♛ สมัครสมาชิก',
-      desc: 'Premium / ไม่มีโฆษณา / ดูต่อทุกอุปกรณ์',
+      title: 'สมาชิก',
+      desc: 'ดูสิทธิ์สมาชิกและสถานะบัญชี',
       locked: false,
       badge: '',
     },
@@ -240,7 +239,7 @@ function HeaderAccountMenuPortal() {
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.30em] text-[#e50914]">Account</p>
               <h3 className="mt-2 text-[27px] font-black tracking-[-0.06em] md:text-[32px]">{isSignedIn ? 'บัญชีของฉัน' : 'เมนูผู้ใช้'}</h3>
-              <p className="mt-2 break-all text-sm font-semibold leading-5 text-white/58">{isSignedIn ? userLabel : 'บัญชี รายการโปรด ประวัติ และสมาชิก'}</p>
+              <p className="mt-2 break-all text-sm font-semibold leading-5 text-white/58">{isSignedIn ? userLabel : 'เข้าสู่ระบบเพื่อใช้รายการโปรด ประวัติ และสิทธิ์สมาชิก'}</p>
             </div>
             <button type="button" aria-label="ปิดเมนู" onClick={() => setOpen(false)} className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/[0.09] text-2xl font-black text-white/82 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] transition hover:bg-[#e50914] hover:text-white">×</button>
           </div>
@@ -250,15 +249,15 @@ function HeaderAccountMenuPortal() {
           <div className="mt-4 rounded-[28px] bg-[#1d0307]/64 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_22px_70px_rgba(229,9,20,0.08)]">
             <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#e50914]">Signed in</p>
             <p className="mt-3 break-all text-base font-black text-white/90">{userLabel}</p>
-            <button type="button" onClick={handleLogout} className="mt-4 h-12 w-full rounded-[22px] bg-white/[0.09] text-sm font-black text-white/76 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:bg-white/[0.14] hover:text-white">Logout</button>
+            <button type="button" onClick={handleLogout} className="mt-4 h-12 w-full rounded-[22px] bg-white/[0.09] text-sm font-black text-white/76 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:bg-white/[0.14] hover:text-white">ออกจากระบบ</button>
           </div>
         ) : null}
 
-        <div className="mt-4 grid gap-2.5">
+        {isSignedIn ? <div className="mt-4 grid gap-2.5">
           {isAdmin ? (
             <a href="/admin" className="rounded-[24px] bg-[#e50914] px-4 py-4 text-left shadow-[0_18px_60px_rgba(229,9,20,0.32)] transition hover:scale-[1.01]">
               <span className="block text-base font-black text-white">Admin Dashboard</span>
-              <span className="mt-1 block text-xs font-semibold text-white/72">จัดการหนัง หมวดหมู่ ระบบหลังบ้าน</span>
+              <span className="mt-1 block text-xs font-semibold text-white/72">จัดการข้อมูลและระบบหลังบ้าน</span>
             </a>
           ) : null}
           {memberLinks.map(({ href, title, desc, locked, badge }) => (
@@ -270,31 +269,13 @@ function HeaderAccountMenuPortal() {
               <span className="mt-1 block text-xs font-semibold text-white/42">{desc}</span>
             </a>
           ))}
-        </div>
+        </div> : null}
 
         {!isSignedIn ? (
-          <>
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <a href="/auth?mode=signin" onClick={() => setAuthMode('signin')} className={`rounded-[22px] px-4 py-3 text-center text-xs font-black ${authMode === 'signin' ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.075] text-white/72 hover:bg-white/[0.12]'}`}>Sign in</a>
-              <a href="/auth?mode=signup" onClick={() => setAuthMode('signup')} className={`rounded-[22px] px-4 py-3 text-center text-xs font-black ${authMode === 'signup' ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.075] text-white/72 hover:bg-white/[0.12]'}`}>Sign up</a>
-            </div>
-
-            <div className="mt-4 rounded-[26px] bg-white/[0.045] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-              <p className="mb-2 text-[10px] font-black uppercase tracking-[0.22em] text-white/42">เข้าสู่ระบบด้วย</p>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  ['Google', '/auth?provider=google'],
-                  ['Facebook', '/auth?provider=facebook'],
-                  ['Apple', '/auth?provider=apple'],
-                  ['LINE', '/auth?provider=line'],
-                  ['Email', '/auth?method=email'],
-                  ['เบอร์โทร', '/auth?method=phone'],
-                ].map(([label, href]) => (
-                  <a key={label} href={href} className="rounded-[16px] bg-black/38 px-3 py-2.5 text-center text-[11px] font-black text-white/76 transition hover:bg-[#e50914] hover:text-white">{label}</a>
-                ))}
-              </div>
-            </div>
-          </>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <a href="/auth?mode=signin&next=/" className="rounded-[22px] bg-[#e50914] px-4 py-3 text-center text-xs font-black text-white shadow-glow transition hover:bg-red-600">เข้าสู่ระบบ</a>
+            <a href="/auth?mode=signup&next=/" className="rounded-[22px] bg-white/[0.075] px-4 py-3 text-center text-xs font-black text-white/72 transition hover:bg-white/[0.12] hover:text-white">สมัครสมาชิก</a>
+          </div>
         ) : null}
       </aside>
     </div>,
@@ -406,6 +387,30 @@ function FullSectionOverlay({ section, allItems, onClose }: { section: MovieSect
   );
 }
 
+function AuthSuccessToast() {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const key = 'dofree_auth_success';
+    const value = window.sessionStorage.getItem(key);
+    if (!value) return;
+
+    window.sessionStorage.removeItem(key);
+    setVisible(true);
+    const timer = window.setTimeout(() => setVisible(false), 2800);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  if (!visible) return null;
+
+  return (
+    <div className="fixed bottom-5 left-1/2 z-[1001] w-[calc(100vw-32px)] max-w-[390px] -translate-x-1/2 rounded-[24px] border border-white/15 bg-black/55 px-5 py-4 text-white shadow-[0_26px_90px_rgba(0,0,0,0.65),inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-2xl md:bottom-7 md:left-auto md:right-7 md:w-[360px] md:translate-x-0">
+      <p className="text-sm font-black">เข้าสู่ระบบเรียบร้อย</p>
+      <p className="mt-1 text-xs font-semibold text-white/58">ยินดีต้อนรับกลับสู่ดูดีดี.online</p>
+    </div>
+  );
+}
+
 export function HomeRealtimeWrapper({ home }: { home: HomePayload }) {
   const [openSection, setOpenSection] = useState<MovieSection | null>(null);
   const allItems = useMemo(() => unique(home.sections.flatMap((section) => section.items)), [home.sections]);
@@ -413,6 +418,7 @@ export function HomeRealtimeWrapper({ home }: { home: HomePayload }) {
     <>
       <HomeExperienceV3 home={home} />
       <HeaderAccountMenuPortal />
+      <AuthSuccessToast />
       <DesktopRailScrollFix />
       <ViewAllClickBridge sections={home.sections} onOpen={setOpenSection} />
       {openSection ? <FullSectionOverlay section={openSection} allItems={allItems} onClose={() => setOpenSection(null)} /> : null}
