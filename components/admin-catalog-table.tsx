@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { adminSessionHeaders } from '@/lib/admin-session-browser';
 import { adminInputClassSm, adminSelectClassSm } from '@/lib/admin-ui-classes';
@@ -120,7 +120,7 @@ type FilterPreset = {
 const sections = ['watch-ready', 'top-rated', 'popular', 'now-playing', 'series', 'thai', 'action', 'horror', 'comedy', 'korea', 'japan', 'china', 'documentary'];
 const cls = adminInputClassSm;
 const selectCls = adminSelectClassSm;
-const limit = 240;
+const catalogBatchSize = 24;
 
 const emptyOptions: FilterOptions = {
   sources: ['all'],
@@ -487,7 +487,7 @@ function Edit({
       <form onSubmit={onSave} className="admin-floating-glass mx-auto flex max-h-[calc(100dvh-16px)] w-[calc(100vw-16px)] max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/10 md:rounded-3xl">
         <div className="shrink-0 border-b border-white/10 p-3 md:p-5">
         <div className="flex gap-3">
-          <img src={item.poster_url || ''} alt={name(item)} className="h-24 w-16 rounded-xl bg-white/10 object-cover md:h-40 md:w-28" />
+          <img src={item.poster_url || ''} alt={name(item)} loading="lazy" decoding="async" className="h-24 w-16 rounded-xl bg-white/10 object-cover md:h-40 md:w-28" />
           <div className="min-w-0 flex-1">
             <p className="text-xs font-black text-[#e50914]">EDIT MOVIE</p>
             <h2 className="mt-1 truncate text-xl font-black leading-tight md:mt-2 md:text-3xl">{form.title_th || form.title || name(item)}</h2>
@@ -707,6 +707,7 @@ export function AdminCatalogTable() {
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [saving, setSaving] = useState(false);
   const [episodeSaving, setEpisodeSaving] = useState(false);
   const [episodeLoading, setEpisodeLoading] = useState(false);
@@ -717,6 +718,10 @@ export function AdminCatalogTable() {
   const [episodeForm, setEpisodeForm] = useState<EpisodeForm>(emptyEpisodeForm());
   const [episodeDraftRows, setEpisodeDraftRows] = useState<EpisodeDraftRow[]>([]);
   const [expandedEpisodeKey, setExpandedEpisodeKey] = useState('');
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const loadingMoreGuardRef = useRef(false);
+  const lastAppendOffsetRef = useRef<number | null>(null);
+  const loadRequestIdRef = useRef(0);
 
   function currentFilters(overrides: Partial<FilterPreset> = {}) {
     return {
@@ -781,15 +786,26 @@ export function AdminCatalogTable() {
       minRating: values.minRating || '',
       maxRating: values.maxRating || '',
       view: values.view || 'unique',
-      limit: String(limit),
+      limit: String(catalogBatchSize),
       offset: String(nextOffset),
     });
   }
 
   async function load(nextOffset = 0, append = false, overrides: Partial<FilterPreset> = {}) {
-    setLoading(true);
+    if (append) {
+      if (loadingMoreGuardRef.current || loadingMore || loading || !hasMore) return;
+      if (lastAppendOffsetRef.current === nextOffset) return;
+      loadingMoreGuardRef.current = true;
+      lastAppendOffsetRef.current = nextOffset;
+      setLoadingMore(true);
+    } else {
+      lastAppendOffsetRef.current = null;
+      setLoading(true);
+    }
+
+    const requestId = ++loadRequestIdRef.current;
     setErr('');
-    setMsg('');
+    if (!append) setMsg('');
 
     try {
       const response = await fetch(`/api/admin/catalog-lite?${buildParams(nextOffset, overrides)}`, {
@@ -798,6 +814,7 @@ export function AdminCatalogTable() {
       });
       const data = (await response.json()) as Payload;
       if (!response.ok || !data.ok) throw new Error(data.error || 'โหลดไม่สำเร็จ');
+      if (requestId !== loadRequestIdRef.current) return;
 
       const next = data.links || [];
       setItems((old) => (append ? [...old, ...next] : next));
@@ -806,13 +823,33 @@ export function AdminCatalogTable() {
       setMatched(typeof data.meta?.matched === 'number' ? data.meta.matched : null);
       setTotal(typeof data.meta?.total === 'number' ? data.meta.total : null);
       if (data.options) setOptions(data.options);
-      setMsg(`โหลด ${next.length} รายการ${typeof data.meta?.matched === 'number' ? ` จาก ${data.meta.matched} รายการที่ตรงเงื่อนไข` : ''}`);
+      setMsg(`โหลด ${append ? nextOffset + next.length : next.length} รายการ${typeof data.meta?.matched === 'number' ? ` จาก ${data.meta.matched} รายการที่ตรงเงื่อนไข` : ''}`);
     } catch (error) {
+      if (append) lastAppendOffsetRef.current = null;
       setErr(error instanceof Error ? error.message : 'โหลดไม่สำเร็จ');
     } finally {
-      setLoading(false);
+      if (append) {
+        loadingMoreGuardRef.current = false;
+        setLoadingMore(false);
+      } else {
+        setLoading(false);
+      }
     }
   }
+
+  useEffect(() => {
+    if (!hasMore || loading || loadingMore || typeof IntersectionObserver === 'undefined') return;
+    const node = loadMoreRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) void load(offset, true);
+    }, { rootMargin: '720px' });
+
+    observer.observe(node);
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasMore, loading, loadingMore, offset]);
 
   async function save(event: FormEvent) {
     event.preventDefault();
@@ -1123,7 +1160,7 @@ export function AdminCatalogTable() {
         {items.map((item, index) => (
           <button key={`${item.media_type}-${item.tmdb_id}-${item.source_bucket || index}`} type="button" onClick={() => open(item)} className="group text-left">
             <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-white/10 ring-1 ring-white/5 transition group-hover:-translate-y-1 group-hover:ring-[#e50914]/60">
-              {item.poster_url ? <img src={item.poster_url} alt={name(item)} className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center p-3 text-center text-xs font-black text-white/30">NO POSTER</div>}
+              {item.poster_url ? <img src={item.poster_url} alt={name(item)} loading="lazy" decoding="async" className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center p-3 text-center text-xs font-black text-white/30">NO POSTER</div>}
               <span className={`absolute left-2 top-2 rounded-md px-2 py-1 text-[9px] font-black ${item.watch_url ? 'bg-emerald-500 text-black' : item.status === 'broken' ? 'bg-orange-500 text-black' : 'bg-[#e50914] text-white'}`}>{statusLabel(item)}</span>
             </div>
             <p className="mt-2 line-clamp-2 text-xs font-black">{name(item)}</p>
@@ -1139,11 +1176,10 @@ export function AdminCatalogTable() {
         </div>
       ) : null}
 
-      {hasMore ? (
-        <div className="mt-6 text-center">
-          <button type="button" onClick={() => load(offset, true)} className="rounded-xl bg-white/10 px-6 py-3 text-sm font-black">โหลดเพิ่ม {limit}</button>
-        </div>
-      ) : null}
+      <div ref={loadMoreRef} className="mt-6 min-h-10 text-center">
+        {loadingMore ? <p className="text-xs font-black text-white/38">กำลังโหลดเพิ่ม...</p> : null}
+        {!loading && !loadingMore && items.length && !hasMore ? <p className="text-xs font-black text-white/28">แสดงครบแล้ว</p> : null}
+      </div>
 
       {active && form ? (
         <Edit
