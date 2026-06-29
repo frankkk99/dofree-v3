@@ -8,7 +8,6 @@ import { AdminControlCenter } from '@/components/admin-control-center';
 import { AdminDashboard } from '@/components/admin-dashboard';
 import { AdminFloatingTopbar, type AdminModuleId } from '@/components/admin-floating-topbar';
 import { AdminPremiumAccessPanel } from '@/components/admin-premium-access-panel';
-import { AdminSeriesBulkManager } from '@/components/admin-series-bulk-manager';
 
 const moduleCopy: Record<AdminModuleId, { title: string; description: string }> = {
   dashboard: {
@@ -28,8 +27,8 @@ const moduleCopy: Record<AdminModuleId, { title: string; description: string }> 
     description: 'Control free premium access flags without changing real payment logic.',
   },
   series: {
-    title: 'Series Bulk Tools',
-    description: 'Paste and save many episodes for one series in a focused workspace.',
+    title: 'Dashboard',
+    description: 'Series bulk tools are no longer part of the main admin workspace.',
   },
   audit: {
     title: 'Audit Log',
@@ -37,7 +36,7 @@ const moduleCopy: Record<AdminModuleId, { title: string; description: string }> 
   },
 };
 
-const validModules = new Set<AdminModuleId>(['dashboard', 'content', 'homepage', 'premium', 'series', 'audit']);
+const validModules = new Set<AdminModuleId>(['dashboard', 'content', 'homepage', 'premium', 'audit']);
 
 function normalizeModule(value: string | null): AdminModuleId {
   return validModules.has(value as AdminModuleId) ? (value as AdminModuleId) : 'dashboard';
@@ -86,11 +85,6 @@ export function AdminWorkspace() {
       ) : null}
       {activeModule === 'homepage' ? <AdminControlCenter /> : null}
       {activeModule === 'premium' ? <AdminPremiumAccessPanel /> : null}
-      {activeModule === 'series' ? (
-        <section id="series-bulk-manager" className="border-y border-white/10 bg-black/20">
-          <AdminSeriesBulkManager />
-        </section>
-      ) : null}
       {activeModule === 'audit' ? (
         <section id="admin-audit-log">
           <AdminAuditLogPanel />
