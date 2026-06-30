@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MediaPlaceholder } from '@/components/media-placeholder';
 import type { MovieItem } from '@/lib/tmdb';
 import { releaseMonthYear } from '@/lib/release-date';
@@ -23,8 +23,12 @@ function statusBadge(item: MovieItem, priorityBadge?: string) {
   return item.label;
 }
 
+function imageCandidates(item: MovieItem) {
+  return [item.posterUrl, item.backdropUrl].filter((url): url is string => Boolean(url));
+}
+
 export function MovieCard({ item, priorityBadge, onSelect, compact = false, grid = false, priority = false }: MovieCardProps) {
-  const [imageFailed, setImageFailed] = useState(false);
+  const [imageIndex, setImageIndex] = useState(0);
   const badge = statusBadge(item, priorityBadge);
   const href = `/${item.mediaType}/${item.id}`;
   const releaseLabel = releaseMonthYear(item as MovieItem & { releaseDate?: string });
@@ -35,8 +39,18 @@ export function MovieCard({ item, priorityBadge, onSelect, compact = false, grid
       ? 'h-[158px] w-[104px] sm:h-[206px] sm:w-[132px] md:h-[260px] md:w-[170px]'
       : 'h-[176px] w-[116px] sm:h-[220px] sm:w-[140px] md:h-[280px] md:w-[180px] xl:h-[300px] xl:w-[196px]';
   const cardClass = `${sizeClass} group relative ${grid ? '' : 'shrink-0'} overflow-hidden rounded-[8px] border border-white/[0.07] bg-[#111] text-left shadow-[0_16px_44px_rgba(0,0,0,0.62)] transition duration-300 hover:-translate-y-1 hover:border-[#e50914]/80 hover:shadow-glow md:rounded-[10px] md:shadow-[0_24px_70px_rgba(0,0,0,0.65)]`;
-  const imageUrl = imageFailed ? '' : item.posterUrl || item.backdropUrl || '';
+  const candidates = imageCandidates(item);
+  const imageUrl = candidates[imageIndex] || '';
   const optimizeImage = canUseNextImage(imageUrl);
+
+  useEffect(() => {
+    setImageIndex(0);
+  }, [item.id, item.mediaType, item.posterUrl, item.backdropUrl]);
+
+  const tryNextImage = () => {
+    setImageIndex((current) => Math.min(current + 1, candidates.length));
+  };
+
   const content = (
     <>
       {imageUrl && optimizeImage ? (
@@ -47,7 +61,7 @@ export function MovieCard({ item, priorityBadge, onSelect, compact = false, grid
           priority={priority}
           sizes={grid ? '(max-width: 640px) 25vw, (max-width: 1024px) 16vw, 12vw' : compact ? '(max-width: 640px) 104px, 170px' : '(max-width: 640px) 116px, 196px'}
           className="object-cover object-center transition duration-700 group-hover:scale-110"
-          onError={() => setImageFailed(true)}
+          onError={tryNextImage}
         />
       ) : imageUrl ? (
         <img
@@ -58,7 +72,7 @@ export function MovieCard({ item, priorityBadge, onSelect, compact = false, grid
           fetchPriority={priority ? 'high' : 'low'}
           sizes={grid ? '(max-width: 640px) 25vw, (max-width: 1024px) 16vw, 12vw' : compact ? '(max-width: 640px) 104px, 170px' : '(max-width: 640px) 116px, 196px'}
           className="absolute inset-0 h-full w-full object-cover object-center transition duration-700 group-hover:scale-110"
-          onError={() => setImageFailed(true)}
+          onError={tryNextImage}
         />
       ) : (
         <MediaPlaceholder variant="poster" title="โปสเตอร์กำลังอัปเดต" subtitle="กำลังซิงก์ภาพจาก TMDB" />
