@@ -111,7 +111,7 @@ function WatchReadyPanel({ title, tmdbId, mediaType, fallbackImage, hasWatchLink
           <p className="text-[10px] font-black uppercase tracking-[0.35em] text-white/75 sm:text-xs">WATCH READY</p>
           <h2 className="mt-2 max-w-full break-words text-2xl font-black leading-tight tracking-[-0.05em] text-white sm:text-3xl md:text-4xl">พร้อมรับชม</h2>
           <p className="mt-2 max-w-xl text-sm font-semibold leading-6 text-white/78">
-            {hasWatchLink ? `ดู ${title} ได้ในหน้าเดียวกัน ไม่ต้องออกไปหน้าเล่นแยก` : 'กำลังอัปเดตลิงก์รับชมสำหรับเรื่องนี้'}
+            {hasWatchLink ? `ดู ${title} ได้ในหน้าเดียวกัน เลื่อนลงล่างสุดเพื่อรับชม` : 'จะอัปเดตลิงก์รับชมเร็วๆ นี้'}
           </p>
           <div className="mt-5 flex max-w-full flex-wrap gap-3">
             <a href="#watch" className="rounded-2xl bg-[#e50914] px-5 py-3 text-sm font-black text-white shadow-glow transition hover:brightness-110 sm:px-6 sm:py-4">▶ รับชมตอนนี้</a>
@@ -172,7 +172,7 @@ export function DetailPageViewInline({ detail }: { detail: DetailPayload }) {
       {fallbackImage ? <div className="fixed inset-0 -z-10 scale-105 bg-cover bg-center opacity-28 blur-[2px]" style={{ backgroundImage: `url(${fallbackImage})` }} /> : null}
       <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_18%_12%,rgba(229,9,20,0.24),transparent_24rem),linear-gradient(180deg,rgba(0,0,0,0.62),#030303_72%)]" />
 
-      <article data-detail-layout="modal-visual-page-v5-inline-watch" className="mx-auto w-full max-w-[920px] overflow-hidden rounded-[28px] bg-[#050505]/88 shadow-[0_42px_150px_rgba(0,0,0,0.94)] backdrop-blur-2xl md:rounded-[34px]">
+      <article data-detail-layout="modal-visual-page-v6-watch-at-bottom" className="mx-auto w-full max-w-[920px] overflow-hidden rounded-[28px] bg-[#050505]/88 shadow-[0_42px_150px_rgba(0,0,0,0.94)] backdrop-blur-2xl md:rounded-[34px]">
         <section className="relative overflow-hidden bg-black/42 pb-4 shadow-[inset_0_-80px_110px_rgba(0,0,0,0.55)] backdrop-blur-xl md:pb-5">
           {fallbackImage ? <div className="absolute inset-0 bg-cover bg-center opacity-24 blur-[1px]" style={{ backgroundImage: `url(${fallbackImage})` }} /> : null}
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,5,5,0.42),rgba(5,5,5,0.86)_55%,rgba(5,5,5,0.98)_100%)] md:bg-[linear-gradient(90deg,rgba(5,5,5,0.98)_0%,rgba(5,5,5,0.86)_42%,rgba(5,5,5,0.48)_100%)]" />
@@ -204,7 +204,6 @@ export function DetailPageViewInline({ detail }: { detail: DetailPayload }) {
 
           <div className="relative z-10 grid gap-4">
             <TrailerPreview title={item.title} trailerUrl={effectiveTrailerUrl} fallbackImage={fallbackImage} />
-            <DetailInlineWatchSection tmdbId={item.id} mediaType={item.mediaType} title={item.title} fallbackImage={fallbackImage} />
           </div>
         </section>
 
@@ -237,6 +236,10 @@ export function DetailPageViewInline({ detail }: { detail: DetailPayload }) {
 
           <WatchReadyPanel title={item.title} tmdbId={item.id} mediaType={item.mediaType} fallbackImage={fallbackImage} hasWatchLink={hasWatchLink} />
         </section>
+
+        <div className="pb-5 md:pb-6">
+          <DetailInlineWatchSection tmdbId={item.id} mediaType={item.mediaType} title={item.title} fallbackImage={fallbackImage} />
+        </div>
       </article>
     </main>
   );
