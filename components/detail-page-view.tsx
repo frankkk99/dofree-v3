@@ -1,9 +1,17 @@
 import type { ReactNode } from 'react';
 import type { DetailPayload } from '@/lib/tmdb';
 import { DetailRecommendationCarousel } from '@/components/detail-recommendation-carousel';
+import { DetailReportButton } from '@/components/detail-report-button';
 import { absoluteUrl, siteName } from '@/lib/seo';
 
-const DETAIL_LAYOUT_VERSION = 'modal-card-v3';
+const DETAIL_LAYOUT_VERSION = 'modal-visual-page-v4';
+
+const detailTabs = [
+  { label: 'แนะนำ', href: '#recommend' },
+  { label: 'นักแสดง', href: '#cast' },
+  { label: 'รายละเอียด', href: '#detail' },
+  { label: 'เรื่องย่อ', href: '#summary' },
+] as const;
 
 function statusLabel(status?: string, isWatchReady?: boolean) {
   if (isWatchReady || status === 'published') return 'พร้อมรับชม';
@@ -73,12 +81,23 @@ function StatusBadge({ children, active = false }: { children: ReactNode; active
   );
 }
 
+function SectionSurface({ id, children, className = '' }: { id?: string; children: ReactNode; className?: string }) {
+  return (
+    <section id={id} className={`rounded-[22px] bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_22px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl md:p-5 ${className}`}>
+      {children}
+    </section>
+  );
+}
+
 function TrailerCard({ title, trailerUrl, fallbackImage }: { title: string; trailerUrl?: string; fallbackImage: string }) {
   const embedUrl = youtubeEmbedUrl(trailerUrl);
 
   return (
     <section>
-      <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-red-100/68 md:text-xs">ตัวอย่าง</p>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-red-100/68 md:text-xs">Trailer Preview</p>
+        <span className="rounded-full bg-white/[0.08] px-2.5 py-1 text-[9px] font-black text-white/42 backdrop-blur-xl md:text-[10px]">ตัวอย่าง</span>
+      </div>
       {embedUrl ? (
         <div className="overflow-hidden rounded-[20px] bg-black shadow-[0_24px_90px_rgba(0,0,0,0.72)] md:rounded-[26px]">
           <iframe
@@ -105,17 +124,62 @@ function TrailerCard({ title, trailerUrl, fallbackImage }: { title: string; trai
   );
 }
 
+function WatchReadyPanel({
+  title,
+  tmdbId,
+  mediaType,
+  fallbackImage,
+  watchHref,
+  hasWatchLink,
+}: {
+  title: string;
+  tmdbId: number;
+  mediaType: 'movie' | 'tv';
+  fallbackImage: string;
+  watchHref: string;
+  hasWatchLink: boolean;
+}) {
+  return (
+    <section id="watch-ready" className="overflow-hidden rounded-[24px] border border-[#e50914]/18 bg-[linear-gradient(135deg,rgba(229,9,20,0.16),rgba(255,255,255,0.045))] shadow-[0_26px_95px_rgba(0,0,0,0.58)] backdrop-blur-xl md:rounded-[28px]">
+      <div className="relative min-h-[168px] p-5 md:min-h-[190px] md:p-6">
+        {fallbackImage ? <img src={fallbackImage} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover opacity-14 blur-[1px]" /> : null}
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,5,5,0.97),rgba(5,5,5,0.8)_56%,rgba(5,5,5,0.62)),radial-gradient(circle_at_82%_20%,rgba(229,9,20,0.26),transparent_24rem)]" />
+        <div className="relative z-10 flex min-h-[128px] flex-col justify-between gap-5 md:flex-row md:items-center">
+          <div className="min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-red-100/72">WATCH READY</p>
+            <h2 className="mt-2 text-2xl font-black tracking-[-0.05em] text-white md:text-4xl">พร้อมรับชม</h2>
+            <p className="mt-2 max-w-2xl text-xs font-semibold leading-5 text-white/58 md:text-sm md:leading-6">
+              {hasWatchLink ? `เปิดหน้าเล่นของ ${title} แล้วเริ่มรับชมได้ทันที` : 'เรื่องนี้ยังไม่มีลิงก์เล่นตรงในระบบตอนนี้ สามารถดูรายการพร้อมรับชมอื่น หรือแจ้งลิงก์เสียให้ทีมตรวจสอบได้'}
+            </p>
+          </div>
+
+          <div className="flex shrink-0 flex-wrap gap-2 md:justify-end">
+            <a href={hasWatchLink ? watchHref : '/watch-ready'} className="inline-flex h-11 items-center justify-center rounded-2xl bg-[#e50914] px-5 text-sm font-black text-white shadow-glow transition hover:scale-[1.01] hover:brightness-110 md:h-12 md:px-6">
+              ▶ {hasWatchLink ? 'เปิดหน้าเล่น' : 'รับชมตอนนี้'}
+            </a>
+            <DetailReportButton tmdbId={tmdbId} mediaType={mediaType} title={title} className="h-11 rounded-2xl bg-black/35 px-4 text-xs font-black text-white/70 shadow-[0_12px_34px_rgba(0,0,0,0.32)] backdrop-blur-xl transition hover:bg-white/[0.08] md:h-12">
+              แจ้งลิงก์เสีย
+            </DetailReportButton>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function DetailPageView({ detail }: { detail: DetailPayload }) {
   const { item, cast, trailerUrl, recommendations } = detail;
   const effectiveTrailerUrl = item.trailerUrl || trailerUrl;
   const watchHref = `/watch/${item.mediaType}/${item.id}`;
-  const primaryHref = item.watchUrl ? watchHref : effectiveTrailerUrl || '/watch-ready';
-  const primaryLabel = item.watchUrl ? 'รับชม' : effectiveTrailerUrl ? 'ดูตัวอย่าง' : 'ดูรายการพร้อมรับชม';
-  const availabilityBadge = item.watchUrl ? 'HD' : effectiveTrailerUrl ? 'ตัวอย่าง' : 'ข้อมูล';
+  const hasWatchLink = Boolean(item.watchUrl || item.isWatchReady);
+  const primaryHref = hasWatchLink ? watchHref : effectiveTrailerUrl || '/watch-ready';
+  const primaryLabel = hasWatchLink ? 'รับชม' : effectiveTrailerUrl ? 'ดูตัวอย่าง' : 'รับชม';
+  const availabilityBadge = hasWatchLink ? 'HD' : effectiveTrailerUrl ? 'ตัวอย่าง' : 'ข้อมูล';
   const fallbackImage = item.backdropUrl || item.posterUrl || '';
   const canonicalPath = `/${item.mediaType}/${item.id}`;
   const canonicalUrl = absoluteUrl(canonicalPath);
   const contentTypeLabel = item.mediaType === 'tv' ? 'ซีรีส์' : 'หนัง';
+  const overview = item.overview || 'ยังไม่มีคำอธิบายเรื่องนี้ แต่ระบบเตรียมโครงหน้าไว้สำหรับแสดงรายละเอียด ตัวอย่าง นักแสดง และรายการแนะนำที่เกี่ยวข้อง';
   const imageUrls = [item.backdropUrl, item.posterUrl].filter(Boolean).map((url) => absoluteUrl(String(url)));
   const aggregateRating = item.rating
     ? {
@@ -140,7 +204,7 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
     image: imageUrls.length ? imageUrls : undefined,
     genre: item.genres,
     inLanguage: item.language,
-    potentialAction: item.watchUrl
+    potentialAction: hasWatchLink
       ? {
           '@type': 'WatchAction',
           target: absoluteUrl(watchHref),
@@ -179,43 +243,43 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
 
       <div className="fixed inset-0 -z-10 bg-[#030303]" />
-      <div className="fixed inset-0 -z-10 bg-cover bg-center opacity-28 blur-[1px]" style={{ backgroundImage: `url(${fallbackImage})` }} />
-      <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_18%_12%,rgba(229,9,20,0.22),transparent_24rem),linear-gradient(180deg,rgba(0,0,0,0.58),#030303_72%)]" />
+      {fallbackImage ? <div className="fixed inset-0 -z-10 scale-105 bg-cover bg-center opacity-28 blur-[2px]" style={{ backgroundImage: `url(${fallbackImage})` }} /> : null}
+      <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_18%_12%,rgba(229,9,20,0.24),transparent_24rem),radial-gradient(circle_at_80%_8%,rgba(255,255,255,0.08),transparent_22rem),linear-gradient(180deg,rgba(0,0,0,0.62),#030303_72%)]" />
 
-      <article data-detail-layout={DETAIL_LAYOUT_VERSION} className="mx-auto w-full max-w-[860px] overflow-hidden rounded-[28px] bg-[#050505]/88 shadow-[0_42px_150px_rgba(0,0,0,0.94)] backdrop-blur-2xl md:rounded-[34px]">
+      <article data-detail-layout={DETAIL_LAYOUT_VERSION} className="mx-auto w-full max-w-[920px] overflow-hidden rounded-[28px] bg-[#050505]/88 shadow-[0_42px_150px_rgba(0,0,0,0.94)] backdrop-blur-2xl md:rounded-[34px]">
         <section className="relative bg-black/42 shadow-[inset_0_-80px_110px_rgba(0,0,0,0.55)] backdrop-blur-xl">
-          <div className="absolute inset-0 bg-cover bg-center opacity-24 blur-[1px]" style={{ backgroundImage: `url(${fallbackImage})` }} />
+          {fallbackImage ? <div className="absolute inset-0 bg-cover bg-center opacity-24 blur-[1px]" style={{ backgroundImage: `url(${fallbackImage})` }} /> : null}
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,5,5,0.42),rgba(5,5,5,0.86)_55%,rgba(5,5,5,0.98)_100%)] md:bg-[linear-gradient(90deg,rgba(5,5,5,0.98)_0%,rgba(5,5,5,0.86)_42%,rgba(5,5,5,0.48)_100%)]" />
 
           <a href="/" className="absolute right-3 top-3 z-20 grid h-9 w-9 place-items-center rounded-full bg-black/62 text-xl font-black text-white/80 shadow-[0_14px_42px_rgba(0,0,0,0.72)] backdrop-blur-xl transition hover:bg-white/[0.12] md:right-4 md:top-4 md:h-11 md:w-11 md:text-2xl" aria-label="กลับหน้าแรก">
             ×
           </a>
 
-          <div className="relative z-10 grid grid-cols-[88px_1fr] gap-3 p-4 pt-5 md:grid-cols-[118px_1fr] md:gap-4 md:p-5 md:pb-4">
+          <div className="relative z-10 grid grid-cols-[88px_1fr] gap-3 p-4 pt-5 md:grid-cols-[126px_1fr] md:gap-5 md:p-5 md:pb-4">
             <div className="overflow-hidden rounded-[16px] bg-black/40 shadow-[0_20px_55px_rgba(0,0,0,0.75)] backdrop-blur-md md:rounded-[20px]">
-              {item.posterUrl ? <img src={item.posterUrl} alt={item.title} loading="lazy" decoding="async" className="h-[132px] w-full object-cover md:h-[176px]" /> : null}
+              {item.posterUrl ? <img src={item.posterUrl} alt={item.title} loading="lazy" decoding="async" className="h-[132px] w-full object-cover md:h-[188px]" /> : null}
             </div>
 
             <div className="min-w-0 pr-9 md:pr-11">
               <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#e50914] md:text-[10px] md:tracking-[0.24em]">
                 {mediaLabel(item.mediaType)}
               </p>
-              <h1 className="modal-title mt-1.5 line-clamp-2 text-[21px] font-black leading-[0.98] tracking-[-0.06em] text-white md:text-[31px]">
+              <h1 className="modal-title mt-1.5 line-clamp-2 text-[21px] font-black leading-[0.98] tracking-[-0.06em] text-white md:text-[34px]">
                 {item.title}
               </h1>
-              {item.titleEn && item.titleEn !== item.title ? <p className="mt-2 text-sm font-bold text-white/42 md:text-base">{item.titleEn}</p> : null}
+              {item.titleEn && item.titleEn !== item.title ? <p className="mt-2 line-clamp-1 text-sm font-bold text-white/42 md:text-base">{item.titleEn}</p> : null}
 
               <div className="mt-2 flex flex-wrap gap-1.5 text-[9px] font-black md:text-[11px]">
-                <StatusBadge>★ {item.rating.toFixed(1)}</StatusBadge>
+                <StatusBadge>★ {(item.rating || 0).toFixed(1)}</StatusBadge>
                 <StatusBadge>{item.year}</StatusBadge>
                 <StatusBadge>{item.language === 'th' ? 'TH' : item.language || 'EN'}</StatusBadge>
                 <StatusBadge active>{availabilityBadge}</StatusBadge>
               </div>
 
               <p className="mt-2 line-clamp-3 max-w-2xl text-[11px] font-medium leading-4 text-white/58 md:text-[13px] md:leading-5">
-                {item.overview || 'ยังไม่มีคำอธิบายเรื่องนี้ แต่ระบบเตรียมโครงหน้าไว้สำหรับแสดงรายละเอียด ตัวอย่าง นักแสดง และรายการแนะนำที่เกี่ยวข้อง'}
+                {overview}
               </p>
-              <a href="#detail" className="mt-1 inline-flex text-[10px] font-black text-red-200/80 hover:text-red-100 md:text-xs">ดูเพิ่มเติม</a>
+              <a href="#summary" className="mt-1 inline-flex text-[10px] font-black text-red-200/80 hover:text-red-100 md:text-xs">ดูเพิ่มเติม</a>
 
               <div className="mt-3 flex flex-wrap gap-2">
                 <a {...linkProps(primaryHref)} href={primaryHref} className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#e50914] px-3 text-[11px] font-black text-white shadow-[0_14px_36px_rgba(0,0,0,0.42)] backdrop-blur-xl transition hover:brightness-110 md:h-9 md:px-4 md:text-xs">
@@ -224,6 +288,9 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
                 <a href="#recommend" className="inline-flex h-8 items-center rounded-lg bg-white/[0.1] px-3 text-[11px] font-black text-white/82 shadow-[0_14px_36px_rgba(0,0,0,0.32)] backdrop-blur-xl transition hover:bg-white/[0.16] md:h-9 md:px-4 md:text-xs">
                   + รายการโปรด
                 </a>
+                <DetailReportButton tmdbId={item.id} mediaType={item.mediaType} title={item.title} className="inline-flex h-8 items-center rounded-lg bg-white/[0.08] px-3 text-[11px] font-black text-white/70 shadow-[0_14px_36px_rgba(0,0,0,0.32)] backdrop-blur-xl transition hover:bg-white/[0.14] md:h-9 md:px-4 md:text-xs">
+                  แจ้งลิงก์เสีย
+                </DetailReportButton>
               </div>
             </div>
           </div>
@@ -233,24 +300,18 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
           </div>
         </section>
 
-        <section className="sticky top-0 z-20 bg-black/62 px-3 shadow-[0_20px_60px_rgba(0,0,0,0.58)] backdrop-blur-2xl md:px-5">
+        <nav className="sticky top-0 z-20 bg-black/62 px-3 shadow-[0_20px_60px_rgba(0,0,0,0.58)] backdrop-blur-2xl md:px-5" aria-label="รายละเอียดเรื่องนี้">
           <div className="movie-rail flex gap-1 overflow-x-auto py-2.5 md:gap-1.5 md:py-3">
-            {[
-              { label: 'แนะนำ', href: '#recommend' },
-              { label: 'นักแสดง', href: '#cast' },
-              { label: 'รายละเอียด', href: '#detail' },
-              { label: 'สปอยหนัง', href: '#spoiler' },
-              { label: 'รับชม', href: watchHref },
-            ].map((tab, index) => (
+            {detailTabs.map((tab, index) => (
               <a key={tab.label} href={tab.href} className={`min-w-max rounded-md px-3 py-1.5 text-[10px] font-black shadow-[0_12px_32px_rgba(0,0,0,0.28)] backdrop-blur-xl transition md:px-4 md:py-2 md:text-xs ${index === 0 ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.07] text-white/55 hover:bg-white/[0.12] hover:text-white'}`}>
                 {tab.label}
               </a>
             ))}
           </div>
-        </section>
+        </nav>
 
         <section className="flex flex-col gap-6 p-3 md:p-4">
-          <div id="recommend" className="order-1 rounded-[22px] bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_22px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl md:p-5">
+          <SectionSurface id="recommend">
             <div className="mb-4 flex items-center justify-between gap-4">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]/75">Recommended</p>
@@ -260,9 +321,9 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
             </div>
 
             <DetailRecommendationCarousel current={item} items={recommendations} />
-          </div>
+          </SectionSurface>
 
-          <div id="cast" className="order-2 rounded-[22px] bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_22px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl md:p-5">
+          <SectionSurface id="cast">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]/75">Cast</p>
@@ -275,7 +336,7 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
               <div className="mt-4 grid grid-cols-3 gap-2 md:grid-cols-4 md:gap-3">
                 {cast.slice(0, 12).map((person, index) => (
                   <div key={`${person.id || person.name}-${index}`} className="relative aspect-[2/3] overflow-hidden rounded-[12px] bg-white/[0.055] shadow-[0_16px_54px_rgba(0,0,0,0.55)] backdrop-blur-xl md:rounded-[16px]">
-                    {person.profileUrl ? <img src={person.profileUrl} alt={person.name} className="absolute inset-0 h-full w-full object-cover" /> : <div className="absolute inset-0 grid place-items-center bg-[radial-gradient(circle_at_50%_24%,#8a111b,#111_62%)] text-4xl font-black text-white/78 md:text-5xl">{personInitial(person.name)}</div>}
+                    {person.profileUrl ? <img src={person.profileUrl} alt={person.name} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" /> : <div className="absolute inset-0 grid place-items-center bg-[radial-gradient(circle_at_50%_24%,#8a111b,#111_62%)] text-4xl font-black text-white/78 md:text-5xl">{personInitial(person.name)}</div>}
                     <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.04)_0%,rgba(0,0,0,0.06)_44%,rgba(0,0,0,0.92)_100%)]" />
                     <div className="absolute inset-x-0 bottom-0 p-2 md:p-3">
                       <h3 className="line-clamp-2 text-[10px] font-black leading-tight text-white drop-shadow md:text-sm">{person.name}</h3>
@@ -287,27 +348,35 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
             ) : (
               <div className="mt-4 rounded-2xl bg-black/28 p-4 text-center text-xs font-bold text-white/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] backdrop-blur-xl md:text-sm">ยังไม่มีข้อมูลนักแสดงสำหรับเรื่องนี้</div>
             )}
-          </div>
+          </SectionSurface>
 
-          <div id="detail" className="order-3 rounded-[22px] bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_22px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl md:p-5">
-            <h2 className="text-xl font-black tracking-[-0.04em] md:text-2xl">เกี่ยวกับเรื่องนี้</h2>
+          <SectionSurface id="detail">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]/75">Details</p>
+                <h2 className="mt-1 text-xl font-black tracking-[-0.04em] md:text-2xl">รายละเอียด</h2>
+              </div>
+              <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-black text-white/38 backdrop-blur-xl">{statusLabel(item.status, item.isWatchReady)}</span>
+            </div>
             <div className="mt-3 grid gap-2 text-[11px] font-bold text-white/62 sm:grid-cols-2 md:mt-4 md:gap-3 md:text-sm">
-              <p>ประเภท: {(item.genres || []).join(', ') || 'ภาพยนตร์'}</p>
+              <p>ประเภท: {(item.genres || []).join(', ') || mediaLabel(item.mediaType)}</p>
               <p>ความยาว: {item.runtime ? `${item.runtime} นาที` : 'ยังไม่มีข้อมูล'}</p>
-              <p>วันฉาย: {item.year}</p>
+              <p>ปี: {item.year}</p>
               <p>ภาษา: {item.language === 'th' ? 'ไทย' : item.language || 'ไม่ระบุ'}</p>
               <p>สถานะ: {statusLabel(item.status, item.isWatchReady)}</p>
-              <p>คะแนน: {item.rating.toFixed(1)} / 10</p>
+              <p>คะแนน: {(item.rating || 0).toFixed(1)} / 10</p>
             </div>
-            <p className="mt-4 text-xs leading-6 text-white/58 md:text-sm md:leading-7">{item.overview}</p>
-          </div>
+          </SectionSurface>
 
-          <div id="spoiler" className="order-4 rounded-[22px] bg-yellow-300/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_22px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl md:p-5">
-            <h2 className="text-xl font-black tracking-[-0.04em] md:text-2xl">สปอยหนัง</h2>
+          <SectionSurface id="summary" className="bg-yellow-300/[0.055]">
+            <p className="text-[10px] font-black uppercase tracking-[0.26em] text-yellow-100/62">Overview</p>
+            <h2 className="mt-1 text-xl font-black tracking-[-0.04em] md:text-2xl">เรื่องย่อ</h2>
             <div className="mt-3 rounded-2xl bg-black/28 p-3 text-xs leading-6 text-yellow-50/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] md:text-sm md:leading-7">
-              {item.overview || 'ยังไม่มีสปอยสำหรับเรื่องนี้'}
+              {overview}
             </div>
-          </div>
+          </SectionSurface>
+
+          <WatchReadyPanel title={item.title} tmdbId={item.id} mediaType={item.mediaType} fallbackImage={fallbackImage} watchHref={watchHref} hasWatchLink={hasWatchLink} />
         </section>
       </article>
     </main>
