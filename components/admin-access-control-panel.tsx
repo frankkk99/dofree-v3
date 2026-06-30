@@ -139,6 +139,29 @@ export function AdminAccessControlPanel() {
     setNotice('Role preset reset');
   }
 
+  async function saveActiveRoleSettings() {
+    setNotice('');
+    setError('');
+    setSavingKey(`${activeRole}:all`);
+    try {
+      for (const permission of permissions) {
+        const setting = settings[settingKey(activeRole, permission.key)] || defaultRolePermission(activeRole, permission);
+        const response = await fetch('/api/admin/access-control/role-permissions', {
+          method: 'PUT',
+          headers: adminSessionHeaders({ 'content-type': 'application/json' }),
+          body: JSON.stringify({ ...setting, riskLevel: permission.riskLevel }),
+        });
+        const payload = (await response.json()) as { ok?: boolean; error?: string };
+        if (!response.ok || !payload.ok) throw new Error(payload.error || 'Cannot save permission');
+      }
+      setNotice('Saved changes');
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : 'Cannot save role permissions');
+    } finally {
+      setSavingKey('');
+    }
+  }
+
   const activeRoleCopy = adminRolePresets.find((role) => role.key === activeRole) || adminRolePresets[0];
 
   return (
@@ -152,7 +175,7 @@ export function AdminAccessControlPanel() {
           </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={resetRolePreset} disabled={loading || Boolean(savingKey)} className="rounded-2xl bg-white/[0.08] px-4 py-3 text-xs font-black text-white/70 hover:bg-white/[0.14] disabled:opacity-45">Reset role preset</button>
-            <button type="button" onClick={() => void load()} disabled={loading} className="rounded-2xl bg-[#e50914] px-4 py-3 text-xs font-black text-white shadow-glow disabled:opacity-45">Save Changes</button>
+            <button type="button" onClick={() => void saveActiveRoleSettings()} disabled={loading || Boolean(savingKey)} className="rounded-2xl bg-[#e50914] px-4 py-3 text-xs font-black text-white shadow-glow disabled:opacity-45">Save Changes</button>
           </div>
         </div>
 
