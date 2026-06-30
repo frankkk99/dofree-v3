@@ -1,22 +1,12 @@
 import type { Metadata } from 'next';
 import { DetailPageView } from '@/components/detail-page-view';
+import { getInlineTvEpisodes, getInlineWatchSource } from '@/lib/inline-watch-sources';
 import { absoluteUrl, baseOpenGraph, buildOgImages, indexRobots, safeDescription, siteName } from '@/lib/seo';
-import { getDetailPayload, getWatchSourceUrl, type MediaType } from '@/lib/tmdb';
-import { createWatchSourceToken } from '@/lib/watch-source-token';
+import { getDetailPayload } from '@/lib/tmdb';
 
 type PageProps = {
   params: Promise<{ id: string }>;
 };
-
-function protectedWatchUrl(sourceUrl: string | undefined, mediaType: MediaType, id: number) {
-  if (!sourceUrl) return undefined;
-  try {
-    const token = createWatchSourceToken({ url: sourceUrl, mediaType, id }, 60 * 60);
-    return `/api/watch/source?token=${encodeURIComponent(token)}`;
-  } catch {
-    return undefined;
-  }
-}
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
@@ -56,6 +46,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function TvDetailPage({ params }: PageProps) {
   const { id } = await params;
   const detail = await getDetailPayload('tv', id);
-  const watchSourceUrl = protectedWatchUrl(await getWatchSourceUrl('tv', detail.item.id), 'tv', detail.item.id);
-  return <DetailPageView detail={detail} watchSourceUrl={watchSourceUrl} />;
+  const watchEpisodes = await getInlineTvEpisodes(detail.item.id);
+  const watchSourceUrl = await getInlineWatchSource('tv', detail.item.id);
+  return <DetailPageView detail={detail} watchSourceUrl={watchSourceUrl} watchEpisodes={watchEpisodes} />;
 }
