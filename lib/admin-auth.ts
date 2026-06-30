@@ -1,4 +1,5 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
+import { isAdminRole, isOwnerRole } from '@/lib/admin-access-control';
 
 function normalizeAdminToken(value?: string | null) {
   return value?.trim().replace(/^DOFREE_ADMIN_TOKEN\s*=\s*/i, '').trim();
@@ -120,7 +121,7 @@ export async function requireAdminAccess(request: Request): Promise<AdminAccess>
     try {
       const user = await currentUser(suppliedBearer);
       const role = await profileRole(suppliedBearer, user.id);
-      if (role === 'admin' || role === 'super_admin') return { ok: true, mode: 'session', user, role };
+      if (isAdminRole(role)) return { ok: true, mode: 'session', user, role };
       return { ok: false, status: 403, error: 'Admin only' };
     } catch (error) {
       return { ok: false, status: 401, error: error instanceof Error ? error.message : 'Unauthorized' };
@@ -136,4 +137,13 @@ export async function requireAdminAccess(request: Request): Promise<AdminAccess>
   }
 
   return { ok: false, status: 401, error: 'Admin session required' };
+}
+
+export async function requireOwnerAccess(request: Request): Promise<AdminAccess> {
+  const access = await requireAdminAccess(request);
+  if (!access.ok) return access;
+  if (access.mode !== 'session' || !isOwnerRole(access.role)) {
+    return { ok: false, status: 403, error: 'FORBIDDEN' };
+  }
+  return access;
 }
