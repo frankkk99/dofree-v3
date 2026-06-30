@@ -68,6 +68,11 @@ function shuffleSections(sections: MovieSection[], seed: number) {
   }));
 }
 
+function dailySeed() {
+  const day = new Date().toISOString().slice(0, 10);
+  return day.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+}
+
 function heroCandidatesFromSections(sections: MovieSection[]) {
   return uniqueMovies(sections.flatMap((section) => section.items || [])).filter(isRecentEnoughForHero);
 }
@@ -212,7 +217,7 @@ function LazyMovieRail({ section, sectionIndex, onSelect }: { section: MovieSect
 }
 
 export function HomeExperienceV3({ home }: { home: HomePayload }) {
-  const [shuffleSeed, setShuffleSeed] = useState(1);
+  const [shuffleSeed] = useState(() => dailySeed());
   const randomizedSections = useMemo(() => shuffleSections(home.sections, shuffleSeed), [home.sections, shuffleSeed]);
   const heroItems = useMemo(() => {
     const sectionHeroItems = randomizedSections.flatMap((section) => section.items || []);
@@ -227,38 +232,31 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
   const allItems = useMemo(() => uniqueMovies([...heroItems, ...randomizedSections.flatMap((section) => section.items)]), [heroItems, randomizedSections]);
   const [heroIndex, setHeroIndex] = useState(0);
   const [selected, setSelected] = useState<MovieItem | null>(null);
+  const [initialDetailTab, setInitialDetailTab] = useState<'recommend' | 'watch'>('recommend');
   const hero = heroItems[heroIndex] || home.hero;
   const heroImage = hero.backdropUrl || hero.posterUrl;
   const optimizeHeroImage = canUseNextImage(heroImage);
   const recommendations = selected ? allItems.filter((movie) => `${movie.mediaType}-${movie.id}` !== `${selected.mediaType}-${selected.id}`).slice(0, 24) : allItems.slice(0, 24);
 
   useEffect(() => {
-    setShuffleSeed(Date.now() + Math.floor(Math.random() * 1000000));
-  }, []);
-
-  useEffect(() => {
     setHeroIndex(0);
   }, [shuffleSeed]);
 
   function openMovie(item: MovieItem) {
+    setInitialDetailTab('recommend');
     setSelected(item);
   }
 
   function openHeroWatch(item: MovieItem) {
+    setInitialDetailTab('watch');
     setSelected(item);
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => {
-        const watchTab = Array.from(document.querySelectorAll('button')).find((button) => button.textContent?.trim() === 'รับชม');
-        watchTab?.click();
-      });
-    });
   }
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#030303] text-white">
       <header className="fixed inset-x-0 top-0 z-50 border-b border-white/[0.07] bg-black/88 backdrop-blur-2xl">
         <nav className="mx-auto flex h-[58px] max-w-[1920px] items-center px-4 md:h-[76px] md:px-7 xl:h-[88px]">
-          <a href="/" className="flex items-center gap-1.5 text-[24px] font-black tracking-[-0.08em] text-[#e50914] md:text-[34px] xl:text-[38px]"><span>DOFree</span><span className="rounded bg-[#e50914] px-1 py-0.5 text-[9px] font-black tracking-normal text-white md:rounded-md md:px-1.5 md:text-[13px]">v3</span></a>
+          <a href="/" className="flex items-center gap-1.5 text-[22px] font-black tracking-[-0.06em] text-[#e50914] md:text-[31px] xl:text-[34px]"><span>ดูดีดี.online</span></a>
           <div className="ml-auto flex items-center gap-3 md:gap-5"><div data-dofree-menu-host="true" className="grid h-9 w-9 place-items-center md:h-12 md:w-12" /></div>
         </nav>
       </header>
@@ -294,7 +292,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
         </div>
       </section>
 
-      {selected ? <DetailWindow item={selected} recommendations={recommendations} onClose={() => setSelected(null)} onSelect={openMovie} /> : null}
+      {selected ? <DetailWindow item={selected} recommendations={recommendations} onClose={() => setSelected(null)} onSelect={openMovie} initialTab={initialDetailTab} /> : null}
     </main>
   );
 }

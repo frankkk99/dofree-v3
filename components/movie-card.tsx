@@ -25,7 +25,7 @@ export function MovieCard({ item, priorityBadge, onSelect, compact = false, grid
   const badge = statusBadge(item, priorityBadge);
   const href = `/${item.mediaType}/${item.id}`;
   const releaseLabel = releaseMonthYear(item as MovieItem & { releaseDate?: string });
-  const badges = item.badges?.length ? item.badges : [badge, item.isWatchReady ? 'HD' : undefined].filter(Boolean) as string[];
+  const badges = item.badges?.length ? item.badges : [badge, item.isWatchReady || item.watchUrl ? 'HD' : 'ข้อมูล'].filter(Boolean) as string[];
   const sizeClass = grid
     ? 'aspect-[2/3] h-auto w-full min-w-0'
     : compact

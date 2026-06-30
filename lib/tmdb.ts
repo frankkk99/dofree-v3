@@ -23,6 +23,8 @@ export type MovieItem = {
   episodeCount?: number;
   label?: string;
   badges?: string[];
+  searchText?: string;
+  hiddenSearchTerms?: string[];
 };
 
 export type MovieSection = {
@@ -135,12 +137,11 @@ function demoWatchUrl(item: Pick<MovieItem, 'id' | 'mediaType'>) {
 
 function buildBadges(item: Pick<MovieItem, 'rating' | 'language' | 'isWatchReady'>, index: number) {
   const badges: string[] = [];
-  if (item.isWatchReady) badges.push('พร้อมดู');
+  if (item.isWatchReady) badges.push('พร้อมดู', 'HD');
   if (item.rating >= 8) badges.push('8+');
   if (item.rating >= minTmdbRating) badges.push('6.5+');
   if (index < 4) badges.push('ใหม่');
   if (item.language === 'th') badges.push('พากย์ไทย');
-  badges.push('HD');
   return badges.slice(0, 3);
 }
 
@@ -150,8 +151,8 @@ function fallbackItem(index: number, overrides: Partial<MovieItem> = {}): MovieI
     id: 9000 + index,
     mediaType: 'movie',
     title: fallbackTitles[index % fallbackTitles.length],
-    titleEn: 'DOFree Preview',
-    overview: 'ตัวอย่างข้อมูลสำหรับ DOFree v3 เพื่อแสดงโครงหน้าเว็บแบบภาพยนตร์ cinematic พร้อมสถานะรับชมและข้อมูลประกอบ',
+    titleEn: 'DooDeeDee Preview',
+    overview: 'ตัวอย่างข้อมูลสำหรับดูดีดี.online เพื่อแสดงโครงหน้าเว็บแบบภาพยนตร์ พร้อมสถานะรับชมและข้อมูลประกอบ',
     posterUrl: fallbackImages[index % fallbackImages.length],
     backdropUrl: fallbackImages[(index + 1) % fallbackImages.length],
     rating,

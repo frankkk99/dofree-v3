@@ -171,12 +171,15 @@ function HeaderAccountMenuPortal() {
 
     function findHost() {
       const menuHost = document.querySelector('[data-dofree-menu-host="true"]') as HTMLElement | null;
-      if (menuHost) setHost(menuHost);
+      if (menuHost) {
+        setHost(menuHost);
+        window.clearInterval(timer);
+      }
     }
 
     syncAuth();
-    findHost();
     const timer = window.setInterval(findHost, 1000);
+    findHost();
     window.addEventListener('storage', syncAuth);
     window.addEventListener('dofree-auth-change', syncAuth);
 
@@ -326,6 +329,7 @@ function FullSectionOverlay({ section, allItems, onClose }: { section: MovieSect
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const overlayRef = useRef<HTMLDivElement | null>(null);
   const loadingGuardRef = useRef(false);
   const recommendations = selected ? allItems.filter((item) => `${item.mediaType}-${item.id}` !== `${selected.mediaType}-${selected.id}`).slice(0, 24) : allItems.slice(0, 24);
 
@@ -362,24 +366,15 @@ function FullSectionOverlay({ section, allItems, onClose }: { section: MovieSect
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => { void loadMore(); }, 120);
-    return () => window.clearTimeout(timer);
-  }, [loadMore]);
-
-  useEffect(() => {
-    if (!hasMore || typeof IntersectionObserver === 'undefined') return;
-    const node = loadMoreRef.current;
-    if (!node) return;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) void loadMore();
-    }, { rootMargin: '680px' });
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [hasMore, loadMore]);
+  function onOverlayScroll() {
+    const overlay = overlayRef.current;
+    if (!overlay || !hasMore || loadingMore || loadingGuardRef.current) return;
+    const remaining = overlay.scrollHeight - overlay.clientHeight - overlay.scrollTop;
+    if (remaining < 360) void loadMore();
+  }
 
   return (
-    <div className="fixed inset-0 z-[80] overflow-y-auto bg-[#030303]/96 p-4 text-white backdrop-blur-xl md:p-7">
+    <div ref={overlayRef} onScroll={onOverlayScroll} className="fixed inset-0 z-[80] overflow-y-auto bg-[#030303]/96 p-4 text-white backdrop-blur-xl md:p-7">
       <div className="mx-auto max-w-[1920px]">
         <div className="sticky top-0 z-10 mb-5 flex items-end justify-between gap-3 border-b border-white/10 bg-[#030303]/88 py-4 backdrop-blur-xl">
           <div>
