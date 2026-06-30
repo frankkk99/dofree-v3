@@ -88,6 +88,7 @@ const metricLabels: Array<{ key: keyof Metrics; label: string; hint: string; acc
 ];
 
 const adminModules = [
+  { label: 'Notifications', href: '/admin?module=notifications', description: 'Create, schedule, pin, and disable bell announcements' },
   { label: 'Catalog Manager', href: '#catalog-manager', description: 'เติมลิงก์ ดูสถานะ และแก้ข้อมูลหนัง' },
   { label: 'Sync', href: '/admin/sync', description: 'รีเฟรช catalog แบบ preview, dry run และ batch resume' },
   { label: 'Analytics', href: '#analytics', description: 'ดูคนเข้าเว็บ คำค้น และคอนเทนต์ยอดนิยม' },

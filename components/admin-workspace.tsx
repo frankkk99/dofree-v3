@@ -7,6 +7,7 @@ import { AdminCatalogBrowser } from '@/components/admin-catalog-browser';
 import { AdminControlCenter } from '@/components/admin-control-center';
 import { AdminDashboard } from '@/components/admin-dashboard';
 import { AdminFloatingTopbar, type AdminModuleId } from '@/components/admin-floating-topbar';
+import { AdminNotificationManager } from '@/components/admin-notification-manager';
 import { AdminPremiumAccessPanel } from '@/components/admin-premium-access-panel';
 
 const moduleCopy: Record<AdminModuleId, { title: string; description: string }> = {
@@ -22,6 +23,10 @@ const moduleCopy: Record<AdminModuleId, { title: string; description: string }> 
     title: 'Homepage Control',
     description: 'Tune homepage categories and the cards shown in each section.',
   },
+  notifications: {
+    title: 'Notifications',
+    description: 'Create, schedule, pin, preview, and disable bell notifications.',
+  },
   premium: {
     title: 'Premium Controls',
     description: 'Control free premium access flags without changing real payment logic.',
@@ -32,7 +37,7 @@ const moduleCopy: Record<AdminModuleId, { title: string; description: string }> 
   },
 };
 
-const validModules = new Set<AdminModuleId>(['dashboard', 'content', 'homepage', 'premium', 'audit']);
+const validModules = new Set<AdminModuleId>(['dashboard', 'content', 'homepage', 'notifications', 'premium', 'audit']);
 
 function normalizeModule(value: string | null): AdminModuleId {
   return validModules.has(value as AdminModuleId) ? (value as AdminModuleId) : 'dashboard';
@@ -79,6 +84,7 @@ export function AdminWorkspace() {
         </section>
       ) : null}
       {activeModule === 'homepage' ? <AdminControlCenter /> : null}
+      {activeModule === 'notifications' ? <AdminNotificationManager /> : null}
       {activeModule === 'premium' ? <AdminPremiumAccessPanel /> : null}
       {activeModule === 'audit' ? (
         <section id="admin-audit-log">

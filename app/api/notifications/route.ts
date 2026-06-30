@@ -1,34 +1,38 @@
 import { NextResponse } from 'next/server';
+import { isVisibleNotification, publicNotificationSelect, sortNotifications, type NotificationRow } from '@/lib/admin-notifications';
 import { supabaseRest } from '@/lib/supabase-rest';
-
-type NotificationRow = {
-  id: string;
-  title: string;
-  message: string;
-  cta_label?: string | null;
-  cta_url?: string | null;
-  enabled: boolean;
-  sort_order: number;
-  updated_at?: string;
-};
 
 const fallback: NotificationRow = {
   id: 'fallback',
-  title: 'แจ้งเตือนจากดูดีดี',
-  message: 'ติดตามหนังใหม่และรายการแนะนำได้ที่นี่',
-  cta_label: 'ดูหน้าแรก',
+  title: 'Welcome to dofree',
+  message: 'Follow recommendations, new releases, and important announcements from this bell.',
+  type: 'general',
+  audience: 'all',
+  priority: 0,
+  cta_label: 'Home',
   cta_url: '/',
   enabled: true,
+  pinned: false,
   sort_order: 0,
+  updated_at: new Date(0).toISOString(),
 };
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const rows = await supabaseRest<NotificationRow[]>(
-    'site_notifications?select=id,title,message,cta_label,cta_url,enabled,sort_order,updated_at&enabled=eq.true&order=sort_order.asc,updated_at.desc&limit=5',
-    { mode: 'service', next: { revalidate: 60 } },
-  ).catch(() => [fallback]);
+  try {
+    const rows = await supabaseRest<NotificationRow[]>(
+      `site_notifications?select=${publicNotificationSelect}&enabled=eq.true&order=pinned.desc,priority.desc,sort_order.asc,publish_at.desc.nullslast,updated_at.desc&limit=50`,
+      { mode: 'service', next: { revalidate: 60 } },
+    );
 
-  return NextResponse.json({ ok: true, notifications: rows?.length ? rows : [fallback] });
+    const notifications = (rows || [])
+      .filter((row) => isVisibleNotification(row))
+      .sort(sortNotifications)
+      .slice(0, 10);
+
+    return NextResponse.json({ ok: true, notifications: notifications.length ? notifications : [fallback] });
+  } catch {
+    return NextResponse.json({ ok: true, notifications: [fallback] });
+  }
 }

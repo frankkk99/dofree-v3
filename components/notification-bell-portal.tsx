@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { canUsePremiumFeature } from '@/lib/premium-access-config';
 import { usePremiumAccessSnapshot } from '@/lib/premium-access-client';
@@ -9,11 +9,22 @@ type SiteNotification = {
   id: string;
   title: string;
   message: string;
+  detail?: string | null;
+  type?: string | null;
+  priority?: number | null;
+  audience?: string | null;
   cta_label?: string | null;
   cta_url?: string | null;
-  enabled?: boolean;
-  sort_order?: number;
-  updated_at?: string;
+  secondary_cta_label?: string | null;
+  secondary_cta_url?: string | null;
+  image_url?: string | null;
+  related_media_type?: 'movie' | 'tv' | string | null;
+  related_tmdb_id?: number | null;
+  publish_at?: string | null;
+  expires_at?: string | null;
+  pinned?: boolean | null;
+  sort_order?: number | null;
+  updated_at?: string | null;
 };
 
 type NotificationPayload = {
@@ -21,12 +32,26 @@ type NotificationPayload = {
   notifications?: SiteNotification[];
 };
 
+const readStorageKey = 'dofree_read_notifications';
+
 const fallback: SiteNotification = {
   id: 'fallback',
-  title: 'แจ้งเตือนจากดูดีดี',
-  message: 'ติดตามหนังใหม่และรายการแนะนำได้ที่นี่',
-  cta_label: 'ดูหน้าแรก',
+  title: 'Welcome to dofree',
+  message: 'Follow recommendations, new releases, and important announcements from this bell.',
+  type: 'general',
+  cta_label: 'Home',
   cta_url: '/',
+};
+
+const typeLabels: Record<string, string> = {
+  general: 'General',
+  system: 'System',
+  new_release: 'New',
+  episode_update: 'Episode',
+  premium: 'Premium',
+  maintenance: 'Maintenance',
+  help: 'Help',
+  promotion: 'Promo',
 };
 
 function BellIcon() {
@@ -38,17 +63,108 @@ function BellIcon() {
   );
 }
 
+function isSafeHref(value?: string | null) {
+  if (!value) return false;
+  const href = value.trim();
+  const lower = href.toLowerCase();
+  if (lower.startsWith('javascript:') || lower.startsWith('data:')) return false;
+  if (href.startsWith('/') && !href.startsWith('//')) return true;
+
+  try {
+    const url = new URL(href);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function isExternalHref(value?: string | null) {
+  if (!value || value.startsWith('/')) return false;
+  try {
+    const url = new URL(value);
+    return url.origin !== window.location.origin;
+  } catch {
+    return false;
+  }
+}
+
+function isSafeImage(value?: string | null) {
+  if (!value) return false;
+  const src = value.trim();
+  const lower = src.toLowerCase();
+  if (lower.startsWith('javascript:') || lower.startsWith('data:')) return false;
+  if (src.startsWith('/') && !src.startsWith('//')) return true;
+
+  try {
+    const url = new URL(src);
+    return url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function readStoredIds() {
+  try {
+    const raw = window.localStorage.getItem(readStorageKey);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function storeReadIds(ids: string[]) {
+  try {
+    window.localStorage.setItem(readStorageKey, JSON.stringify([...new Set(ids)].slice(-200)));
+  } catch {}
+}
+
+function badgeText(item: SiteNotification) {
+  return typeLabels[item.type || 'general'] || item.type || 'General';
+}
+
+function actionLink(label?: string | null, href?: string | null, tone: 'primary' | 'secondary' = 'primary') {
+  if (!label || !href || !isSafeHref(href)) return null;
+  const external = isExternalHref(href);
+  return (
+    <a
+      href={href}
+      target={external ? '_blank' : undefined}
+      rel={external ? 'noreferrer noopener' : undefined}
+      onClick={(event) => event.stopPropagation()}
+      className={`inline-flex min-h-9 items-center justify-center rounded-xl px-3 py-2 text-[11px] font-black ${tone === 'primary' ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.08] text-white/78 hover:bg-white/[0.14]'}`}
+    >
+      {label}
+    </a>
+  );
+}
+
+function relatedHref(item: SiteNotification) {
+  if ((item.related_media_type === 'movie' || item.related_media_type === 'tv') && item.related_tmdb_id) {
+    return `/${item.related_media_type}/${item.related_tmdb_id}`;
+  }
+  return null;
+}
+
 export function NotificationBellPortal() {
   const [headerHost, setHeaderHost] = useState<HTMLElement | null>(null);
   const [bodyHost, setBodyHost] = useState<HTMLElement | null>(null);
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<SiteNotification[]>([fallback]);
+  const [readIds, setReadIds] = useState<string[]>([]);
+  const [expandedIds, setExpandedIds] = useState<string[]>([]);
   const { config: premiumAccessConfig, userState: premiumUserState } = usePremiumAccessSnapshot();
   const boxRef = useRef<HTMLDivElement | null>(null);
   const canOpenNotifications = canUsePremiumFeature('notifications', premiumUserState, premiumAccessConfig);
 
+  const unreadCount = useMemo(
+    () => notifications.filter((item) => item.id && !readIds.includes(item.id)).length,
+    [notifications, readIds],
+  );
+
   useEffect(() => {
     setBodyHost(document.body);
+    setReadIds(readStoredIds());
 
     function findHeaderHost() {
       const menuHost = document.querySelector('[data-dofree-menu-host="true"]') as HTMLElement | null;
@@ -79,6 +195,15 @@ export function NotificationBellPortal() {
   }, []);
 
   useEffect(() => {
+    if (!open) return;
+    setReadIds((current) => {
+      const next = [...new Set([...current, ...notifications.map((item) => item.id).filter(Boolean)])];
+      storeReadIds(next);
+      return next;
+    });
+  }, [open, notifications]);
+
+  useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if (event.key === 'Escape') setOpen(false);
     }
@@ -96,12 +221,16 @@ export function NotificationBellPortal() {
     };
   }, [open]);
 
+  function toggleExpanded(id: string) {
+    setExpandedIds((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]);
+  }
+
   if (!bodyHost || !headerHost) return null;
 
   const button = createPortal(
     <button
       type="button"
-      aria-label="เปิดแจ้งเตือน"
+      aria-label="Open notifications"
       onClick={() => {
         if (!canOpenNotifications) {
           window.location.href = '/membership';
@@ -112,29 +241,62 @@ export function NotificationBellPortal() {
       className="order-[-1] relative grid h-10 w-10 place-items-center rounded-none bg-transparent text-white transition hover:opacity-75 md:h-12 md:w-12"
     >
       <BellIcon />
-      <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-[#e50914] shadow-[0_0_18px_rgba(229,9,20,0.8)]" />
+      {unreadCount > 0 ? (
+        <span className="absolute right-0.5 top-0 grid min-h-5 min-w-5 place-items-center rounded-full bg-[#e50914] px-1 text-[10px] font-black leading-none text-white shadow-[0_0_18px_rgba(229,9,20,0.8)]">
+          {unreadCount > 9 ? '9+' : unreadCount}
+        </span>
+      ) : notifications.length ? (
+        <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-[#e50914] shadow-[0_0_18px_rgba(229,9,20,0.8)]" />
+      ) : null}
     </button>,
     headerHost,
   );
 
   const modal = open ? createPortal(
-    <div ref={boxRef} className="fixed right-4 top-[70px] z-[1100] w-[calc(100vw-32px)] max-w-[360px] overflow-hidden rounded-[26px] bg-white/[0.085] p-3 text-white shadow-[0_30px_110px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,255,255,0.18),inset_0_-26px_70px_rgba(0,0,0,0.36)] backdrop-blur-3xl md:right-8 md:top-[92px]">
-      <div className="rounded-[22px] bg-black/38 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.10)]">
+    <div ref={boxRef} className="fixed right-3 top-[66px] z-[1100] w-[calc(100vw-24px)] max-w-[390px] overflow-hidden rounded-2xl bg-white/[0.085] p-2 text-white shadow-[0_30px_110px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,255,255,0.18),inset_0_-26px_70px_rgba(0,0,0,0.36)] backdrop-blur-3xl md:right-8 md:top-[92px] md:p-3">
+      <div className="max-h-[min(680px,calc(100vh-92px))] overflow-y-auto rounded-2xl bg-black/42 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] md:p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]">Notifications</p>
-            <h3 className="mt-1 text-2xl font-black tracking-[-0.06em]">แจ้งเตือน</h3>
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#e50914]">Notifications</p>
+            <h3 className="mt-1 text-2xl font-black tracking-[-0.04em]">Bell</h3>
           </div>
-          <button type="button" onClick={() => setOpen(false)} className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/[0.08] text-xl font-black text-white/80 hover:bg-[#e50914]">×</button>
+          <button type="button" onClick={() => setOpen(false)} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/[0.08] text-xl font-black text-white/80 hover:bg-[#e50914]">x</button>
         </div>
         <div className="mt-4 grid gap-2">
-          {notifications.map((item) => (
-            <article key={item.id} className="rounded-[18px] bg-white/[0.065] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-              <h4 className="text-sm font-black text-white/92">{item.title}</h4>
-              <p className="mt-1 text-xs font-semibold leading-5 text-white/54">{item.message}</p>
-              {item.cta_label && item.cta_url ? <a href={item.cta_url} className="mt-3 inline-flex h-9 items-center rounded-xl bg-[#e50914] px-4 text-[11px] font-black text-white shadow-glow">{item.cta_label}</a> : null}
-            </article>
-          ))}
+          {notifications.map((item) => {
+            const expanded = expandedIds.includes(item.id);
+            const related = relatedHref(item);
+            return (
+              <article
+                key={item.id}
+                onClick={() => toggleExpanded(item.id)}
+                className="cursor-pointer rounded-2xl bg-white/[0.065] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:bg-white/[0.095]"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap gap-1.5">
+                      <span className="rounded-full bg-[#e50914]/14 px-2 py-1 text-[10px] font-black uppercase text-red-100">{badgeText(item)}</span>
+                      {item.pinned ? <span className="rounded-full bg-white px-2 py-1 text-[10px] font-black uppercase text-black">Pinned</span> : null}
+                    </div>
+                    <h4 className="mt-2 break-words text-sm font-black text-white/92">{item.title}</h4>
+                  </div>
+                  {item.priority ? <span className="rounded-lg bg-white/[0.08] px-2 py-1 text-[10px] font-black text-white/46">P{item.priority}</span> : null}
+                </div>
+                {isSafeImage(item.image_url) ? (
+                  <div className="mt-3 aspect-[16/9] overflow-hidden rounded-xl bg-white/[0.06]">
+                    <img src={item.image_url || ''} alt="" className="h-full w-full object-cover" />
+                  </div>
+                ) : null}
+                <p className="mt-2 break-words text-xs font-semibold leading-5 text-white/58">{item.message}</p>
+                {expanded && item.detail ? <p className="mt-2 break-words text-xs font-semibold leading-5 text-white/42">{item.detail}</p> : null}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {actionLink(item.cta_label, item.cta_url)}
+                  {actionLink(item.secondary_cta_label, item.secondary_cta_url, 'secondary')}
+                  {related ? actionLink(item.related_media_type === 'tv' ? 'Open series' : 'Open movie', related, 'secondary') : null}
+                </div>
+              </article>
+            );
+          })}
         </div>
       </div>
     </div>,
