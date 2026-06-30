@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { getStoredSession, type DofreeSession } from '@/lib/supabase-auth-browser';
 
-export type AdminModuleId = 'dashboard' | 'content' | 'homepage' | 'premium' | 'audit';
+export type AdminModuleId = 'dashboard' | 'content' | 'homepage' | 'notifications' | 'premium' | 'audit';
 
 const modules = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'content', label: 'Content' },
   { id: 'homepage', label: 'Homepage' },
+  { id: 'notifications', label: 'Notifications' },
   { id: 'premium', label: 'Premium' },
   { id: 'audit', label: 'Audit' },
 ] satisfies { id: AdminModuleId; label: string }[];
