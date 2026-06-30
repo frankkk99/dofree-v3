@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getAdminRoleLabel, isAdminRole } from '@/lib/admin-access-control';
 import { supabaseRest as supabaseServiceRest } from '@/lib/supabase-rest';
 
 type AuthUser = {
@@ -97,7 +98,7 @@ export async function GET(request: Request) {
 
     const profile = data[0] || null;
     const role = profile?.role || 'viewer';
-    const isAdmin = role === 'admin' || role === 'super_admin';
+    const isAdmin = isAdminRole(role);
     const membership = await supabaseServiceRest<MembershipRecord[]>(
       `memberships?user_id=eq.${encodeURIComponent(user.id)}&select=user_id,plan,status,expires_at&limit=1`,
       { mode: 'service', cache: 'no-store' },
@@ -110,6 +111,7 @@ export async function GET(request: Request) {
       profile,
       membership,
       role,
+      roleLabel: getAdminRoleLabel(role),
       isAdmin,
       isPremium,
       hasPremiumAccess: isPremium,
