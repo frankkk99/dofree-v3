@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import type { MediaType } from '@/lib/tmdb';
 
 type DetailReportButtonProps = {
@@ -8,7 +9,7 @@ type DetailReportButtonProps = {
   mediaType: MediaType;
   title: string;
   className?: string;
-  children?: React.ReactNode;
+  children?: ReactNode;
 };
 
 export function DetailReportButton({ tmdbId, mediaType, title, className = '', children = 'แจ้งลิงก์เสีย' }: DetailReportButtonProps) {
