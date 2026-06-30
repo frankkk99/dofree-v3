@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { HomePayload, MovieItem, MovieSection } from '@/lib/tmdb';
 import { HomeHeroMedia } from '@/components/home-hero-media';
 import { MovieCard } from '@/components/movie-card';
-import { DetailWindow } from '@/components/window-system';
+import { PortalDetailWindow } from '@/components/portal-detail-window';
 
 const RAIL_LOAD_STEP = 9;
 const RAIL_LOAD_THRESHOLD = 360;
@@ -271,7 +271,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
       <section id="sections" className="mx-auto max-w-[1920px] scroll-mt-[120px] bg-black px-4 py-7 md:px-7 md:py-10">
         <div className="space-y-8 md:space-y-12">
           {randomizedSections.map((section, sectionIndex) => (
-            <div key={section.slug} className="relative" style={{ contentVisibility: sectionIndex > 1 ? 'auto' : 'visible', containIntrinsicSize: '360px 1000px' }}>
+            <div id={section.slug} key={section.slug} className="relative scroll-mt-[96px]" style={{ contentVisibility: sectionIndex > 1 ? 'auto' : 'visible', containIntrinsicSize: '360px 1000px' }}>
               <div className="mb-3 flex items-center justify-between md:mb-6"><div>{section.eyebrow ? <p className="text-[9px] font-black uppercase tracking-[0.26em] text-[#e50914]/80">{section.eyebrow}</p> : null}<h2 className="text-[20px] font-black tracking-[-0.04em] md:text-[30px]">{section.title}</h2></div><a href={`#${section.slug}`} className="text-[12px] font-black text-white/50 hover:text-white md:text-[16px]">ดูทั้งหมด ›</a></div>
               <LazyMovieRail section={section} sectionIndex={sectionIndex} onSelect={openMovie} />
             </div>
@@ -279,7 +279,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
         </div>
       </section>
 
-      {selected ? <DetailWindow item={selected} recommendations={recommendations} onClose={() => setSelected(null)} onSelect={openMovie} initialTab={initialDetailTab} /> : null}
+      {selected ? <PortalDetailWindow item={selected} recommendations={recommendations} onClose={() => setSelected(null)} onSelect={openMovie} initialTab={initialDetailTab} /> : null}
     </main>
   );
 }
