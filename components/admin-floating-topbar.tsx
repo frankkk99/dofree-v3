@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { AdminHelpModal } from '@/components/admin-help-modal';
 import { getStoredSession, type DofreeSession } from '@/lib/supabase-auth-browser';
 
 export type AdminModuleId = 'dashboard' | 'content' | 'homepage' | 'notifications' | 'premium' | 'audit';
@@ -27,6 +28,7 @@ export function AdminFloatingTopbar({
 }) {
   const [session, setSession] = useState<DofreeSession | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [adminHelpOpen, setAdminHelpOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -53,6 +55,13 @@ export function AdminFloatingTopbar({
           <div className="ml-auto min-w-0 text-right text-[10px] font-bold text-white/42 max-sm:hidden">
             <span className="inline-block max-w-[220px] truncate align-bottom">{accountLabel(session)}</span>
           </div>
+          <button
+            type="button"
+            onClick={() => setAdminHelpOpen(true)}
+            className="hidden h-9 shrink-0 items-center rounded-xl bg-white/[0.08] px-3 text-xs font-black text-white/72 hover:bg-white/[0.14] hover:text-white sm:inline-flex"
+          >
+            Help
+          </button>
           <div ref={menuRef} className="relative">
             <button
               type="button"
@@ -66,6 +75,16 @@ export function AdminFloatingTopbar({
             {menuOpen ? (
               <div className="admin-floating-glass absolute right-0 top-11 z-10 grid min-w-44 gap-1 rounded-2xl border border-white/10 p-2">
                 <a href="/" className="rounded-xl px-3 py-2 text-xs font-black text-white/72 hover:bg-white/[0.08] hover:text-white">Back to site</a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdminHelpOpen(true);
+                    setMenuOpen(false);
+                  }}
+                  className="rounded-xl px-3 py-2 text-left text-xs font-black text-white/72 hover:bg-white/[0.08] hover:text-white"
+                >
+                  Help
+                </button>
                 <button type="button" onClick={() => window.location.reload()} className="rounded-xl px-3 py-2 text-left text-xs font-black text-white/72 hover:bg-white/[0.08] hover:text-white">Refresh</button>
                 <a href="/admin/users" className="rounded-xl px-3 py-2 text-xs font-black text-white/72 hover:bg-white/[0.08] hover:text-white">Users</a>
                 <a href="/admin/memberships" className="rounded-xl px-3 py-2 text-xs font-black text-white/72 hover:bg-white/[0.08] hover:text-white">Membership</a>
@@ -87,6 +106,7 @@ export function AdminFloatingTopbar({
           ))}
         </nav>
       </div>
+      <AdminHelpModal open={adminHelpOpen} onClose={() => setAdminHelpOpen(false)} />
     </div>
   );
 }
