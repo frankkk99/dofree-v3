@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type UIEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { MovieCard } from '@/components/movie-card';
 import type { HomePayload, MovieItem } from '@/lib/tmdb';
@@ -21,6 +21,7 @@ type SearchPayload = {
   ok?: boolean;
   items?: MovieItem[];
   total?: number;
+  hasMore?: boolean;
 };
 
 type FilterState = {
@@ -33,7 +34,7 @@ type FilterState = {
   sort: string;
 };
 
-const SEARCH_LIMIT = 240;
+const SEARCH_LIMIT = 24;
 const defaultFilters: FilterState = {
   category: '',
   type: '',
@@ -137,8 +138,12 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
   const [categories, setCategories] = useState<SearchCategory[]>(() => fallbackCategories(home));
   const [items, setItems] = useState<MovieItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [offset, setOffset] = useState(0);
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState('');
+  const requestIdRef = useRef(0);
 
   const categoryOptions = useMemo(() => [{ value: '', label: 'ทุกหมวด' }, ...categories.map((category) => ({ value: category.slug, label: category.title }))], [categories]);
   const activeTitle = useMemo(() => categories.find((category) => category.slug === filters.category)?.title || '', [filters.category, categories]);
@@ -155,15 +160,19 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
   }, [activeTitle, filters]);
 
   useEffect(() => {
+    let timer: number | undefined;
     function findHeaderHost() {
       const menuHost = document.querySelector('[data-dofree-menu-host="true"]') as HTMLElement | null;
       const parent = menuHost?.parentElement || null;
-      if (parent) setHeaderHost(parent);
+      if (parent) {
+        setHeaderHost(parent);
+        if (timer) window.clearInterval(timer);
+      }
     }
 
+    timer = window.setInterval(findHeaderHost, 800);
     findHeaderHost();
-    const timer = window.setInterval(findHeaderHost, 800);
-    return () => window.clearInterval(timer);
+    return () => { if (timer) window.clearInterval(timer); };
   }, []);
 
   useEffect(() => {
@@ -184,9 +193,17 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);
 
-  async function runSearch(nextQuery = query, nextFilters = filters) {
+  const runSearch = useCallback(async (nextQuery = query, nextFilters = filters, append = false, nextOffset = 0) => {
     const cleanQuery = nextQuery.trim();
-    setLoading(true);
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+    if (append) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+      setOffset(0);
+      setHasMore(false);
+    }
     setSearched(true);
     setError('');
     try {
@@ -200,34 +217,57 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
       if (nextFilters.year) params.set('year', nextFilters.year);
       if (nextFilters.sort) params.set('sort', nextFilters.sort);
       params.set('limit', String(SEARCH_LIMIT));
+      params.set('offset', String(nextOffset));
       const response = await fetch(`/api/search?${params.toString()}`, { cache: 'no-store' });
       const payload = (await response.json()) as SearchPayload;
-      setItems(Array.isArray(payload.items) ? payload.items : []);
+      if (requestId !== requestIdRef.current) return;
+      const nextItems = Array.isArray(payload.items) ? payload.items : [];
+      setItems((current) => append ? [...current, ...nextItems] : nextItems);
+      setOffset(nextOffset + nextItems.length);
+      setHasMore(Boolean(payload.hasMore) && nextItems.length > 0);
     } catch {
-      setItems([]);
+      if (requestId !== requestIdRef.current) return;
+      if (!append) setItems([]);
+      setHasMore(false);
       setError('ค้นหาไม่สำเร็จ ลองใหม่อีกครั้ง');
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) {
+        setLoading(false);
+        setLoadingMore(false);
+      }
     }
-  }
+  }, [filters, query]);
 
   function updateFilter(key: keyof FilterState, value: string) {
     const nextFilters = { ...filters, [key]: value };
     setFilters(nextFilters);
-    void runSearch(query, nextFilters);
+    void runSearch(query, nextFilters, false, 0);
   }
 
   function clearSearch() {
     setQuery('');
     setFilters(defaultFilters);
     setItems([]);
+    setOffset(0);
+    setHasMore(false);
+    setLoadingMore(false);
     setSearched(false);
     setError('');
   }
 
   function openSearch() {
     setOpen(true);
-    if (!searched) void runSearch(query, filters);
+  }
+
+  const loadMore = useCallback(() => {
+    if (!searched || loading || loadingMore || !hasMore) return;
+    void runSearch(query, filters, true, offset);
+  }, [filters, hasMore, loading, loadingMore, offset, query, runSearch, searched]);
+
+  function onModalScroll(event: UIEvent<HTMLDivElement>) {
+    const target = event.currentTarget;
+    const remaining = target.scrollHeight - target.clientHeight - target.scrollTop;
+    if (remaining < 560) loadMore();
   }
 
   const headerButton = headerHost ? createPortal(
@@ -247,12 +287,12 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
       {headerButton}
 
       {open ? (
-        <div className="fixed inset-0 z-[95] overflow-y-auto bg-black/50 px-2 py-3 text-white backdrop-blur-[5px] md:px-3 md:py-4">
+        <div onScroll={onModalScroll} className="fixed inset-0 z-[95] overflow-y-auto bg-black/50 px-2 py-3 text-white backdrop-blur-[5px] md:px-3 md:py-4">
           <div className="mx-auto max-w-6xl rounded-[28px] bg-black/62 p-2 shadow-[0_44px_140px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,255,255,0.16),inset_0_-38px_90px_rgba(255,255,255,0.035)] backdrop-blur-3xl md:rounded-[34px] md:p-5">
             <div className="rounded-[24px] bg-white/[0.045] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.10),inset_0_-24px_70px_rgba(0,0,0,0.35)] md:rounded-[28px] md:p-5">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]">Search</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]">ค้นหา</p>
                   <h2 className="mt-1 text-[28px] font-black leading-[0.95] tracking-[-0.06em] md:text-4xl">ค้นหาแบบละเอียด</h2>
                   <p className="mt-2 max-w-[260px] text-xs font-bold leading-5 text-white/42 md:max-w-none">กรองด้วยหมวด ประเภท ประเทศ ภาษา ความชัด ปี และคะแนน</p>
                 </div>
@@ -288,10 +328,10 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
               <div className="mt-5">
                 <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/38">Results</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/38">ผลลัพธ์</p>
                     <h3 className="mt-1 text-xl font-black tracking-[-0.04em]">{filterSummary ? filterSummary : query.trim() ? `ค้นหา “${query.trim()}”` : 'ผลลัพธ์ทั้งหมด'}</h3>
                   </div>
-                  <p className="text-[11px] font-bold text-white/38">{loading ? 'กำลังค้นหา...' : searched ? `พบ ${items.length} เรื่อง` : 'เลือกตัวกรองหรือพิมพ์คำค้นหา'}</p>
+                  <p className="text-[11px] font-bold text-white/38">{loading ? 'กำลังค้นหา...' : searched ? `พบ ${items.length} เรื่อง${hasMore ? ' ขึ้นไป' : ''}` : 'พิมพ์คำค้นหาหรือเลือกตัวกรองเพื่อเริ่มค้นหา'}</p>
                 </div>
 
                 {error ? <div className="mb-3 rounded-2xl bg-[#e50914]/12 px-4 py-3 text-xs font-bold text-red-100">{error}</div> : null}
@@ -306,6 +346,20 @@ export function FloatingGlassSearch({ home }: { home: HomePayload }) {
                   </div>
                 ) : searched ? (
                   <div className="rounded-[24px] bg-white/[0.045] p-6 text-center text-sm font-bold text-white/58 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">ไม่พบหนังที่ตรงกับเงื่อนไขนี้</div>
+                ) : (
+                  <div className="rounded-[24px] bg-white/[0.045] p-6 text-center text-sm font-bold leading-6 text-white/58 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">พิมพ์คำค้นหาหรือเลือกตัวกรองเพื่อเริ่มค้นหา</div>
+                )}
+                {loadingMore ? (
+                  <div className="mt-3 grid grid-cols-4 gap-2.5 sm:grid-cols-5 md:grid-cols-6 md:gap-4 lg:grid-cols-7 xl:grid-cols-8">
+                    {Array.from({ length: 8 }).map((_, index) => <div key={`loading-more-${index}`} className="aspect-[2/3] animate-pulse rounded-lg bg-white/[0.055] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]" />)}
+                  </div>
+                ) : null}
+                {searched && hasMore && !loading ? (
+                  <div className="mt-5 text-center">
+                    <button type="button" onClick={loadMore} disabled={loadingMore} className="rounded-full bg-white/[0.09] px-5 py-3 text-xs font-black text-white/64 hover:bg-white/[0.14] hover:text-white disabled:opacity-45">
+                      {loadingMore ? 'กำลังโหลดเพิ่ม...' : 'โหลดเพิ่ม'}
+                    </button>
+                  </div>
                 ) : null}
               </div>
             </div>

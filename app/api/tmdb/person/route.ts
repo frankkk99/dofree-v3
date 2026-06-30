@@ -126,7 +126,7 @@ function toMovieItem(item: TmdbCredit, index: number): MovieItem | null {
     status: rating >= 7 ? 'review' : 'draft',
     isWatchReady: false,
     label: roleLabel,
-    badges: [mediaType === 'tv' ? 'Series' : 'Movie', rating >= 8 ? '8+' : '6.5+', year].filter(Boolean).slice(0, 3),
+    badges: [mediaType === 'tv' ? 'ซีรีส์' : 'ภาพยนตร์', rating >= 8 ? '8+' : '6.5+', year].filter(Boolean).slice(0, 3),
   };
 }
 

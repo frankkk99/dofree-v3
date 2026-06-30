@@ -11,7 +11,7 @@ const modalTabs = [
   { id: 'recommend', label: 'แนะนำ' },
   { id: 'cast', label: 'นักแสดง' },
   { id: 'detail', label: 'รายละเอียด' },
-  { id: 'spoiler', label: 'สปอยหนัง' },
+  { id: 'spoiler', label: 'เรื่องย่อ' },
 ] as const;
 
 const MODAL_REC_BATCH_SIZE = 6;
@@ -307,7 +307,7 @@ function ModalWatchSection({
         {readyEpisodes.length ? (
           <div className="relative z-10 mt-4 rounded-2xl border border-white/10 bg-black/34 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl">
             <div className="mb-2 flex items-center justify-between gap-2">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/48">Episodes</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/48">ตอน</p>
               <span className="text-[10px] font-black text-white/35">{readyEpisodes.length} ตอน</span>
             </div>
             <div className="grid max-h-28 grid-cols-3 gap-2 overflow-y-auto pr-1 sm:grid-cols-4 md:grid-cols-6">
@@ -355,7 +355,7 @@ export function SearchWindow({ query, setQuery, items, onClose, onSelect }: { qu
       <div className="mx-auto max-w-4xl rounded-[28px] bg-[#050505]/92 p-4 shadow-[0_38px_120px_rgba(0,0,0,0.9)] backdrop-blur-2xl md:p-6">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#e50914]">DodeedeeV3 Search</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#e50914]">ค้นหาบนดูดีดี.online</p>
             <h2 className="mt-1 text-2xl font-black tracking-[-0.06em]">ค้นหาภาพยนตร์</h2>
           </div>
           <button onClick={onClose} className="grid h-9 w-9 place-items-center rounded-full bg-white/[0.08] text-xl font-black text-white/80 shadow-[0_12px_36px_rgba(0,0,0,0.55)] backdrop-blur-xl hover:bg-white/[0.14]">×</button>
@@ -372,7 +372,7 @@ export function SearchWindow({ query, setQuery, items, onClose, onSelect }: { qu
   );
 }
 
-export function DetailWindow({ item, recommendations, onClose, onSelect }: { item: MovieItem; recommendations: MovieItem[]; onClose: () => void; onSelect: (item: MovieItem) => void }) {
+export function DetailWindow({ item, recommendations, onClose, onSelect, initialTab = 'recommend' }: { item: MovieItem; recommendations: MovieItem[]; onClose: () => void; onSelect: (item: MovieItem) => void; initialTab?: 'recommend' | 'watch' }) {
   const [reported, setReported] = useState(false);
   const [activeTab, setActiveTab] = useState<ModalTab>('recommend');
   const [expanded, setExpanded] = useState(false);
@@ -394,6 +394,7 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
   const hasWatchLink = Boolean(displayItem.watchUrl || seriesEpisodes.length);
   const canWatch = canUsePremiumFeature('watch', premiumUserState, premiumAccessConfig);
   const premiumPromoLabel = hasWatchLink && canWatch && !premiumUserState.hasPremiumAccess ? premiumAccessConfig.label : '';
+  const availabilityBadge = hasWatchLink ? 'HD' : displayItem.trailerUrl ? 'ตัวอย่าง' : 'ข้อมูล';
 
   useEffect(() => {
     function closeFromOverlayRequest() {
@@ -464,6 +465,14 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
   }, [item.id, item.mediaType, recommendations]);
 
   useEffect(() => {
+    if (initialTab !== 'watch') return;
+    const timer = window.setTimeout(() => {
+      watchSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 180);
+    return () => window.clearTimeout(timer);
+  }, [initialTab, item.id, seriesEpisodes.length]);
+
+  useEffect(() => {
     const rail = recRailRef.current;
     if (activeTab !== 'recommend' || !rail) return;
 
@@ -509,13 +518,13 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
               {displayItem.posterUrl ? <img src={displayItem.posterUrl} alt={displayItem.title} loading="lazy" decoding="async" className="h-[132px] w-full object-cover md:h-[176px]" /> : null}
             </div>
             <div className="min-w-0 pr-9 md:pr-11">
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#e50914] md:text-[10px] md:tracking-[0.24em]">{displayItem.mediaType === 'tv' ? 'Series' : 'Movie'}</p>
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#e50914] md:text-[10px] md:tracking-[0.24em]">{displayItem.mediaType === 'tv' ? 'ซีรีส์' : 'ภาพยนตร์'}</p>
               <h2 className="modal-title mt-1.5 line-clamp-2 text-[21px] font-black leading-[0.98] tracking-[-0.06em] text-white md:text-[31px]">{displayItem.title}</h2>
               <div className="mt-2 flex flex-wrap gap-1.5 text-[9px] font-black md:text-[11px]">
                 <StatusBadge>★ {(displayItem.rating || 0).toFixed(1)}</StatusBadge>
                 <StatusBadge>{displayItem.year}</StatusBadge>
                 <StatusBadge>{displayItem.language === 'th' ? 'TH' : displayItem.language || 'EN'}</StatusBadge>
-                <StatusBadge active>{displayItem.watchUrl ? 'HD' : 'ZOOM'}</StatusBadge>
+                <StatusBadge active>{availabilityBadge}</StatusBadge>
               </div>
               <p className={`${expanded ? '' : 'line-clamp-3'} mt-2 text-[11px] font-medium leading-4 text-white/58 md:text-[13px] md:leading-5`}>{displayItem.overview}</p>
               <button onClick={() => setExpanded((value) => !value)} className="mt-1 text-[10px] font-black text-red-200/80 hover:text-red-100 md:text-xs">{expanded ? 'ย่อ' : 'ดูเพิ่มเติม'}</button>
@@ -527,7 +536,7 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
           </div>
 
           <div className="relative z-10 px-4 pb-4 md:px-5 md:pb-5">
-            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-red-100/68 md:text-xs">TRAILER PREVIEW</p>
+            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-red-100/68 md:text-xs">ตัวอย่าง</p>
             <InlinePlayer url={displayItem.trailerUrl} title={`ตัวอย่าง ${displayItem.title}`} fallbackImage={fallbackImage} emptyLabel={detailLoading ? 'กำลังโหลดตัวอย่าง...' : 'ยังไม่มีตัวอย่างที่เปิดดูได้'} />
           </div>
         </div>
@@ -558,7 +567,7 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
                   <p>ความยาว: {displayItem.runtime ? `${displayItem.runtime} นาที` : 'ยังไม่มีข้อมูล'}</p>
                   <p>วันฉาย: {displayItem.year}</p>
                   <p>ภาษา: {displayItem.language === 'th' ? 'ไทย' : displayItem.language || 'ไม่ระบุ'}</p>
-                  <p>สถานะ: {displayItem.watchUrl ? 'พร้อมรับชม' : displayItem.status || 'preview'}</p>
+                  <p>สถานะ: {hasWatchLink ? 'พร้อมรับชม' : displayItem.trailerUrl ? 'มีตัวอย่าง' : 'ข้อมูล'}</p>
                   <p>คะแนน: {(displayItem.rating || 0).toFixed(1)} / 10</p>
                 </div>
                 <p className="mt-4 text-xs leading-5 text-white/58 md:text-sm md:leading-6">{displayItem.overview}</p>
@@ -602,7 +611,7 @@ export function DetailWindow({ item, recommendations, onClose, onSelect }: { ite
               </div>
             )}
 
-            {activeTab === 'spoiler' && <div><h3 className="text-base font-black md:text-xl">สปอยหนัง</h3><div className="mt-3 rounded-2xl bg-yellow-300/[0.08] p-3 text-xs leading-5 text-yellow-50/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl md:text-sm md:leading-6">{displayItem.overview}</div></div>}
+            {activeTab === 'spoiler' && <div><h3 className="text-base font-black md:text-xl">เรื่องย่อ</h3><div className="mt-3 rounded-2xl bg-yellow-300/[0.08] p-3 text-xs leading-5 text-yellow-50/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl md:text-sm md:leading-6">{displayItem.overview}</div></div>}
 
             <div ref={watchSectionRef}>
               <ModalWatchSection item={displayItem} fallbackImage={fallbackImage} onReport={reportIssue} reported={reported} episodes={seriesEpisodes} episodeLoading={seriesEpisodesLoading} canWatch={canWatch} premiumLabel={premiumPromoLabel} />

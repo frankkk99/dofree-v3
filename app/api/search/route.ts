@@ -74,11 +74,10 @@ function watchKey(mediaType: MediaType, id: number) {
 
 function badges(item: Pick<MovieItem, 'rating' | 'language' | 'isWatchReady'>) {
   const list: string[] = [];
-  if (item.isWatchReady) list.push('พร้อมดู');
+  if (item.isWatchReady) list.push('พร้อมดู', 'HD');
   if (item.rating >= 8) list.push('8+');
   if (item.rating >= 6.5) list.push('6.5+');
   if (item.language === 'th') list.push('พากย์ไทย');
-  list.push('HD');
   return list.slice(0, 3);
 }
 
@@ -163,7 +162,7 @@ function matchesCountry(item: MovieItem, country: string) {
 function matchesQuality(item: MovieItem, quality: string) {
   if (!quality) return true;
   if (quality === 'ready') return Boolean(item.isWatchReady || item.watchUrl || item.status === 'published');
-  if (quality === 'hd') return (item.badges || []).some((badge) => String(badge).toLowerCase().includes('hd'));
+  if (quality === 'hd') return Boolean(item.isWatchReady || item.watchUrl);
   if (quality === 'review') return item.status === 'review' || !item.isWatchReady;
   return true;
 }
@@ -223,18 +222,19 @@ async function fetchWatchLinks(rows: CatalogRow[]) {
   return map;
 }
 
-async function rowsForSearch(query: string, category: string, limit: number) {
+async function rowsForSearch(query: string, category: string, limit: number, offset: number) {
   const isKnownCategory = category && knownSlugPattern.test(category);
   const bucketFilter = isKnownCategory && category !== 'watch-ready' ? `&source_bucket=eq.${encodeURIComponent(category)}` : '';
+  const fetchLimit = Math.min((offset + limit) * 3, 600);
   const rows = await supabaseRest<CatalogRow[]>(
-    `tmdb_catalog?select=tmdb_id,media_type,title,title_en,overview,poster_url,backdrop_url,rating,vote_count,popularity,release_year,release_date,genres,language,runtime,source_bucket,sort_score,is_active&is_active=eq.true${bucketFilter}${termFilter(query)}&order=sort_score.desc.nullslast,rating.desc&limit=${Math.min(limit * 2, 600)}`,
+    `tmdb_catalog?select=tmdb_id,media_type,title,title_en,overview,poster_url,backdrop_url,rating,vote_count,popularity,release_year,release_date,genres,language,runtime,source_bucket,sort_score,is_active&is_active=eq.true${bucketFilter}${termFilter(query)}&order=sort_score.desc.nullslast,rating.desc&limit=${fetchLimit}`,
     { mode: 'service', next: { revalidate: 120 } },
   ).catch(() => []);
 
   if (category !== 'watch-ready') return rows || [];
 
   const links = await supabaseRest<WatchLinkRecord[]>(
-    `admin_movie_links?is_active=eq.true&watch_url=not.is.null&select=tmdb_id,media_type,title,title_th,watch_url,trailer_url&order=updated_at.desc.nullslast&limit=${Math.min(limit * 2, 600)}`,
+    `admin_movie_links?is_active=eq.true&watch_url=not.is.null&select=tmdb_id,media_type,title,title_th,watch_url,trailer_url&order=updated_at.desc.nullslast&limit=${fetchLimit}`,
     { mode: 'service', next: { revalidate: 120 } },
   ).catch(() => []);
   const ids = [...new Set((links || []).map((link) => Number(link.tmdb_id)).filter(Boolean))];
@@ -249,12 +249,15 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get('q') || '';
   const category = searchParams.get('category') || '';
-  const limit = Math.max(1, Math.min(Number(searchParams.get('limit') || 120), 300));
+  const limit = Math.max(1, Math.min(Number(searchParams.get('limit') || 24), 48));
+  const offset = Math.max(0, Math.min(Number(searchParams.get('offset') || 0), 600));
 
-  const rows = await rowsForSearch(query, category, limit);
+  const rows = await rowsForSearch(query, category, limit, offset);
   const links = await fetchWatchLinks(rows);
   const baseItems = rows.map((row) => rowToMovie(row, links)).filter((item) => matchesQuery(item, query));
-  const items = applyFilters(uniqueItems(baseItems), searchParams).slice(0, limit);
+  const filteredItems = applyFilters(uniqueItems(baseItems), searchParams);
+  const items = filteredItems.slice(offset, offset + limit);
+  const hasMore = filteredItems.length > offset + items.length;
 
-  return NextResponse.json({ ok: true, items, total: items.length }, { headers: CACHE_HEADERS });
+  return NextResponse.json({ ok: true, items, total: filteredItems.length, hasMore, offset }, { headers: CACHE_HEADERS });
 }

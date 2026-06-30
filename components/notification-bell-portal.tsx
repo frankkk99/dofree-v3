@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { canUsePremiumFeature } from '@/lib/premium-access-config';
 import { usePremiumAccessSnapshot } from '@/lib/premium-access-client';
 
 type SiteNotification = {
@@ -36,22 +35,22 @@ const readStorageKey = 'dofree_read_notifications';
 
 const fallback: SiteNotification = {
   id: 'fallback',
-  title: 'Welcome to dofree',
-  message: 'Follow recommendations, new releases, and important announcements from this bell.',
+  title: 'ยินดีต้อนรับสู่ดูดีดี.online',
+  message: 'ติดตามประกาศ รายการอัปเดต และข้อมูลสำคัญจากปุ่มกระดิ่งนี้',
   type: 'general',
-  cta_label: 'Home',
+  cta_label: 'หน้าแรก',
   cta_url: '/',
 };
 
 const typeLabels: Record<string, string> = {
-  general: 'General',
-  system: 'System',
-  new_release: 'New',
-  episode_update: 'Episode',
+  general: 'ประกาศ',
+  system: 'ระบบ',
+  new_release: 'รายการใหม่',
+  episode_update: 'ตอนใหม่',
   premium: 'Premium',
-  maintenance: 'Maintenance',
-  help: 'Help',
-  promotion: 'Promo',
+  maintenance: 'ปรับปรุงระบบ',
+  help: 'ช่วยเหลือ',
+  promotion: 'โปรโมชัน',
 };
 
 function BellIcon() {
@@ -153,13 +152,18 @@ export function NotificationBellPortal() {
   const [notifications, setNotifications] = useState<SiteNotification[]>([fallback]);
   const [readIds, setReadIds] = useState<string[]>([]);
   const [expandedIds, setExpandedIds] = useState<string[]>([]);
-  const { config: premiumAccessConfig, userState: premiumUserState } = usePremiumAccessSnapshot();
+  const { userState: premiumUserState } = usePremiumAccessSnapshot();
   const boxRef = useRef<HTMLDivElement | null>(null);
-  const canOpenNotifications = canUsePremiumFeature('notifications', premiumUserState, premiumAccessConfig);
+  const visibleNotifications = useMemo(() => notifications.filter((item) => {
+    const audience = item.audience || 'all';
+    if (audience === 'admin') return premiumUserState.isAdmin;
+    if (audience === 'premium') return premiumUserState.hasPremiumAccess;
+    return true;
+  }), [notifications, premiumUserState.hasPremiumAccess, premiumUserState.isAdmin]);
 
   const unreadCount = useMemo(
-    () => notifications.filter((item) => item.id && !readIds.includes(item.id)).length,
-    [notifications, readIds],
+    () => visibleNotifications.filter((item) => item.id && !readIds.includes(item.id)).length,
+    [visibleNotifications, readIds],
   );
 
   useEffect(() => {
@@ -169,11 +173,14 @@ export function NotificationBellPortal() {
     function findHeaderHost() {
       const menuHost = document.querySelector('[data-dofree-menu-host="true"]') as HTMLElement | null;
       const parent = menuHost?.parentElement || null;
-      if (parent) setHeaderHost(parent);
+      if (parent) {
+        setHeaderHost(parent);
+        window.clearInterval(timer);
+      }
     }
 
-    findHeaderHost();
     const timer = window.setInterval(findHeaderHost, 800);
+    findHeaderHost();
     return () => window.clearInterval(timer);
   }, []);
 
@@ -197,11 +204,11 @@ export function NotificationBellPortal() {
   useEffect(() => {
     if (!open) return;
     setReadIds((current) => {
-      const next = [...new Set([...current, ...notifications.map((item) => item.id).filter(Boolean)])];
+      const next = [...new Set([...current, ...visibleNotifications.map((item) => item.id).filter(Boolean)])];
       storeReadIds(next);
       return next;
     });
-  }, [open, notifications]);
+  }, [open, visibleNotifications]);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -230,14 +237,8 @@ export function NotificationBellPortal() {
   const button = createPortal(
     <button
       type="button"
-      aria-label="Open notifications"
-      onClick={() => {
-        if (!canOpenNotifications) {
-          window.location.href = '/membership';
-          return;
-        }
-        setOpen((value) => !value);
-      }}
+      aria-label="เปิดการแจ้งเตือน"
+      onClick={() => setOpen((value) => !value)}
       className="order-[-1] relative grid h-10 w-10 place-items-center rounded-none bg-transparent text-white transition hover:opacity-75 md:h-12 md:w-12"
     >
       <BellIcon />
@@ -245,7 +246,7 @@ export function NotificationBellPortal() {
         <span className="absolute right-0.5 top-0 grid min-h-5 min-w-5 place-items-center rounded-full bg-[#e50914] px-1 text-[10px] font-black leading-none text-white shadow-[0_0_18px_rgba(229,9,20,0.8)]">
           {unreadCount > 9 ? '9+' : unreadCount}
         </span>
-      ) : notifications.length ? (
+      ) : visibleNotifications.length ? (
         <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-[#e50914] shadow-[0_0_18px_rgba(229,9,20,0.8)]" />
       ) : null}
     </button>,
@@ -257,13 +258,13 @@ export function NotificationBellPortal() {
       <div className="max-h-[min(680px,calc(100vh-92px))] overflow-y-auto rounded-2xl bg-black/42 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] md:p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#e50914]">Notifications</p>
-            <h3 className="mt-1 text-2xl font-black tracking-[-0.04em]">Bell</h3>
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#e50914]">การแจ้งเตือน</p>
+            <h3 className="mt-1 text-2xl font-black tracking-[-0.04em]">ประกาศล่าสุด</h3>
           </div>
           <button type="button" onClick={() => setOpen(false)} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/[0.08] text-xl font-black text-white/80 hover:bg-[#e50914]">x</button>
         </div>
         <div className="mt-4 grid gap-2">
-          {notifications.map((item) => {
+          {visibleNotifications.map((item) => {
             const expanded = expandedIds.includes(item.id);
             const related = relatedHref(item);
             return (
@@ -276,7 +277,7 @@ export function NotificationBellPortal() {
                   <div className="min-w-0">
                     <div className="flex flex-wrap gap-1.5">
                       <span className="rounded-full bg-[#e50914]/14 px-2 py-1 text-[10px] font-black uppercase text-red-100">{badgeText(item)}</span>
-                      {item.pinned ? <span className="rounded-full bg-white px-2 py-1 text-[10px] font-black uppercase text-black">Pinned</span> : null}
+                      {item.pinned ? <span className="rounded-full bg-white px-2 py-1 text-[10px] font-black uppercase text-black">ปักหมุด</span> : null}
                     </div>
                     <h4 className="mt-2 break-words text-sm font-black text-white/92">{item.title}</h4>
                   </div>
@@ -292,7 +293,7 @@ export function NotificationBellPortal() {
                 <div className="mt-3 flex flex-wrap gap-2">
                   {actionLink(item.cta_label, item.cta_url)}
                   {actionLink(item.secondary_cta_label, item.secondary_cta_url, 'secondary')}
-                  {related ? actionLink(item.related_media_type === 'tv' ? 'Open series' : 'Open movie', related, 'secondary') : null}
+                  {related ? actionLink(item.related_media_type === 'tv' ? 'เปิดซีรีส์' : 'เปิดภาพยนตร์', related, 'secondary') : null}
                 </div>
               </article>
             );

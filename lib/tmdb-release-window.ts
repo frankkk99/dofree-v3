@@ -110,7 +110,6 @@ function badges(movie: ReleaseMovie, index: number) {
   if (movie.rating >= 8) items.push('8+');
   if (movie.language === 'th') items.push('พากย์ไทย');
   if (index < 4) items.push('ใหม่');
-  items.push('HD');
   return [...new Set(items)].slice(0, 3);
 }
 

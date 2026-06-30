@@ -43,8 +43,8 @@ type SectionDef = {
 
 type EpisodeSummaryLookup = Awaited<ReturnType<typeof getSeriesEpisodeSummaries>>;
 
-export const HOME_SECTION_LIMIT = 18;
-export const HOME_SECTION_LOAD_LIMIT = 9;
+export const HOME_SECTION_LIMIT = 12;
+export const HOME_SECTION_LOAD_LIMIT = 12;
 const HOME_HERO_LIMIT = 6;
 const PUBLIC_CATALOG_REVALIDATE = 300;
 const minRating = 6.5;
@@ -98,12 +98,11 @@ function publicWatchUrl(item: Pick<MovieItem, 'mediaType' | 'id'>) {
 
 function badges(item: Pick<MovieItem, 'rating' | 'language' | 'isWatchReady'>, index: number) {
   const items: string[] = [];
-  if (item.isWatchReady) items.push('พร้อมดู');
+  if (item.isWatchReady) items.push('พร้อมดู', 'HD');
   if (item.rating >= 8) items.push('8+');
   if (item.rating >= minRating) items.push('6.5+');
   if (index < 4) items.push('ใหม่');
   if (item.language === 'th') items.push('พากย์ไทย');
-  items.push('HD');
   return items.slice(0, 3);
 }
 
@@ -205,7 +204,7 @@ function rowToMovie(row: CatalogRow, index: number): MovieItem {
     isWatchReady: false,
     label: rating >= 8 ? '8+' : '6.5+',
   } satisfies MovieItem & { releaseDate?: string; searchText?: string };
-  return { ...base, badges: [...badges(base, index), searchText, ...hiddenSearchAliases(searchText)] };
+  return { ...base, badges: badges(base, index), searchText, hiddenSearchTerms: hiddenSearchAliases(searchText) };
 }
 
 function applyWatch(item: MovieItem, links: Map<string, WatchLinkRecord>, index: number, episodeSummaries?: EpisodeSummaryLookup): MovieItem {
@@ -225,7 +224,7 @@ function applyWatch(item: MovieItem, links: Map<string, WatchLinkRecord>, index:
     status: 'published',
     label: 'พร้อมดู',
   };
-  return { ...next, searchText, badges: [...badges(next, index), searchText, ...hiddenSearchAliases(searchText)] } as MovieItem & { searchText?: string };
+  return { ...next, searchText, hiddenSearchTerms: hiddenSearchAliases(searchText), badges: badges(next, index) };
 }
 
 function unique(items: MovieItem[]) {
@@ -318,8 +317,10 @@ function categoryMatches(item: MovieItem, category?: string | null) {
     item.mediaType,
     item.status,
     item.label,
+    item.searchText,
     ...(item.genres || []),
     ...(item.badges || []),
+    ...(item.hiddenSearchTerms || []),
   ].filter(Boolean).join(' ').toLowerCase();
   return text.includes(keyword) || (keyword.includes('ซีรี') && item.mediaType === 'tv') || (keyword.includes('ภาพยนตร์') && item.mediaType === 'movie') || (keyword.includes('พร้อม') && Boolean(item.isWatchReady));
 }

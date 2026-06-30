@@ -222,7 +222,7 @@ export function ActorProfileBridge() {
           <div className="flex flex-wrap items-center justify-between gap-2 pb-3">
             <div className="flex gap-2">
               {history.length ? <button type="button" onClick={goBack} className="h-10 rounded-full bg-white/[0.08] px-4 text-xs font-black text-white/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] hover:bg-white/[0.13]">← กลับ</button> : null}
-              <span className="inline-flex h-10 items-center rounded-full bg-[#e50914]/18 px-4 text-[10px] font-black uppercase tracking-[0.24em] text-red-100/78">Actor Profile</span>
+              <span className="inline-flex h-10 items-center rounded-full bg-[#e50914]/18 px-4 text-[10px] font-black uppercase tracking-[0.24em] text-red-100/78">ประวัตินักแสดง</span>
             </div>
             <button type="button" onClick={close} className="grid h-11 w-11 place-items-center rounded-full bg-white/[0.09] text-2xl font-black text-white/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-[#e50914] hover:text-white">×</button>
           </div>
@@ -241,7 +241,7 @@ export function ActorProfileBridge() {
           <section className="mt-4 rounded-[28px] bg-black/30 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
             <div className="mb-3 flex items-end justify-between gap-3">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#e50914]/80">Works</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#e50914]/80">ผลงาน</p>
                 <h3 className="mt-1 text-2xl font-black tracking-[-0.05em]">ผลงานของนักแสดง</h3>
               </div>
               <span className="text-xs font-black text-white/35">{works.length} เรื่อง</span>

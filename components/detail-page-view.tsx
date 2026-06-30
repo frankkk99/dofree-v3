@@ -11,11 +11,11 @@ function statusLabel(status?: string, isWatchReady?: boolean) {
   if (status === 'draft') return 'ตัวอย่างข้อมูล';
   if (status === 'broken') return 'ลิงก์มีปัญหา';
   if (status === 'hidden') return 'ซ่อนจากหน้าเว็บ';
-  return 'Preview';
+  return 'ข้อมูล';
 }
 
 function mediaLabel(mediaType: string) {
-  return mediaType === 'tv' ? 'Series' : 'Movie';
+  return mediaType === 'tv' ? 'ซีรีส์' : 'ภาพยนตร์';
 }
 
 function personInitial(name: string) {
@@ -78,7 +78,7 @@ function TrailerCard({ title, trailerUrl, fallbackImage }: { title: string; trai
 
   return (
     <section>
-      <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-red-100/68 md:text-xs">TRAILER PREVIEW</p>
+      <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-red-100/68 md:text-xs">ตัวอย่าง</p>
       {embedUrl ? (
         <div className="overflow-hidden rounded-[20px] bg-black shadow-[0_24px_90px_rgba(0,0,0,0.72)] md:rounded-[26px]">
           <iframe
@@ -111,6 +111,7 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
   const watchHref = `/watch/${item.mediaType}/${item.id}`;
   const primaryHref = item.watchUrl ? watchHref : effectiveTrailerUrl || '/watch-ready';
   const primaryLabel = item.watchUrl ? 'รับชม' : effectiveTrailerUrl ? 'ดูตัวอย่าง' : 'ดูรายการพร้อมรับชม';
+  const availabilityBadge = item.watchUrl ? 'HD' : effectiveTrailerUrl ? 'ตัวอย่าง' : 'ข้อมูล';
   const fallbackImage = item.backdropUrl || item.posterUrl || '';
   const canonicalPath = `/${item.mediaType}/${item.id}`;
   const canonicalUrl = absoluteUrl(canonicalPath);
@@ -208,7 +209,7 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
                 <StatusBadge>★ {item.rating.toFixed(1)}</StatusBadge>
                 <StatusBadge>{item.year}</StatusBadge>
                 <StatusBadge>{item.language === 'th' ? 'TH' : item.language || 'EN'}</StatusBadge>
-                <StatusBadge active>{item.watchUrl ? 'HD' : 'ZOOM'}</StatusBadge>
+                <StatusBadge active>{availabilityBadge}</StatusBadge>
               </div>
 
               <p className="mt-2 line-clamp-3 max-w-2xl text-[11px] font-medium leading-4 text-white/58 md:text-[13px] md:leading-5">
