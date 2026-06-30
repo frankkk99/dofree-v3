@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { MediaPlaceholder } from '@/components/media-placeholder';
 import type { MovieItem } from '@/lib/tmdb';
 import { releaseMonthYear } from '@/lib/release-date';
@@ -16,6 +16,11 @@ type MovieCardProps = {
   priority?: boolean;
 };
 
+type DetailResponse = {
+  ok?: boolean;
+  item?: Pick<MovieItem, 'posterUrl' | 'backdropUrl'>;
+};
+
 function statusBadge(item: MovieItem, priorityBadge?: string) {
   if (priorityBadge) return priorityBadge;
   if (item.isWatchReady) return 'พร้อมดู';
@@ -23,12 +28,15 @@ function statusBadge(item: MovieItem, priorityBadge?: string) {
   return item.label;
 }
 
-function imageCandidates(item: MovieItem) {
-  return [item.posterUrl, item.backdropUrl].filter((url): url is string => Boolean(url));
+function uniqueImageCandidates(urls: Array<string | undefined | null>) {
+  return Array.from(new Set(urls.filter((url): url is string => Boolean(url))));
 }
 
 export function MovieCard({ item, priorityBadge, onSelect, compact = false, grid = false, priority = false }: MovieCardProps) {
   const [imageIndex, setImageIndex] = useState(0);
+  const [detailImages, setDetailImages] = useState<string[]>([]);
+  const [detailAttempted, setDetailAttempted] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
   const badge = statusBadge(item, priorityBadge);
   const href = `/${item.mediaType}/${item.id}`;
   const releaseLabel = releaseMonthYear(item as MovieItem & { releaseDate?: string });
@@ -39,16 +47,45 @@ export function MovieCard({ item, priorityBadge, onSelect, compact = false, grid
       ? 'h-[158px] w-[104px] sm:h-[206px] sm:w-[132px] md:h-[260px] md:w-[170px]'
       : 'h-[176px] w-[116px] sm:h-[220px] sm:w-[140px] md:h-[280px] md:w-[180px] xl:h-[300px] xl:w-[196px]';
   const cardClass = `${sizeClass} group relative ${grid ? '' : 'shrink-0'} overflow-hidden rounded-[8px] border border-white/[0.07] bg-[#111] text-left shadow-[0_16px_44px_rgba(0,0,0,0.62)] transition duration-300 hover:-translate-y-1 hover:border-[#e50914]/80 hover:shadow-glow md:rounded-[10px] md:shadow-[0_24px_70px_rgba(0,0,0,0.65)]`;
-  const candidates = imageCandidates(item);
+  const candidates = useMemo(() => uniqueImageCandidates([item.posterUrl, item.backdropUrl, ...detailImages]), [detailImages, item.backdropUrl, item.posterUrl]);
   const imageUrl = candidates[imageIndex] || '';
   const optimizeImage = canUseNextImage(imageUrl);
+  const needsDetailImage = imageIndex >= candidates.length && !detailAttempted && !detailLoading;
 
   useEffect(() => {
     setImageIndex(0);
+    setDetailImages([]);
+    setDetailAttempted(false);
+    setDetailLoading(false);
   }, [item.id, item.mediaType, item.posterUrl, item.backdropUrl]);
 
+  useEffect(() => {
+    if (!needsDetailImage) return;
+    const controller = new AbortController();
+    setDetailLoading(true);
+    fetch(`/api/tmdb/detail?mediaType=${encodeURIComponent(item.mediaType)}&id=${encodeURIComponent(String(item.id))}`, {
+      cache: 'no-store',
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return response.json() as Promise<DetailResponse>;
+      })
+      .then((payload) => {
+        const nextImages = uniqueImageCandidates([payload?.item?.posterUrl, payload?.item?.backdropUrl]);
+        setDetailImages(nextImages);
+        setImageIndex(candidates.length);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        setDetailAttempted(true);
+        setDetailLoading(false);
+      });
+    return () => controller.abort();
+  }, [candidates.length, item.id, item.mediaType, needsDetailImage]);
+
   const tryNextImage = () => {
-    setImageIndex((current) => Math.min(current + 1, candidates.length));
+    setImageIndex((current) => current + 1);
   };
 
   const content = (
@@ -74,6 +111,8 @@ export function MovieCard({ item, priorityBadge, onSelect, compact = false, grid
           className="absolute inset-0 h-full w-full object-cover object-center transition duration-700 group-hover:scale-110"
           onError={tryNextImage}
         />
+      ) : detailLoading ? (
+        <MediaPlaceholder variant="poster" title="กำลังโหลดโปสเตอร์" subtitle="กำลังซิงก์ภาพล่าสุด" />
       ) : (
         <MediaPlaceholder variant="poster" title="โปสเตอร์กำลังอัปเดต" subtitle="กำลังซิงก์ภาพจาก TMDB" />
       )}
