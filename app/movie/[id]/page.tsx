@@ -1,11 +1,22 @@
 import type { Metadata } from 'next';
 import { DetailPageView } from '@/components/detail-page-view';
 import { absoluteUrl, baseOpenGraph, buildOgImages, indexRobots, safeDescription, siteName } from '@/lib/seo';
-import { getDetailPayload } from '@/lib/tmdb';
+import { getDetailPayload, getWatchSourceUrl, type MediaType } from '@/lib/tmdb';
+import { createWatchSourceToken } from '@/lib/watch-source-token';
 
 type PageProps = {
   params: Promise<{ id: string }>;
 };
+
+function protectedWatchUrl(sourceUrl: string | undefined, mediaType: MediaType, id: number) {
+  if (!sourceUrl) return undefined;
+  try {
+    const token = createWatchSourceToken({ url: sourceUrl, mediaType, id }, 60 * 60);
+    return `/api/watch/source?token=${encodeURIComponent(token)}`;
+  } catch {
+    return undefined;
+  }
+}
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
@@ -45,5 +56,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function MovieDetailPage({ params }: PageProps) {
   const { id } = await params;
   const detail = await getDetailPayload('movie', id);
-  return <DetailPageView detail={detail} />;
+  const watchSourceUrl = protectedWatchUrl(await getWatchSourceUrl('movie', detail.item.id), 'movie', detail.item.id);
+  return <DetailPageView detail={detail} watchSourceUrl={watchSourceUrl} />;
 }
