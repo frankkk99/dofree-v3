@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { AdminFrontManagerLink } from '@/components/admin-front-manager-link';
 import { AdminHelpModal } from '@/components/admin-help-modal';
 import { canManageAccessControl, getAdminRoleLabel } from '@/lib/admin-access-control';
 import { getStoredSession, type DofreeSession } from '@/lib/supabase-auth-browser';
@@ -58,6 +59,7 @@ export function AdminFloatingTopbar({
       <div className="admin-floating-glass rounded-2xl border border-white/10 p-2 md:rounded-[24px]">
         <div className="flex items-center gap-2 border-b border-white/8 pb-2">
           <a href="/admin" className="shrink-0 rounded-xl bg-[#e50914] px-3 py-2 text-xs font-black text-white md:rounded-2xl md:px-4">Admin Console</a>
+          <AdminFrontManagerLink />
           <div className="ml-auto min-w-0 text-right text-[10px] font-bold text-white/42 max-sm:hidden">
             <span className="inline-block max-w-[220px] truncate align-bottom">{accountLabel(session)}</span>
             <span className="ml-2 rounded-full bg-white/[0.08] px-2 py-1 text-white/58">{roleLabel(session)}</span>
