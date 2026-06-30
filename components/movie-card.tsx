@@ -17,7 +17,7 @@ type MovieCardProps = {
   priority?: boolean;
 };
 
-type DetailResponse = {
+type ImageResponse = {
   ok?: boolean;
   item?: Pick<MovieItem, 'posterUrl' | 'backdropUrl'>;
 };
@@ -64,13 +64,13 @@ export function MovieCard({ item, priorityBadge, compact = false, grid = false, 
     if (!needsDetailImage) return;
     const controller = new AbortController();
     setDetailLoading(true);
-    fetch(`/api/tmdb/detail?mediaType=${encodeURIComponent(item.mediaType)}&id=${encodeURIComponent(String(item.id))}`, {
-      cache: 'no-store',
+    fetch(`/api/tmdb/images?mediaType=${encodeURIComponent(item.mediaType)}&id=${encodeURIComponent(String(item.id))}`, {
+      cache: 'force-cache',
       signal: controller.signal,
     })
       .then(async (response) => {
         if (!response.ok) return null;
-        return response.json() as Promise<DetailResponse>;
+        return response.json() as Promise<ImageResponse>;
       })
       .then((payload) => {
         const nextImages = uniqueImageCandidates([payload?.item?.posterUrl, payload?.item?.backdropUrl]);
