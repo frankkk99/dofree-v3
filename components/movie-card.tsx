@@ -1,10 +1,9 @@
 'use client';
 
-import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import type { MovieItem } from '@/lib/tmdb';
 import { releaseMonthYear } from '@/lib/release-date';
-import { canUseNextImage, normalizeMovieImageUrl } from '@/lib/image-optimizer';
+import { normalizeMovieImageUrl } from '@/lib/image-optimizer';
 
 type MovieCardProps = {
   item: MovieItem;
@@ -37,7 +36,6 @@ export function MovieCard({ item, priorityBadge, onSelect, compact = false, grid
   const normalizedImageUrl = normalizeMovieImageUrl(rawImageUrl, item.posterUrl ? 'poster' : 'backdrop');
   const [imageFailed, setImageFailed] = useState(false);
   const imageUrl = imageFailed ? '' : normalizedImageUrl;
-  const optimizeImage = canUseNextImage(imageUrl);
 
   useEffect(() => {
     setImageFailed(false);
@@ -45,17 +43,7 @@ export function MovieCard({ item, priorityBadge, onSelect, compact = false, grid
 
   const content = (
     <>
-      {imageUrl && optimizeImage ? (
-        <Image
-          src={imageUrl}
-          alt={item.title}
-          fill
-          priority={priority}
-          sizes={grid ? '(max-width: 640px) 25vw, (max-width: 1024px) 16vw, 12vw' : compact ? '(max-width: 640px) 104px, 170px' : '(max-width: 640px) 116px, 196px'}
-          className="object-cover object-center transition duration-700 group-hover:scale-110"
-          onError={() => setImageFailed(true)}
-        />
-      ) : imageUrl ? (
+      {imageUrl ? (
         <img
           src={imageUrl}
           alt={item.title}
