@@ -101,30 +101,6 @@ function SectionSurface({ id, children, className = '' }: { id?: string; childre
   return <section id={id} className={`rounded-[22px] bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_22px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl md:p-5 ${className}`}>{children}</section>;
 }
 
-function WatchReadyPanel({ title, tmdbId, mediaType, fallbackImage, hasWatchLink }: { title: string; tmdbId: number; mediaType: MediaType; fallbackImage: string; hasWatchLink: boolean }) {
-  return (
-    <section className="px-4 sm:px-5">
-      <div className="relative aspect-video w-full max-w-full overflow-hidden rounded-[28px] border border-white/15 bg-black shadow-[0_26px_95px_rgba(0,0,0,0.58)] sm:rounded-[32px]">
-        {fallbackImage ? <img src={fallbackImage} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover opacity-35" /> : null}
-        <div className="absolute inset-0 bg-black/65" />
-        <div className="relative z-10 flex h-full min-w-0 flex-col justify-end p-5 sm:p-8">
-          <p className="text-[10px] font-black uppercase tracking-[0.35em] text-white/75 sm:text-xs">WATCH READY</p>
-          <h2 className="mt-2 max-w-full break-words text-2xl font-black leading-tight tracking-[-0.05em] text-white sm:text-3xl md:text-4xl">พร้อมรับชม</h2>
-          <p className="mt-2 max-w-xl text-sm font-semibold leading-6 text-white/78">
-            {hasWatchLink ? `ดู ${title} ได้ในหน้าเดียวกัน เลื่อนลงล่างสุดเพื่อรับชม` : 'จะอัปเดตลิงก์รับชมเร็วๆ นี้'}
-          </p>
-          <div className="mt-5 flex max-w-full flex-wrap gap-3">
-            <a href="#watch" className="rounded-2xl bg-[#e50914] px-5 py-3 text-sm font-black text-white shadow-glow transition hover:brightness-110 sm:px-6 sm:py-4">▶ รับชมตอนนี้</a>
-            <DetailReportButton tmdbId={tmdbId} mediaType={mediaType} title={title} className="rounded-2xl bg-black/45 px-5 py-3 text-sm font-black text-white backdrop-blur-xl transition hover:bg-white/[0.08] sm:px-6 sm:py-4">
-              แจ้งลิงก์เสีย
-            </DetailReportButton>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 export function DetailPageViewInline({ detail }: { detail: DetailPayload }) {
   const { item, cast, trailerUrl, recommendations } = detail;
   const effectiveTrailerUrl = item.trailerUrl || trailerUrl;
@@ -172,7 +148,7 @@ export function DetailPageViewInline({ detail }: { detail: DetailPayload }) {
       {fallbackImage ? <div className="fixed inset-0 -z-10 scale-105 bg-cover bg-center opacity-28 blur-[2px]" style={{ backgroundImage: `url(${fallbackImage})` }} /> : null}
       <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_18%_12%,rgba(229,9,20,0.24),transparent_24rem),linear-gradient(180deg,rgba(0,0,0,0.62),#030303_72%)]" />
 
-      <article data-detail-layout="modal-visual-page-v6-watch-at-bottom" className="mx-auto w-full max-w-[920px] overflow-hidden rounded-[28px] bg-[#050505]/88 shadow-[0_42px_150px_rgba(0,0,0,0.94)] backdrop-blur-2xl md:rounded-[34px]">
+      <article data-detail-layout="modal-visual-page-v7-single-watch-bottom" className="mx-auto w-full max-w-[920px] overflow-hidden rounded-[28px] bg-[#050505]/88 shadow-[0_42px_150px_rgba(0,0,0,0.94)] backdrop-blur-2xl md:rounded-[34px]">
         <section className="relative overflow-hidden bg-black/42 pb-4 shadow-[inset_0_-80px_110px_rgba(0,0,0,0.55)] backdrop-blur-xl md:pb-5">
           {fallbackImage ? <div className="absolute inset-0 bg-cover bg-center opacity-24 blur-[1px]" style={{ backgroundImage: `url(${fallbackImage})` }} /> : null}
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,5,5,0.42),rgba(5,5,5,0.86)_55%,rgba(5,5,5,0.98)_100%)] md:bg-[linear-gradient(90deg,rgba(5,5,5,0.98)_0%,rgba(5,5,5,0.86)_42%,rgba(5,5,5,0.48)_100%)]" />
@@ -233,8 +209,6 @@ export function DetailPageViewInline({ detail }: { detail: DetailPayload }) {
           </SectionSurface>
 
           <SectionSurface id="summary" className="bg-yellow-300/[0.055]"><p className="text-[10px] font-black uppercase tracking-[0.26em] text-yellow-100/62">Overview</p><h2 className="mt-1 text-xl font-black tracking-[-0.04em] md:text-2xl">เรื่องย่อ</h2><div className="mt-3 rounded-2xl bg-black/28 p-3 text-xs leading-6 text-yellow-50/75 md:text-sm md:leading-7">{overview}</div></SectionSurface>
-
-          <WatchReadyPanel title={item.title} tmdbId={item.id} mediaType={item.mediaType} fallbackImage={fallbackImage} hasWatchLink={hasWatchLink} />
         </section>
 
         <div className="pb-5 md:pb-6">
