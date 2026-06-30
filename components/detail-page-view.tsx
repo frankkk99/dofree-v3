@@ -2,9 +2,10 @@ import type { ReactNode } from 'react';
 import type { DetailPayload } from '@/lib/tmdb';
 import { DetailRecommendationCarousel } from '@/components/detail-recommendation-carousel';
 import { DetailReportButton } from '@/components/detail-report-button';
+import { InlineWatchPlayer, type InlineWatchEpisode } from '@/components/inline-watch-player';
 import { absoluteUrl, siteName } from '@/lib/seo';
 
-const DETAIL_LAYOUT_VERSION = 'modal-visual-page-v4';
+const DETAIL_LAYOUT_VERSION = 'modal-visual-page-v5-inline-watch';
 
 const detailTabs = [
   { label: 'แนะนำ', href: '#recommend' },
@@ -28,14 +29,6 @@ function mediaLabel(mediaType: string) {
 
 function personInitial(name: string) {
   return name.trim().slice(0, 1).toUpperCase() || 'A';
-}
-
-function isExternalHref(href: string) {
-  return /^https?:\/\//.test(href);
-}
-
-function linkProps(href: string) {
-  return isExternalHref(href) ? { target: '_blank', rel: 'noreferrer' } : {};
 }
 
 function youtubeEmbedUrl(url?: string) {
@@ -129,35 +122,33 @@ function WatchReadyPanel({
   tmdbId,
   mediaType,
   fallbackImage,
-  watchHref,
   hasWatchLink,
 }: {
   title: string;
   tmdbId: number;
   mediaType: 'movie' | 'tv';
   fallbackImage: string;
-  watchHref: string;
   hasWatchLink: boolean;
 }) {
   return (
-    <section id="watch-ready" className="overflow-hidden rounded-[24px] border border-[#e50914]/18 bg-[linear-gradient(135deg,rgba(229,9,20,0.16),rgba(255,255,255,0.045))] shadow-[0_26px_95px_rgba(0,0,0,0.58)] backdrop-blur-xl md:rounded-[28px]">
-      <div className="relative min-h-[168px] p-5 md:min-h-[190px] md:p-6">
+    <section id="watch-ready" className="w-full max-w-full overflow-hidden rounded-[28px] border border-[#e50914]/18 bg-[linear-gradient(135deg,rgba(229,9,20,0.16),rgba(255,255,255,0.045))] shadow-[0_26px_95px_rgba(0,0,0,0.58)] backdrop-blur-xl md:rounded-[32px]">
+      <div className="relative min-h-[168px] w-full max-w-full overflow-hidden p-5 md:min-h-[190px] md:p-6">
         {fallbackImage ? <img src={fallbackImage} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover opacity-14 blur-[1px]" /> : null}
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,5,5,0.97),rgba(5,5,5,0.8)_56%,rgba(5,5,5,0.62)),radial-gradient(circle_at_82%_20%,rgba(229,9,20,0.26),transparent_24rem)]" />
-        <div className="relative z-10 flex min-h-[128px] flex-col justify-between gap-5 md:flex-row md:items-center">
+        <div className="relative z-10 flex min-h-[128px] w-full min-w-0 flex-col justify-between gap-5 md:flex-row md:items-center">
           <div className="min-w-0">
             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-red-100/72">WATCH READY</p>
             <h2 className="mt-2 text-2xl font-black tracking-[-0.05em] text-white md:text-4xl">พร้อมรับชม</h2>
-            <p className="mt-2 max-w-2xl text-xs font-semibold leading-5 text-white/58 md:text-sm md:leading-6">
-              {hasWatchLink ? `เปิดหน้าเล่นของ ${title} แล้วเริ่มรับชมได้ทันที` : 'เรื่องนี้ยังไม่มีลิงก์เล่นตรงในระบบตอนนี้ สามารถดูรายการพร้อมรับชมอื่น หรือแจ้งลิงก์เสียให้ทีมตรวจสอบได้'}
+            <p className="mt-2 max-w-2xl break-words text-xs font-semibold leading-5 text-white/58 md:text-sm md:leading-6">
+              {hasWatchLink ? `เลื่อนขึ้นไปที่โซนรับชมของ ${title} เพื่อเปิด player ในหน้านี้ได้ทันที` : 'กำลังอัปเดตลิงก์รับชมสำหรับเรื่องนี้ หากพบว่าควรมีลิงก์แล้ว สามารถแจ้งทีมให้ตรวจสอบได้'}
             </p>
           </div>
 
-          <div className="flex shrink-0 flex-wrap gap-2 md:justify-end">
-            <a href={hasWatchLink ? watchHref : '/watch-ready'} className="inline-flex h-11 items-center justify-center rounded-2xl bg-[#e50914] px-5 text-sm font-black text-white shadow-glow transition hover:scale-[1.01] hover:brightness-110 md:h-12 md:px-6">
-              ▶ {hasWatchLink ? 'เปิดหน้าเล่น' : 'รับชมตอนนี้'}
+          <div className="flex max-w-full shrink-0 flex-wrap gap-2 md:justify-end">
+            <a href="#watch" className="inline-flex min-h-11 max-w-full items-center justify-center rounded-2xl bg-[#e50914] px-5 py-3 text-sm font-black text-white shadow-glow transition hover:scale-[1.01] hover:brightness-110 md:min-h-12 md:px-6">
+              ▶ รับชมตอนนี้
             </a>
-            <DetailReportButton tmdbId={tmdbId} mediaType={mediaType} title={title} className="h-11 rounded-2xl bg-black/35 px-4 text-xs font-black text-white/70 shadow-[0_12px_34px_rgba(0,0,0,0.32)] backdrop-blur-xl transition hover:bg-white/[0.08] md:h-12">
+            <DetailReportButton tmdbId={tmdbId} mediaType={mediaType} title={title} className="min-h-11 max-w-full rounded-2xl bg-black/35 px-4 py-3 text-xs font-black text-white/70 shadow-[0_12px_34px_rgba(0,0,0,0.32)] backdrop-blur-xl transition hover:bg-white/[0.08] md:min-h-12">
               แจ้งลิงก์เสีย
             </DetailReportButton>
           </div>
@@ -167,14 +158,22 @@ function WatchReadyPanel({
   );
 }
 
-export function DetailPageView({ detail }: { detail: DetailPayload }) {
+export function DetailPageView({
+  detail,
+  watchSourceUrl,
+  watchEpisodes = [],
+  initialWatchEpisodeKey,
+}: {
+  detail: DetailPayload;
+  watchSourceUrl?: string;
+  watchEpisodes?: InlineWatchEpisode[];
+  initialWatchEpisodeKey?: string;
+}) {
   const { item, cast, trailerUrl, recommendations } = detail;
   const effectiveTrailerUrl = item.trailerUrl || trailerUrl;
-  const watchHref = `/watch/${item.mediaType}/${item.id}`;
-  const hasWatchLink = Boolean(item.watchUrl || item.isWatchReady);
-  const primaryHref = hasWatchLink ? watchHref : effectiveTrailerUrl || '/watch-ready';
-  const primaryLabel = hasWatchLink ? 'รับชม' : effectiveTrailerUrl ? 'ดูตัวอย่าง' : 'รับชม';
-  const availabilityBadge = hasWatchLink ? 'HD' : effectiveTrailerUrl ? 'ตัวอย่าง' : 'ข้อมูล';
+  const hasInlineWatchSource = Boolean(watchSourceUrl || watchEpisodes.some((episode) => episode.sourceUrl));
+  const primaryHref = '#watch';
+  const availabilityBadge = hasInlineWatchSource ? 'HD' : effectiveTrailerUrl ? 'ตัวอย่าง' : 'ข้อมูล';
   const fallbackImage = item.backdropUrl || item.posterUrl || '';
   const canonicalPath = `/${item.mediaType}/${item.id}`;
   const canonicalUrl = absoluteUrl(canonicalPath);
@@ -204,10 +203,10 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
     image: imageUrls.length ? imageUrls : undefined,
     genre: item.genres,
     inLanguage: item.language,
-    potentialAction: hasWatchLink
+    potentialAction: hasInlineWatchSource
       ? {
           '@type': 'WatchAction',
-          target: absoluteUrl(watchHref),
+          target: absoluteUrl(`${canonicalPath}#watch`),
         }
       : undefined,
     aggregateRating,
@@ -282,8 +281,8 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
               <a href="#summary" className="mt-1 inline-flex text-[10px] font-black text-red-200/80 hover:text-red-100 md:text-xs">ดูเพิ่มเติม</a>
 
               <div className="mt-3 flex flex-wrap gap-2">
-                <a {...linkProps(primaryHref)} href={primaryHref} className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#e50914] px-3 text-[11px] font-black text-white shadow-[0_14px_36px_rgba(0,0,0,0.42)] backdrop-blur-xl transition hover:brightness-110 md:h-9 md:px-4 md:text-xs">
-                  <span>▶</span>{primaryLabel}
+                <a href={primaryHref} className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#e50914] px-3 text-[11px] font-black text-white shadow-[0_14px_36px_rgba(0,0,0,0.42)] backdrop-blur-xl transition hover:brightness-110 md:h-9 md:px-4 md:text-xs">
+                  <span>▶</span>รับชม
                 </a>
                 <a href="#recommend" className="inline-flex h-8 items-center rounded-lg bg-white/[0.1] px-3 text-[11px] font-black text-white/82 shadow-[0_14px_36px_rgba(0,0,0,0.32)] backdrop-blur-xl transition hover:bg-white/[0.16] md:h-9 md:px-4 md:text-xs">
                   + รายการโปรด
@@ -297,6 +296,19 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
 
           <div className="relative z-10 px-4 pb-4 md:px-5 md:pb-5">
             <TrailerCard title={item.title} trailerUrl={effectiveTrailerUrl} fallbackImage={fallbackImage} />
+            <div className="mt-5">
+              <InlineWatchPlayer
+                title={item.title}
+                tmdbId={item.id}
+                mediaType={item.mediaType}
+                sourceUrl={watchSourceUrl}
+                backdropUrl={item.backdropUrl}
+                posterUrl={item.posterUrl}
+                itemLanguage={item.language}
+                episodes={watchEpisodes}
+                initialEpisodeKey={initialWatchEpisodeKey}
+              />
+            </div>
           </div>
         </section>
 
@@ -356,14 +368,14 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
                 <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]/75">Details</p>
                 <h2 className="mt-1 text-xl font-black tracking-[-0.04em] md:text-2xl">รายละเอียด</h2>
               </div>
-              <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-black text-white/38 backdrop-blur-xl">{statusLabel(item.status, item.isWatchReady)}</span>
+              <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-black text-white/38 backdrop-blur-xl">{statusLabel(item.status, hasInlineWatchSource || item.isWatchReady)}</span>
             </div>
             <div className="mt-3 grid gap-2 text-[11px] font-bold text-white/62 sm:grid-cols-2 md:mt-4 md:gap-3 md:text-sm">
               <p>ประเภท: {(item.genres || []).join(', ') || mediaLabel(item.mediaType)}</p>
               <p>ความยาว: {item.runtime ? `${item.runtime} นาที` : 'ยังไม่มีข้อมูล'}</p>
               <p>ปี: {item.year}</p>
               <p>ภาษา: {item.language === 'th' ? 'ไทย' : item.language || 'ไม่ระบุ'}</p>
-              <p>สถานะ: {statusLabel(item.status, item.isWatchReady)}</p>
+              <p>สถานะ: {statusLabel(item.status, hasInlineWatchSource || item.isWatchReady)}</p>
               <p>คะแนน: {(item.rating || 0).toFixed(1)} / 10</p>
             </div>
           </SectionSurface>
@@ -376,7 +388,7 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
             </div>
           </SectionSurface>
 
-          <WatchReadyPanel title={item.title} tmdbId={item.id} mediaType={item.mediaType} fallbackImage={fallbackImage} watchHref={watchHref} hasWatchLink={hasWatchLink} />
+          <WatchReadyPanel title={item.title} tmdbId={item.id} mediaType={item.mediaType} fallbackImage={fallbackImage} hasWatchLink={hasInlineWatchSource} />
         </section>
       </article>
     </main>
