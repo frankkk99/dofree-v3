@@ -37,6 +37,14 @@ function defaultLanguageKey(language?: string) {
   return 'original';
 }
 
+function episodeKeyFromUrl() {
+  if (typeof window === 'undefined') return undefined;
+  const params = new URLSearchParams(window.location.search);
+  const seasonNumber = Number(params.get('season') || 0);
+  const episodeNumber = Number(params.get('episode') || 0);
+  return seasonNumber && episodeNumber ? `${seasonNumber}-${episodeNumber}` : undefined;
+}
+
 export function InlineWatchPlayer({
   title,
   tmdbId,
@@ -66,6 +74,16 @@ export function InlineWatchPlayer({
     setActiveSource(initialSource);
     setActiveEpisodeKey(preferredEpisode?.key);
   }, [initialSource, preferredEpisode?.key]);
+
+  useEffect(() => {
+    if (mediaType !== 'tv' || !playableEpisodes.length) return;
+    const legacyKey = initialEpisodeKey || episodeKeyFromUrl();
+    if (!legacyKey) return;
+    const match = playableEpisodes.find((episode) => episode.key === legacyKey);
+    if (!match) return;
+    setActiveEpisodeKey(match.key);
+    setActiveSource(match.sourceUrl);
+  }, [initialEpisodeKey, mediaType, playableEpisodes]);
 
   useEffect(() => {
     if (!hasVideo || shouldLoadPlayer) return;
