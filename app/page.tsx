@@ -1,13 +1,8 @@
 import { ActorProfileBridge } from '@/components/actor-profile-bridge';
 import { AutoHideHeader } from '@/components/auto-hide-header';
-import { FavoriteClickBridge } from '@/components/favorite-click-bridge';
 import { FloatingGlassSearch } from '@/components/floating-glass-search';
-import { HomeCardLinkBridge } from '@/components/home-card-link-bridge';
 import { HomeRealtimeWrapper } from '@/components/home-realtime-wrapper';
-import { ModalEpisodeTitleLabels } from '@/components/modal-episode-title-labels';
-import { ModalRecommendationDefault } from '@/components/modal-recommendation-default';
 import { NotificationBellPortal } from '@/components/notification-bell-portal';
-import { WatchHistoryClickBridge } from '@/components/watch-history-click-bridge';
 import { applyAdminHomeConfig } from '@/lib/admin-home-config';
 import { getCatalogHomePayload } from '@/lib/catalog-home';
 import { absoluteUrl, englishSiteName, siteDescription, siteName, siteUrl } from '@/lib/seo';
@@ -45,11 +40,6 @@ export default async function HomePage() {
       <FloatingGlassSearch home={home} />
       <NotificationBellPortal />
       <ActorProfileBridge />
-      <ModalEpisodeTitleLabels />
-      <ModalRecommendationDefault />
-      <HomeCardLinkBridge home={home} />
-      <FavoriteClickBridge home={home} />
-      <WatchHistoryClickBridge home={home} />
     </>
   );
 }

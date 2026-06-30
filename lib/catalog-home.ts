@@ -93,7 +93,7 @@ function watchKey(mediaType: MediaType, id: number) {
 }
 
 function publicWatchUrl(item: Pick<MovieItem, 'mediaType' | 'id'>) {
-  return `/watch/${item.mediaType}/${item.id}`;
+  return `/${item.mediaType}/${item.id}#watch`;
 }
 
 function badges(item: Pick<MovieItem, 'rating' | 'language' | 'isWatchReady'>, index: number) {
