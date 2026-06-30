@@ -3,6 +3,8 @@ import { DetailPageView } from '@/components/detail-page-view';
 import { absoluteUrl, baseOpenGraph, buildOgImages, indexRobots, safeDescription, siteName } from '@/lib/seo';
 import { getDetailPayload } from '@/lib/tmdb';
 
+const TV_DETAIL_INLINE_WATCH = true;
+
 type PageProps = {
   params: Promise<{ id: string }>;
 };
