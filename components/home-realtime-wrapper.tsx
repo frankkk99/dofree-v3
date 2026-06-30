@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import type { HomePayload, MovieItem, MovieSection } from '@/lib/tmdb';
 import { HomeExperienceV3 } from '@/components/home-experience-v3';
 import { MovieCard } from '@/components/movie-card';
+import { UserHelpModal } from '@/components/user-help-modal';
 import { DetailWindow } from '@/components/window-system';
 import { canUsePremiumFeature } from '@/lib/premium-access-config';
 import { usePremiumAccessSnapshot } from '@/lib/premium-access-client';
@@ -124,6 +125,7 @@ function HeaderAccountMenuPortal() {
   const [host, setHost] = useState<HTMLElement | null>(null);
   const [bodyHost, setBodyHost] = useState<HTMLElement | null>(null);
   const [open, setOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [user, setUser] = useState<DofreeUser | null>(null);
   const [role, setRole] = useState<string>('');
   const { config: premiumAccessConfig, userState: premiumUserState } = usePremiumAccessSnapshot();
@@ -271,6 +273,18 @@ function HeaderAccountMenuPortal() {
           ))}
         </div> : null}
 
+        <button
+          type="button"
+          onClick={() => {
+            setHelpOpen(true);
+            setOpen(false);
+          }}
+          className="mt-4 w-full rounded-[24px] bg-white/[0.065] px-4 py-4 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] transition hover:bg-white/[0.105]"
+        >
+          <span className="block text-base font-black text-white/92">วิธีใช้งานเว็บ</span>
+          <span className="mt-1 block text-xs font-semibold leading-5 text-white/42">คู่มือการค้นหา รับชม รายการโปรด ประวัติ และคำถามที่พบบ่อย</span>
+        </button>
+
         {!isSignedIn ? (
           <div className="mt-4 grid grid-cols-2 gap-2">
             <a href="/auth?mode=signin&next=/" className="rounded-[22px] bg-[#e50914] px-4 py-3 text-center text-xs font-black text-white shadow-glow transition hover:bg-red-600">เข้าสู่ระบบ</a>
@@ -282,7 +296,7 @@ function HeaderAccountMenuPortal() {
     bodyHost
   ) : null;
 
-  return <>{menuButton}{drawer}</>;
+  return <>{menuButton}{drawer}<UserHelpModal open={helpOpen} onClose={() => setHelpOpen(false)} /></>;
 }
 
 function ViewAllClickBridge({ sections, onOpen }: { sections: MovieSection[]; onOpen: (section: MovieSection) => void }) {
