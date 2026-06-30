@@ -4,8 +4,8 @@ import { AdminAuthGuard } from '@/components/admin-auth-guard';
 import { AdminOwnerGuard } from '@/components/admin-owner-guard';
 
 export const metadata: Metadata = {
-  title: 'Access Control | Admin',
-  description: 'จัดการ Role, Permission และสิทธิ์การใช้งานระบบหลังบ้าน',
+  title: 'จัดการสิทธิ์หลังบ้าน | Admin',
+  description: 'จัดการบทบาท สิทธิ์ และการเข้าถึงระบบหลังบ้าน',
   robots: {
     index: false,
     follow: false,

@@ -55,17 +55,17 @@ export function AdminOwnerGuard({ children }: { children: ReactNode }) {
   }, []);
 
   if (loading) {
-    return <div className="mx-auto max-w-4xl px-4 py-10 text-sm font-black text-white/54">กำลังตรวจสอบสิทธิ์ Owner...</div>;
+    return <div className="mx-auto max-w-4xl px-4 py-10 text-sm font-black text-white/54">กำลังตรวจสอบสิทธิ์เจ้าของระบบ...</div>;
   }
 
   if (!allowed) {
     return (
       <main className="admin-shell grid min-h-screen place-items-center px-4 text-white">
         <section className="admin-floating-glass w-full max-w-lg rounded-[28px] border border-white/10 p-6 text-center">
-          <p className="text-[11px] font-black uppercase tracking-[0.26em] text-[#e50914]">Owner Access</p>
+          <p className="text-[11px] font-black uppercase tracking-[0.26em] text-[#e50914]">สิทธิ์เจ้าของระบบ</p>
           <h1 className="mt-3 text-3xl font-black tracking-[-0.06em]">ไม่มีสิทธิ์เข้าถึงหน้านี้</h1>
-          <p className="mt-3 text-sm font-semibold leading-6 text-white/66">หน้านี้เปิดให้ Owner เท่านั้น หากต้องใช้งานให้ติดต่อ Owner ของระบบ</p>
-          <a href="/admin" className="mt-6 inline-flex rounded-2xl bg-white/[0.08] px-5 py-3 text-sm font-black text-white/72 hover:bg-white/[0.14]">กลับ Admin</a>
+          <p className="mt-3 text-sm font-semibold leading-6 text-white/66">หน้านี้เปิดให้เจ้าของระบบเท่านั้น หากต้องใช้งานให้ติดต่อเจ้าของระบบ</p>
+          <a href="/admin" className="mt-6 inline-flex rounded-2xl bg-white/[0.08] px-5 py-3 text-sm font-black text-white/72 hover:bg-white/[0.14]">กลับหน้าหลังบ้าน</a>
         </section>
       </main>
     );
