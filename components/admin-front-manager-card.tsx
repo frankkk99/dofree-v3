@@ -1,3 +1,7 @@
+'use client';
+
+import { useState } from 'react';
+import { MediaPlaceholder } from '@/components/media-placeholder';
 import type { AdminFrontItem } from '@/components/admin-front-manager-types';
 import { adminFrontItemName, adminFrontStatusLabel } from '@/components/admin-front-manager-types';
 
@@ -15,8 +19,9 @@ function badges(item: AdminFrontItem) {
 }
 
 export function AdminFrontManagerCard({ item, onSelect }: Props) {
+  const [imageFailed, setImageFailed] = useState(false);
   const name = adminFrontItemName(item);
-  const imageUrl = item.poster_url || item.backdrop_url || '';
+  const imageUrl = imageFailed ? '' : item.poster_url || item.backdrop_url || '';
 
   return (
     <button
@@ -27,9 +32,9 @@ export function AdminFrontManagerCard({ item, onSelect }: Props) {
       style={{ contentVisibility: 'auto', containIntrinsicSize: '300px 200px' }}
     >
       {imageUrl ? (
-        <img src={imageUrl} alt={name} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-110" />
+        <img src={imageUrl} alt={name} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-110" onError={() => setImageFailed(true)} />
       ) : (
-        <div className="absolute inset-0 bg-white/[0.05]" />
+        <MediaPlaceholder variant="admin" title="ไม่มีภาพปก" subtitle="ตรวจสอบ poster/backdrop" />
       )}
       <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-black/10 to-black/95" />
       <div className="absolute left-2 top-2 flex flex-wrap gap-1 pr-2">

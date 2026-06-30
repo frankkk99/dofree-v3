@@ -1,11 +1,10 @@
 'use client';
 
-import Image from 'next/image';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { HomePayload, MovieItem, MovieSection } from '@/lib/tmdb';
+import { HomeHeroMedia } from '@/components/home-hero-media';
 import { MovieCard } from '@/components/movie-card';
 import { DetailWindow } from '@/components/window-system';
-import { canUseNextImage } from '@/lib/image-optimizer';
 
 const RAIL_LOAD_STEP = 9;
 const RAIL_LOAD_THRESHOLD = 360;
@@ -36,13 +35,6 @@ function isRecentEnoughForHero(item: MovieItem) {
   return year >= currentYear - 2 || item.label === 'เร็ว ๆ นี้';
 }
 
-function heroScore(item: MovieItem) {
-  const year = numericYear(item);
-  const readyBoost = item.isWatchReady || item.status === 'published' ? 1000 : 0;
-  const soonBoost = item.label === 'เร็ว ๆ นี้' ? 1200 : 0;
-  return soonBoost + readyBoost + year * 10 + Math.round((item.rating || 0) * 10);
-}
-
 function seededMovieScore(item: MovieItem, seed: number, scope: string, index: number) {
   const source = `${scope}:${seed}:${item.mediaType}:${item.id}:${index}`;
   let hash = 2166136261;
@@ -71,10 +63,6 @@ function shuffleSections(sections: MovieSection[], seed: number) {
 function dailySeed() {
   const day = new Date().toISOString().slice(0, 10);
   return day.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
-}
-
-function heroCandidatesFromSections(sections: MovieSection[]) {
-  return uniqueMovies(sections.flatMap((section) => section.items || [])).filter(isRecentEnoughForHero);
 }
 
 function shortTitle(item: MovieItem) {
@@ -225,7 +213,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
       ...(home.heroItems || []),
       ...sectionHeroItems,
       home.hero,
-    ]).filter((item) => (item.backdropUrl || item.posterUrl) && isRecentEnoughForHero(item));
+    ]).filter((item) => isRecentEnoughForHero(item));
     const shuffledCandidates = shuffleMovies(candidates, shuffleSeed + 97, 'homepage-hero');
     return shuffledCandidates.length ? shuffledCandidates.slice(0, HERO_CANDIDATE_LIMIT) : [home.hero];
   }, [home.hero, home.heroItems, randomizedSections, shuffleSeed]);
@@ -235,7 +223,6 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
   const [initialDetailTab, setInitialDetailTab] = useState<'recommend' | 'watch'>('recommend');
   const hero = heroItems[heroIndex] || home.hero;
   const heroImage = hero.backdropUrl || hero.posterUrl;
-  const optimizeHeroImage = canUseNextImage(heroImage);
   const recommendations = selected ? allItems.filter((movie) => `${movie.mediaType}-${movie.id}` !== `${selected.mediaType}-${selected.id}`).slice(0, 24) : allItems.slice(0, 24);
 
   useEffect(() => {
@@ -264,7 +251,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
       <section className="relative min-h-[500px] border-b border-white/[0.08] pt-[58px] md:min-h-[585px] md:pt-[76px] xl:min-h-[610px] xl:pt-[88px]">
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute inset-y-0 right-0 h-full w-full md:w-[78%]">
-            {heroImage && optimizeHeroImage ? <Image src={heroImage} alt="" fill priority sizes="(max-width: 768px) 100vw, 78vw" className="object-cover object-center opacity-90 transition duration-700" /> : heroImage ? <img src={heroImage} alt="" loading="eager" decoding="async" fetchPriority="high" className="h-full w-full object-cover object-center opacity-90 transition duration-700" /> : null}
+            <HomeHeroMedia imageUrl={heroImage} title={hero.title} />
           </div>
           <div className="absolute inset-0 bg-[linear-gradient(90deg,#030303_0%,rgba(3,3,3,0.96)_24%,rgba(3,3,3,0.78)_52%,rgba(0,0,0,0.32)_78%,#030303_100%)]" />
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.06)_0%,rgba(0,0,0,0.10)_42%,#030303_100%)]" />
