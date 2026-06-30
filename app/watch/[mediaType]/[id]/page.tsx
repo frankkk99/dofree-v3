@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
 import { DetailRecommendationCarousel } from '@/components/detail-recommendation-carousel';
 import { WatchOverviewClamp } from '@/components/watch-overview-clamp';
+import { buildOgImages, noindexRobots, safeDescription, siteName } from '@/lib/seo';
 import { episodeWatchHref, getPublishedSeriesEpisodes, groupSeriesEpisodes } from '@/lib/series-episodes';
 import { getDetailPayload, getWatchSourceUrl, type MediaType } from '@/lib/tmdb';
 import { createWatchSourceToken } from '@/lib/watch-source-token';
 
-const siteName = 'ดูดีดี';
 const allowedMediaTypes = new Set(['movie', 'tv']);
 
 type PageProps = {
@@ -60,17 +60,24 @@ function protectedWatchUrl(sourceUrl: string | undefined, mediaType: MediaType, 
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { mediaType, id } = await params;
-  const detail = await getDetailPayload(parseMediaType(mediaType), id);
+  const parsedMediaType = parseMediaType(mediaType);
+  const detail = await getDetailPayload(parsedMediaType, id);
+  const canonical = `/${parsedMediaType}/${id}`;
+  const description = safeDescription(detail.item.overview || `หน้ารับชม ${detail.item.title} บน${siteName}`);
 
   return {
     title: `รับชม ${detail.item.title}`,
-    description: detail.item.overview || `หน้ารับชม ${detail.item.title} บน${siteName}`,
+    description,
+    alternates: {
+      canonical,
+    },
     openGraph: {
       title: `รับชม ${detail.item.title} | ${siteName}`,
-      description: detail.item.overview,
-      images: [detail.item.backdropUrl],
+      description,
+      images: buildOgImages(detail.item.backdropUrl, detail.item.posterUrl),
       siteName,
     },
+    robots: noindexRobots(false),
   };
 }
 

@@ -1,6 +1,13 @@
+import type { Metadata } from 'next';
 import { BackLink } from '@/components/back-link';
 import { premiumFreeAccessStatus } from '@/lib/premium-access-config';
 import { readPremiumFreeAccessConfig } from '@/lib/premium-access-store';
+import { noindexRobots } from '@/lib/seo';
+
+export const metadata: Metadata = {
+  title: 'สมาชิก',
+  robots: noindexRobots(false),
+};
 
 const plans = [
   {

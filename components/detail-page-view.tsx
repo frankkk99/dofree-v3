@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { DetailPayload } from '@/lib/tmdb';
 import { DetailRecommendationCarousel } from '@/components/detail-recommendation-carousel';
+import { absoluteUrl, siteName } from '@/lib/seo';
 
 const DETAIL_LAYOUT_VERSION = 'modal-card-v3';
 
@@ -111,36 +112,70 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
   const primaryHref = item.watchUrl ? watchHref : effectiveTrailerUrl || '/watch-ready';
   const primaryLabel = item.watchUrl ? 'รับชม' : effectiveTrailerUrl ? 'ดูตัวอย่าง' : 'ดูรายการพร้อมรับชม';
   const fallbackImage = item.backdropUrl || item.posterUrl || '';
+  const canonicalPath = `/${item.mediaType}/${item.id}`;
+  const canonicalUrl = absoluteUrl(canonicalPath);
+  const contentTypeLabel = item.mediaType === 'tv' ? 'ซีรีส์' : 'หนัง';
+  const imageUrls = [item.backdropUrl, item.posterUrl].filter(Boolean).map((url) => absoluteUrl(String(url)));
+  const aggregateRating = item.rating
+    ? {
+        '@type': 'AggregateRating',
+        ratingValue: item.rating.toFixed(1),
+        ...(item.voteCount ? { ratingCount: item.voteCount } : {}),
+        bestRating: 10,
+        worstRating: 0,
+      }
+    : undefined;
 
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': item.mediaType === 'tv' ? 'TVSeries' : 'Movie',
+    '@id': `${canonicalUrl}#primary`,
     name: item.title,
     alternateName: item.titleEn,
     description: item.overview,
-    datePublished: item.year,
-    image: item.posterUrl,
+    url: canonicalUrl,
+    mainEntityOfPage: canonicalUrl,
+    datePublished: item.releaseDate || item.year,
+    image: imageUrls.length ? imageUrls : undefined,
     genre: item.genres,
     inLanguage: item.language,
     potentialAction: item.watchUrl
       ? {
           '@type': 'WatchAction',
-          target: watchHref,
+          target: absoluteUrl(watchHref),
         }
       : undefined,
-    aggregateRating: item.rating
-      ? {
-          '@type': 'AggregateRating',
-          ratingValue: item.rating.toFixed(1),
-          ratingCount: 1000,
-          bestRating: 10,
-        }
-      : undefined,
+    aggregateRating,
+  };
+
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: siteName,
+        item: absoluteUrl('/'),
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: contentTypeLabel,
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: item.title,
+        item: canonicalUrl,
+      },
+    ],
   };
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#030303] px-2 py-4 text-white md:px-4 md:py-7">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
 
       <div className="fixed inset-0 -z-10 bg-[#030303]" />
       <div className="fixed inset-0 -z-10 bg-cover bg-center opacity-28 blur-[1px]" style={{ backgroundImage: `url(${fallbackImage})` }} />

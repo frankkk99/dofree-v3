@@ -10,19 +10,29 @@ import { NotificationBellPortal } from '@/components/notification-bell-portal';
 import { WatchHistoryClickBridge } from '@/components/watch-history-click-bridge';
 import { applyAdminHomeConfig } from '@/lib/admin-home-config';
 import { getCatalogHomePayload } from '@/lib/catalog-home';
+import { absoluteUrl, englishSiteName, siteDescription, siteName, siteUrl } from '@/lib/seo';
 import { decorateHomeWithFreshTmdbReleases } from '@/lib/tmdb-release-window';
 
 export const revalidate = 300;
 
-const siteName = 'ดูดีดี';
-const englishSiteName = 'DodeedeeV3';
-const siteUrl = 'https://www.xn--l3caa5kbu.online/';
 const websiteJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
   name: siteName,
-  alternateName: ['ดูดีดีออนไลน์', englishSiteName, 'Dodeedee', 'DooDeeDee'],
+  alternateName: ['ดูดีดีออนไลน์', englishSiteName, 'DooDeeDee'],
   url: siteUrl,
+  description: siteDescription,
+  publisher: {
+    '@type': 'Organization',
+    name: siteName,
+    alternateName: englishSiteName,
+    url: siteUrl,
+  },
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: `${absoluteUrl('/search')}?q={search_term_string}`,
+    'query-input': 'required name=search_term_string',
+  },
 };
 
 export default async function HomePage() {

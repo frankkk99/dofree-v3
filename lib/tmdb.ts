@@ -10,7 +10,9 @@ export type MovieItem = {
   posterUrl: string;
   backdropUrl: string;
   rating: number;
+  voteCount?: number;
   year: string;
+  releaseDate?: string;
   genres?: string[];
   runtime?: number;
   language?: string;
@@ -153,7 +155,9 @@ function fallbackItem(index: number, overrides: Partial<MovieItem> = {}): MovieI
     posterUrl: fallbackImages[index % fallbackImages.length],
     backdropUrl: fallbackImages[(index + 1) % fallbackImages.length],
     rating,
+    voteCount: 0,
     year: String(2026 - (index % 3)),
+    releaseDate: `${2026 - (index % 3)}-01-01`,
     genres: ['ระทึกขวัญ', 'ดราม่า'],
     runtime: 112 + index,
     language: index % 3 === 0 ? 'th' : 'en',
@@ -290,6 +294,8 @@ function toMovieItem(item: TmdbItem, mediaType: MediaType, index: number): Movie
   const backdropUrl = item.backdrop_path ? `${imageBase}${item.backdrop_path}` : item.poster_path ? `${posterBase}${item.poster_path}` : fallbackImages[(index + 1) % fallbackImages.length];
   const year = (item.release_date || item.first_air_date || '').slice(0, 4) || '2026';
   const rating = Number(item.vote_average || 0);
+  const voteCount = Number(item.vote_count || 0);
+  const releaseDate = item.release_date || item.first_air_date || undefined;
   const title = item.title || item.name || item.original_title || item.original_name || fallbackTitles[index % fallbackTitles.length];
   const language = item.original_language || 'th';
   const runtime = item.runtime || item.episode_run_time?.[0];
@@ -303,7 +309,9 @@ function toMovieItem(item: TmdbItem, mediaType: MediaType, index: number): Movie
     posterUrl,
     backdropUrl,
     rating,
+    voteCount,
     year,
+    releaseDate,
     genres,
     runtime,
     language,

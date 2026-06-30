@@ -1,22 +1,39 @@
 import type { Metadata } from 'next';
 import { MovieCard } from '@/components/movie-card';
+import { baseOpenGraph, indexRobots, noindexRobots, safeDescription, siteName } from '@/lib/seo';
 import { searchMovies } from '@/lib/tmdb';
-
-const siteName = 'ดูดีดี';
 
 type SearchProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export const metadata: Metadata = {
-  title: 'ค้นหาภาพยนตร์และซีรีส์',
-  description: `ค้นหาภาพยนตร์ ซีรีส์ และรายการพร้อมรับชมบน${siteName}`,
-  openGraph: {
-    title: `ค้นหาภาพยนตร์และซีรีส์ | ${siteName}`,
-    description: `ค้นหาภาพยนตร์ ซีรีส์ และรายการพร้อมรับชมบน${siteName}`,
-    siteName,
-  },
-};
+export async function generateMetadata({ searchParams }: SearchProps): Promise<Metadata> {
+  const params = await searchParams;
+  const q = typeof params.q === 'string' ? params.q.trim() : '';
+  const title = q ? `ผลการค้นหา "${q}"` : 'ค้นหาหนังและซีรีส์';
+  const description = safeDescription(
+    q ? `ผลการค้นหา "${q}" บน${siteName} พร้อมรายการภาพยนตร์ ซีรีส์ และคอนเทนต์ที่เกี่ยวข้อง` : `ค้นหาภาพยนตร์ ซีรีส์ อนิเมะ นักแสดง และรายการพร้อมรับชมบน${siteName}`,
+  );
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: '/search',
+    },
+    openGraph: {
+      ...baseOpenGraph('/search'),
+      title: `${title} | ${siteName}`,
+      description,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${title} | ${siteName}`,
+      description,
+    },
+    robots: q ? noindexRobots(true) : indexRobots(),
+  };
+}
 
 export default async function SearchPage({ searchParams }: SearchProps) {
   const params = await searchParams;

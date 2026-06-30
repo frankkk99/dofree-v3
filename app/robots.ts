@@ -1,14 +1,13 @@
 import type { MetadataRoute } from 'next';
-
-const siteUrl = 'https://www.xn--l3caa5kbu.online';
+import { siteUrl } from '@/lib/seo';
 
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
       {
         userAgent: '*',
-        allow: '/',
-        disallow: ['/api/'],
+        allow: ['/', '/movie/', '/tv/', '/watch-ready', '/search'],
+        disallow: ['/api/', '/admin/', '/auth', '/watch/', '/membership', '/favorites', '/history', '/notifications'],
       },
     ],
     sitemap: `${siteUrl}/sitemap.xml`,

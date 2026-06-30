@@ -1,0 +1,22 @@
+# ดูดีดี.online
+
+ดูดีดี.online เป็นเว็บไซต์ค้นหาและจัดหมวดหมู่ข้อมูลภาพยนตร์ ซีรีส์ อนิเมะ และคอนเทนต์ยอดนิยม พร้อมข้อมูลเรื่องย่อ นักแสดง ตัวอย่าง รายการแนะนำ และสถานะพร้อมรับชม
+
+Primary URL:
+- https://www.xn--l3caa5kbu.online
+
+Important URLs:
+- /
+- /watch-ready
+- /search
+- /movie/[id]
+- /tv/[id]
+
+Indexing guidance:
+- Detail pages under /movie/[id] and /tv/[id] are the primary SEO pages.
+- Watch pages under /watch/ are private playback pages and should not be indexed.
+- Admin, auth, membership, favorites, history, notifications, and API routes are not public index targets.
+
+Brand names:
+- ดูดีดี.online
+- DooDeeDee.online

@@ -32,6 +32,10 @@ const privateWatchApiHeaders = [
   { key: 'Cache-Control', value: 'no-store, max-age=0' },
 ];
 
+const privateSeoHeaders = [
+  { key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' },
+];
+
 const nextConfig = {
   reactStrictMode: true,
   images: {
@@ -54,8 +58,36 @@ const nextConfig = {
         headers: privateWatchHeaders,
       },
       {
+        source: '/api/:path*',
+        headers: privateSeoHeaders,
+      },
+      {
         source: '/api/watch/:path*',
         headers: privateWatchApiHeaders,
+      },
+      {
+        source: '/admin/:path*',
+        headers: privateSeoHeaders,
+      },
+      {
+        source: '/auth',
+        headers: privateSeoHeaders,
+      },
+      {
+        source: '/membership',
+        headers: privateSeoHeaders,
+      },
+      {
+        source: '/favorites',
+        headers: privateSeoHeaders,
+      },
+      {
+        source: '/history',
+        headers: privateSeoHeaders,
+      },
+      {
+        source: '/notifications',
+        headers: privateSeoHeaders,
       },
     ];
   },

@@ -1,17 +1,25 @@
 import type { Metadata } from 'next';
 import { MovieCard } from '@/components/movie-card';
+import { baseOpenGraph, indexRobots, safeDescription, siteName } from '@/lib/seo';
 import { getWatchReadyItems } from '@/lib/tmdb';
-
-const siteName = 'ดูดีดี';
 
 export const metadata: Metadata = {
   title: 'หนังและซีรีส์พร้อมรับชม',
-  description: 'รวมภาพยนตร์และซีรีส์ที่มีสถานะพร้อมรับชม คัดจากคะแนนสูงและรายการที่เผยแพร่ในดูดีดี',
-  openGraph: {
-    title: `หนังและซีรีส์พร้อมรับชม | ${siteName}`,
-    description: 'รวมภาพยนตร์และซีรีส์ที่มีสถานะพร้อมรับชมบนดูดีดี',
-    siteName,
+  description: safeDescription('รวมภาพยนตร์และซีรีส์ที่มีสถานะพร้อมรับชม คัดจากคะแนนสูง รายการแนะนำ และคอนเทนต์ยอดนิยมบนดูดีดี.online'),
+  alternates: {
+    canonical: '/watch-ready',
   },
+  openGraph: {
+    ...baseOpenGraph('/watch-ready'),
+    title: `หนังและซีรีส์พร้อมรับชม | ${siteName}`,
+    description: 'รวมภาพยนตร์และซีรีส์ที่มีสถานะพร้อมรับชมบนดูดีดี.online',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `หนังและซีรีส์พร้อมรับชม | ${siteName}`,
+    description: 'รวมภาพยนตร์และซีรีส์ที่มีสถานะพร้อมรับชมบนดูดีดี.online',
+  },
+  robots: indexRobots(),
 };
 
 export default async function WatchReadyPage() {
