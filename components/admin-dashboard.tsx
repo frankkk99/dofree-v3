@@ -89,6 +89,7 @@ const metricLabels: Array<{ key: keyof Metrics; label: string; hint: string; acc
 
 const adminModules = [
   { label: 'Catalog Manager', href: '#catalog-manager', description: 'เติมลิงก์ ดูสถานะ และแก้ข้อมูลหนัง' },
+  { label: 'Sync', href: '/admin/sync', description: 'รีเฟรช catalog แบบ preview, dry run และ batch resume' },
   { label: 'Analytics', href: '#analytics', description: 'ดูคนเข้าเว็บ คำค้น และคอนเทนต์ยอดนิยม' },
   { label: 'Missing Link Queue', href: '#catalog-manager', description: 'คิวหนังที่ควรเติมลิงก์ก่อน' },
   { label: 'Broken Link Reports', href: '#maintenance', description: 'รายงานลิงก์เสียและงานซ่อมด่วน' },

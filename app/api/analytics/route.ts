@@ -26,9 +26,17 @@ type AnalyticsEventInput = {
 
 const allowedEvents = new Set([
   'page_view',
+  'movie_detail_open',
   'detail_open',
   'watch_click',
   'search',
+  'favorite_add',
+  'favorite_remove',
+  'actor_open',
+  'login_success',
+  'signup_success',
+  'premium_click',
+  'report_broken_link',
   'category_click',
   'favorite_click',
   'history_click',
@@ -92,18 +100,39 @@ export async function POST(request: Request) {
 
   const record = {
     event_name: eventName,
+    event_type: eventName,
     page_path: cleanText(body.pagePath ?? body.page_path, 500),
+    path: cleanText(body.pagePath ?? body.page_path, 500),
     page_title: cleanText(body.pageTitle ?? body.page_title, 240),
     media_type: cleanMediaType(body.mediaType ?? body.media_type),
     media_id: cleanNumber(body.mediaId ?? body.media_id),
+    tmdb_id: cleanNumber(body.mediaId ?? body.media_id),
     title: cleanText(body.title, 240),
     search_query: cleanText(body.searchQuery ?? body.search_query, 180),
+    query: cleanText(body.searchQuery ?? body.search_query, 180),
     section_slug: cleanText(body.sectionSlug ?? body.section_slug, 80),
     referrer: cleanText(body.referrer, 500),
     visitor_id: cleanText(body.visitorId ?? body.visitor_id, 120),
+    session_id: cleanText(body.visitorId ?? body.visitor_id, 120),
     device: clientDevice(body, request),
     user_agent: userAgent(request),
     metadata: cleanMetadata(body.metadata),
+  };
+
+  const legacyRecord = {
+    event_name: record.event_name,
+    page_path: record.page_path,
+    page_title: record.page_title,
+    media_type: record.media_type,
+    media_id: record.media_id,
+    title: record.title,
+    search_query: record.search_query,
+    section_slug: record.section_slug,
+    referrer: record.referrer,
+    visitor_id: record.visitor_id,
+    device: record.device,
+    user_agent: record.user_agent,
+    metadata: record.metadata,
   };
 
   try {
@@ -115,9 +144,20 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ ok: true });
-  } catch (error) {
-    // Analytics must never break the public website. If the migration/env is missing,
-    // report a soft success so the browser can continue normally.
-    return NextResponse.json({ ok: true, disabled: true, reason: error instanceof Error ? error.message : 'analytics unavailable' });
+  } catch (firstError) {
+    try {
+      await supabaseRest('analytics_events', {
+        method: 'POST',
+        mode: 'service',
+        prefer: 'return=minimal',
+        body: [legacyRecord],
+      });
+
+      return NextResponse.json({ ok: true, legacy: true });
+    } catch (error) {
+      // Analytics must never break the public website. If the migration/env is missing,
+      // report a soft success so the browser can continue normally.
+      return NextResponse.json({ ok: true, disabled: true, reason: error instanceof Error ? error.message : firstError instanceof Error ? firstError.message : 'analytics unavailable' });
+    }
   }
 }

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { AdminAuthGuard } from '@/components/admin-auth-guard';
-import { AdminTmdbSyncPanel } from '@/components/admin-tmdb-sync-panel';
+import { AdminSyncCenter } from '@/components/admin-sync-center';
 
 export const metadata: Metadata = {
   title: 'Admin Sync | DOFree',
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default function AdminSyncPage() {
   return (
     <AdminAuthGuard>
-      <AdminTmdbSyncPanel />
+      <AdminSyncCenter />
     </AdminAuthGuard>
   );
 }
