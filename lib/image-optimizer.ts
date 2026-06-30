@@ -9,6 +9,26 @@ const allowedRemoteSuffixes = [
   '.googleusercontent.com',
 ];
 
+const tmdbPosterBase = 'https://image.tmdb.org/t/p/w500';
+const tmdbBackdropBase = 'https://image.tmdb.org/t/p/original';
+
+export type MovieImageKind = 'poster' | 'backdrop';
+
+export function normalizeMovieImageUrl(src?: string | null, kind: MovieImageKind = 'poster') {
+  const value = src?.trim();
+  if (!value) return '';
+
+  if (value.startsWith('//')) return `https:${value}`;
+  if (value.startsWith('http://')) return value.replace('http://', 'https://');
+
+  if (value.startsWith('/')) {
+    const base = kind === 'backdrop' ? tmdbBackdropBase : tmdbPosterBase;
+    return `${base}${value}`;
+  }
+
+  return value;
+}
+
 export function canUseNextImage(src?: string | null) {
   const value = src?.trim();
   if (!value) return false;
