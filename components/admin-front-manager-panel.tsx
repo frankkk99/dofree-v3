@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { AdminFrontManagerEpisodes } from '@/components/admin-front-manager-episodes';
 import {
   adminFrontItemName,
   adminFrontSections,
@@ -180,6 +181,8 @@ export function AdminFrontManagerPanel({ item, onClose, onSaved }: Props) {
                 </div>
               </div>
             </section>
+
+            <AdminFrontManagerEpisodes item={item} provider={form.provider} />
           </div>
         </div>
       </aside>
