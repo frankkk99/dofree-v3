@@ -6,7 +6,6 @@ import type { HomePayload, MovieItem, MovieSection } from '@/lib/tmdb';
 import { HomeExperienceV3 } from '@/components/home-experience-v3';
 import { MovieCard } from '@/components/movie-card';
 import { UserHelpModal } from '@/components/user-help-modal';
-import { DetailWindow } from '@/components/window-system';
 import { canUsePremiumFeature } from '@/lib/premium-access-config';
 import { usePremiumAccessSnapshot } from '@/lib/premium-access-client';
 import { getStoredSession, signOut, type DofreeUser } from '@/lib/supabase-auth-browser';
@@ -323,15 +322,13 @@ function ViewAllClickBridge({ sections, onOpen }: { sections: MovieSection[]; on
   return null;
 }
 
-function FullSectionOverlay({ section, allItems, onClose }: { section: MovieSection; allItems: MovieItem[]; onClose: () => void }) {
-  const [selected, setSelected] = useState<MovieItem | null>(null);
+function FullSectionOverlay({ section, onClose }: { section: MovieSection; onClose: () => void }) {
   const [items, setItems] = useState<MovieItem[]>(() => unique(section.items));
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const loadingGuardRef = useRef(false);
-  const recommendations = selected ? allItems.filter((item) => `${item.mediaType}-${item.id}` !== `${selected.mediaType}-${selected.id}`).slice(0, 24) : allItems.slice(0, 24);
 
   const loadMore = useCallback(async () => {
     if (loadingGuardRef.current || loadingMore || !hasMore) return;
@@ -353,7 +350,6 @@ function FullSectionOverlay({ section, allItems, onClose }: { section: MovieSect
   }, [hasMore, items.length, loadingMore, section.slug]);
 
   useEffect(() => {
-    setSelected(null);
     setItems(unique(section.items));
     setHasMore(true);
     setLoadingMore(false);
@@ -385,13 +381,12 @@ function FullSectionOverlay({ section, allItems, onClose }: { section: MovieSect
           <button type="button" onClick={onClose} className="rounded-full bg-white/[0.1] px-4 py-2 text-xs font-black text-white/80 hover:bg-[#e50914]">ปิด</button>
         </div>
         <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-5 md:grid-cols-6 md:gap-4 lg:grid-cols-7 xl:grid-cols-8">
-          {items.map((item, index) => <MovieCard key={`full-${section.slug}-${item.mediaType}-${item.id}-${index}`} item={item} onSelect={setSelected} grid priority={index < 12} priorityBadge={section.title === 'ทั้งหมด' ? undefined : section.title} />)}
+          {items.map((item, index) => <MovieCard key={`full-${section.slug}-${item.mediaType}-${item.id}-${index}`} item={item} grid priority={index < 12} priorityBadge={section.title === 'ทั้งหมด' ? undefined : section.title} />)}
         </div>
         <div ref={loadMoreRef} className="py-8 text-center">
           {hasMore ? <button type="button" onClick={() => void loadMore()} disabled={loadingMore} className="rounded-full bg-white/[0.09] px-5 py-3 text-xs font-black text-white/60 hover:bg-white/[0.14] hover:text-white">{loadingMore ? 'กำลังโหลดเพิ่ม...' : 'โหลดเพิ่ม'}</button> : <span className="text-xs font-black text-white/35">แสดงครบหมวดแล้ว</span>}
         </div>
       </div>
-      {selected ? <DetailWindow item={selected} recommendations={recommendations} onClose={() => setSelected(null)} onSelect={setSelected} /> : null}
     </div>
   );
 }
@@ -422,7 +417,6 @@ function AuthSuccessToast() {
 
 export function HomeRealtimeWrapper({ home }: { home: HomePayload }) {
   const [openSection, setOpenSection] = useState<MovieSection | null>(null);
-  const allItems = useMemo(() => unique(home.sections.flatMap((section) => section.items)), [home.sections]);
   return (
     <>
       <HomeExperienceV3 home={home} />
@@ -430,7 +424,7 @@ export function HomeRealtimeWrapper({ home }: { home: HomePayload }) {
       <AuthSuccessToast />
       <DesktopRailScrollFix />
       <ViewAllClickBridge sections={home.sections} onOpen={setOpenSection} />
-      {openSection ? <FullSectionOverlay section={openSection} allItems={allItems} onClose={() => setOpenSection(null)} /> : null}
+      {openSection ? <FullSectionOverlay section={openSection} onClose={() => setOpenSection(null)} /> : null}
     </>
   );
 }

@@ -325,7 +325,7 @@ function ModalWatchSection({
   );
 }
 
-export function SearchWindow({ query, setQuery, items, onClose, onSelect }: { query: string; setQuery: (value: string) => void; items: MovieItem[]; onClose: () => void; onSelect: (item: MovieItem) => void }) {
+export function SearchWindow({ query, setQuery, items, onClose, onSelect: _onSelect }: { query: string; setQuery: (value: string) => void; items: MovieItem[]; onClose: () => void; onSelect: (item: MovieItem) => void }) {
   const normalizedQuery = query.trim().toLowerCase();
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [visibleCount, setVisibleCount] = useState(24);
@@ -364,7 +364,7 @@ export function SearchWindow({ query, setQuery, items, onClose, onSelect }: { qu
           <input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหาภาพยนตร์, ซีรีส์, นักแสดง" className="w-full bg-transparent text-sm font-bold text-white outline-none placeholder:text-white/35" />
         </label>
         <div className="mt-4 grid grid-cols-4 gap-2.5 md:grid-cols-6">
-          {visibleItems.map((item) => <MovieCard key={`search-${item.mediaType}-${item.id}`} item={item} grid onSelect={(nextItem) => { onClose(); onSelect(nextItem); }} />)}
+          {visibleItems.map((item) => <MovieCard key={`search-${item.mediaType}-${item.id}`} item={item} grid />)}
         </div>
         {visibleItems.length < filteredItems.length ? <div ref={loadMoreRef} className="py-5 text-center text-[11px] font-black text-white/35">กำลังโหลดเพิ่ม...</div> : null}
       </div>
@@ -372,7 +372,7 @@ export function SearchWindow({ query, setQuery, items, onClose, onSelect }: { qu
   );
 }
 
-export function DetailWindow({ item, recommendations, onClose, onSelect, initialTab = 'recommend' }: { item: MovieItem; recommendations: MovieItem[]; onClose: () => void; onSelect: (item: MovieItem) => void; initialTab?: 'recommend' | 'watch' }) {
+export function DetailWindow({ item, recommendations, onClose, onSelect: _onSelect, initialTab = 'recommend' }: { item: MovieItem; recommendations: MovieItem[]; onClose: () => void; onSelect: (item: MovieItem) => void; initialTab?: 'recommend' | 'watch' }) {
   const [reported, setReported] = useState(false);
   const [activeTab, setActiveTab] = useState<ModalTab>('recommend');
   const [expanded, setExpanded] = useState(false);
@@ -590,11 +590,6 @@ export function DetailWindow({ item, recommendations, onClose, onSelect, initial
                       key={`modal-rec-${movie.mediaType}-${movie.id}-${index}`}
                       item={movie}
                       compact
-                      onSelect={(nextItem) => {
-                        onSelect(nextItem);
-                        setActiveTab('recommend');
-                        setExpanded(false);
-                      }}
                       priorityBadge={index % 2 === 0 ? 'แนะนำ' : undefined}
                     />
                   ))}

@@ -3,15 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { MovieItem } from '@/lib/tmdb';
 import { MovieCard } from '@/components/movie-card';
-import { DetailWindow } from '@/components/window-system';
 
 const AUTO_SPEED = 42;
 const RESUME_DELAY = 2600;
-
-function recommendationsFor(selected: MovieItem | null, fallback: MovieItem[]) {
-  if (!selected) return fallback;
-  return fallback.filter((item) => `${item.mediaType}-${item.id}` !== `${selected.mediaType}-${selected.id}`);
-}
 
 export function DetailRecommendationCarousel({ current, items }: { current: MovieItem; items: MovieItem[] }) {
   const railRef = useRef<HTMLDivElement | null>(null);
@@ -19,10 +13,8 @@ export function DetailRecommendationCarousel({ current, items }: { current: Movi
   const lastFrameRef = useRef<number>(0);
   const interactionPausedUntilRef = useRef(0);
   const [hoverPaused, setHoverPaused] = useState(false);
-  const [selected, setSelected] = useState<MovieItem | null>(null);
   const safeItems = useMemo(() => items.filter((item) => `${item.mediaType}-${item.id}` !== `${current.mediaType}-${current.id}`), [current.id, current.mediaType, items]);
   const carouselItems = useMemo(() => (safeItems.length > 4 ? [...safeItems, ...safeItems] : safeItems), [safeItems]);
-  const modalRecommendations = useMemo(() => recommendationsFor(selected, [current, ...safeItems]), [current, safeItems, selected]);
 
   useEffect(() => {
     const rail = railRef.current;
@@ -80,8 +72,7 @@ export function DetailRecommendationCarousel({ current, items }: { current: Movi
   }
 
   return (
-    <>
-      <div
+    <div
         ref={railRef}
         onMouseEnter={() => setHoverPaused(true)}
         onMouseLeave={() => setHoverPaused(false)}
@@ -93,20 +84,9 @@ export function DetailRecommendationCarousel({ current, items }: { current: Movi
             key={`detail-recommend-${movie.mediaType}-${movie.id}-${index}`}
             item={movie}
             compact
-            onSelect={setSelected}
             priorityBadge={index % 2 === 0 ? 'แนะนำ' : undefined}
           />
         ))}
-      </div>
-
-      {selected ? (
-        <DetailWindow
-          item={selected}
-          recommendations={modalRecommendations}
-          onClose={() => setSelected(null)}
-          onSelect={setSelected}
-        />
-      ) : null}
-    </>
+    </div>
   );
 }

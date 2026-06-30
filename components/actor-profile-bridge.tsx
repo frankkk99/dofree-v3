@@ -1,9 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MovieItem } from '@/lib/tmdb';
 import { MovieCard } from '@/components/movie-card';
-import { DetailWindow } from '@/components/window-system';
 import { canUsePremiumFeature } from '@/lib/premium-access-config';
 import { usePremiumAccessSnapshot } from '@/lib/premium-access-client';
 
@@ -81,19 +80,12 @@ export function ActorProfileBridge() {
   const [payload, setPayload] = useState<ActorPayload>(emptyPayload);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [selectedMovie, setSelectedMovie] = useState<MovieItem | null>(null);
-  const [selectedMovieRecommendations, setSelectedMovieRecommendations] = useState<MovieItem[]>([]);
   const [upsell, setUpsell] = useState('');
   const { config: premiumAccessConfig, userState: premiumUserState } = usePremiumAccessSnapshot();
   const modalContentRef = useRef<HTMLDivElement | null>(null);
 
   const works = payload.works || [];
   const collaborators = payload.collaborators || [];
-  const recommendations = useMemo(() => {
-    const source = selectedMovieRecommendations.length ? selectedMovieRecommendations : works;
-    return source.filter((item) => selectedMovie ? `${item.mediaType}-${item.id}` !== `${selectedMovie.mediaType}-${selectedMovie.id}` : true).slice(0, 24);
-  }, [selectedMovie, selectedMovieRecommendations, works]);
-
   const openActor = useCallback((next: ActorRef, pushHistory = true) => {
     if (!next.id && !next.name.trim()) return;
     if (!canUsePremiumFeature('actorClick', premiumUserState, premiumAccessConfig)) {
@@ -105,8 +97,6 @@ export function ActorProfileBridge() {
     }
     setUpsell('');
     window.dispatchEvent(new CustomEvent(closeContentOverlaysEvent));
-    setSelectedMovie(null);
-    setSelectedMovieRecommendations([]);
     setCurrent((prev) => {
       if (pushHistory && prev) setHistory((stack) => [...stack.slice(-10), prev]);
       return next;
@@ -184,8 +174,6 @@ export function ActorProfileBridge() {
 
   function close() {
     closeActor();
-    setSelectedMovie(null);
-    setSelectedMovieRecommendations([]);
   }
 
   function goBack() {
@@ -193,12 +181,6 @@ export function ActorProfileBridge() {
     if (!previous) return;
     setHistory((stack) => stack.slice(0, -1));
     openActor(previous, false);
-  }
-
-  function openMovieFromActor(movie: MovieItem) {
-    setSelectedMovieRecommendations(works);
-    closeActor();
-    window.requestAnimationFrame(() => setSelectedMovie(movie));
   }
 
   if (!current) {
@@ -209,7 +191,6 @@ export function ActorProfileBridge() {
             {upsell}
           </div>
         ) : null}
-        {selectedMovie ? <DetailWindow item={selectedMovie} recommendations={recommendations} onClose={() => setSelectedMovie(null)} onSelect={setSelectedMovie} /> : null}
       </>
     );
   }
@@ -247,7 +228,7 @@ export function ActorProfileBridge() {
               <span className="text-xs font-black text-white/35">{works.length} เรื่อง</span>
             </div>
             <div className="movie-rail flex max-w-full gap-2.5 overflow-x-auto overflow-y-hidden pb-2 md:gap-4" style={{ WebkitOverflowScrolling: 'touch' }}>
-              {loading ? Array.from({ length: 6 }).map((_, index) => <div key={index} className="h-[176px] w-[116px] shrink-0 animate-pulse rounded-[10px] bg-white/[0.055] md:h-[220px] md:w-[146px]" />) : works.map((movie, index) => <MovieCard key={`actor-work-${movie.mediaType}-${movie.id}-${index}`} item={movie} compact onSelect={openMovieFromActor} priorityBadge={index < 3 ? 'ผลงาน' : undefined} />)}
+              {loading ? Array.from({ length: 6 }).map((_, index) => <div key={index} className="h-[176px] w-[116px] shrink-0 animate-pulse rounded-[10px] bg-white/[0.055] md:h-[220px] md:w-[146px]" />) : works.map((movie, index) => <MovieCard key={`actor-work-${movie.mediaType}-${movie.id}-${index}`} item={movie} compact priorityBadge={index < 3 ? 'ผลงาน' : undefined} />)}
               {!loading && !works.length ? <p className="py-8 text-sm font-bold text-white/42">ยังไม่มีผลงานให้แสดง</p> : null}
             </div>
           </section>

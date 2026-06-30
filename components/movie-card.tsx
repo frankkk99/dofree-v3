@@ -10,6 +10,7 @@ import { canUseNextImage } from '@/lib/image-optimizer';
 type MovieCardProps = {
   item: MovieItem;
   priorityBadge?: string;
+  /** Deprecated: cards now navigate to detail pages directly. */
   onSelect?: (item: MovieItem) => void;
   compact?: boolean;
   grid?: boolean;
@@ -32,7 +33,7 @@ function uniqueImageCandidates(urls: Array<string | undefined | null>) {
   return Array.from(new Set(urls.filter((url): url is string => Boolean(url))));
 }
 
-export function MovieCard({ item, priorityBadge, onSelect, compact = false, grid = false, priority = false }: MovieCardProps) {
+export function MovieCard({ item, priorityBadge, compact = false, grid = false, priority = false }: MovieCardProps) {
   const [imageIndex, setImageIndex] = useState(0);
   const [detailImages, setDetailImages] = useState<string[]>([]);
   const [detailAttempted, setDetailAttempted] = useState(false);
@@ -139,14 +140,6 @@ export function MovieCard({ item, priorityBadge, onSelect, compact = false, grid
       </div>
     </>
   );
-
-  if (onSelect) {
-    return (
-      <button type="button" className={cardClass} onClick={() => onSelect(item)} aria-label={`เปิดรายละเอียด ${item.title}`} style={{ contentVisibility: 'auto', containIntrinsicSize: grid ? '260px 180px' : '300px 196px' }}>
-        {content}
-      </button>
-    );
-  }
 
   return (
     <a className={cardClass} href={href} aria-label={`ดูรายละเอียด ${item.title}`} style={{ contentVisibility: 'auto', containIntrinsicSize: grid ? '260px 180px' : '300px 196px' }}>
