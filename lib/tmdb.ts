@@ -50,6 +50,12 @@ export type DetailPayload = {
   source: 'tmdb' | 'fallback';
 };
 
+export type MediaImagePayload = {
+  posterUrl: string;
+  backdropUrl: string;
+  source: 'tmdb' | 'fallback';
+};
+
 type TmdbItem = {
   id: number;
   title?: string;
@@ -424,6 +430,32 @@ function mergeVideos(...groups: Array<{ results?: TmdbVideo[] } | null | undefin
   }
 
   return videos;
+}
+
+export async function getMediaImagePayload(mediaType: MediaType, id: string | number): Promise<MediaImagePayload> {
+  const numericId = Number(id);
+  if (!numericId) {
+    return {
+      posterUrl: fallbackImages[0],
+      backdropUrl: fallbackImages[1],
+      source: 'fallback',
+    };
+  }
+
+  const detail = await tmdb<TmdbItem>(`/${mediaType}/${numericId}?language=th-TH`);
+  if (!detail?.id) {
+    return {
+      posterUrl: fallbackImages[numericId % fallbackImages.length],
+      backdropUrl: fallbackImages[(numericId + 1) % fallbackImages.length],
+      source: 'fallback',
+    };
+  }
+
+  return {
+    posterUrl: detail.poster_path ? `${posterBase}${detail.poster_path}` : fallbackImages[numericId % fallbackImages.length],
+    backdropUrl: detail.backdrop_path ? `${imageBase}${detail.backdrop_path}` : detail.poster_path ? `${posterBase}${detail.poster_path}` : fallbackImages[(numericId + 1) % fallbackImages.length],
+    source: detail.poster_path || detail.backdrop_path ? 'tmdb' : 'fallback',
+  };
 }
 
 export async function getDetailPayload(mediaType: MediaType, id: string): Promise<DetailPayload> {
