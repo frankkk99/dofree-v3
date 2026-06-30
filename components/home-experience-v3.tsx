@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { HomePayload, MovieItem, MovieSection } from '@/lib/tmdb';
 import { HomeHeroMedia } from '@/components/home-hero-media';
 import { MovieCard } from '@/components/movie-card';
-import { PortalDetailWindow } from '@/components/portal-detail-window';
 
 const RAIL_LOAD_STEP = 9;
 const RAIL_LOAD_THRESHOLD = 360;
@@ -124,7 +123,7 @@ function RailSkeleton() {
   );
 }
 
-function LazyMovieRail({ section, sectionIndex, onSelect }: { section: MovieSection; sectionIndex: number; onSelect: (item: MovieItem) => void }) {
+function LazyMovieRail({ section, sectionIndex }: { section: MovieSection; sectionIndex: number }) {
   const { ref, mounted } = useLazyMount();
   const railRef = useRef<HTMLDivElement | null>(null);
   const loadGuardRef = useRef(false);
@@ -193,7 +192,7 @@ function LazyMovieRail({ section, sectionIndex, onSelect }: { section: MovieSect
       {mounted ? (
         <div ref={railRef} className="movie-rail flex max-w-full gap-2.5 overflow-x-auto overflow-y-hidden scroll-smooth pb-3 sm:gap-3 md:gap-5 md:pb-4" style={{ WebkitOverflowScrolling: 'touch' }}>
           {items.map((item, index) => (
-            <MovieCard key={`${section.slug}-${item.mediaType}-${item.id}-${index}`} item={item} onSelect={onSelect} priority={sectionIndex === 0 && index < 3} priorityBadge={section.slug === 'coming-soon' ? releaseWindowBadge(item) : index % 4 === 0 ? 'ใหม่' : undefined} />
+            <MovieCard key={`${section.slug}-${item.mediaType}-${item.id}-${index}`} item={item} priority={sectionIndex === 0 && index < 3} priorityBadge={section.slug === 'coming-soon' ? releaseWindowBadge(item) : index % 4 === 0 ? 'ใหม่' : undefined} />
           ))}
           {loadingMore ? Array.from({ length: Math.min(RAIL_LOAD_STEP, Math.max(1, RAIL_LOAD_STEP - items.length)) }).map((_, index) => (
             <div key={`loading-${section.slug}-${index}`} className="h-[176px] w-[116px] shrink-0 animate-pulse rounded-[8px] bg-white/[0.045] sm:h-[220px] sm:w-[140px] md:h-[280px] md:w-[180px] xl:h-[300px] xl:w-[196px]" aria-hidden="true" />
@@ -217,27 +216,13 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
     const shuffledCandidates = shuffleMovies(candidates, shuffleSeed + 97, 'homepage-hero');
     return shuffledCandidates.length ? shuffledCandidates.slice(0, HERO_CANDIDATE_LIMIT) : [home.hero];
   }, [home.hero, home.heroItems, randomizedSections, shuffleSeed]);
-  const allItems = useMemo(() => uniqueMovies([...heroItems, ...randomizedSections.flatMap((section) => section.items)]), [heroItems, randomizedSections]);
   const [heroIndex, setHeroIndex] = useState(0);
-  const [selected, setSelected] = useState<MovieItem | null>(null);
-  const [initialDetailTab, setInitialDetailTab] = useState<'recommend' | 'watch'>('recommend');
   const hero = heroItems[heroIndex] || home.hero;
   const heroImage = hero.backdropUrl || hero.posterUrl;
-  const recommendations = selected ? allItems.filter((movie) => `${movie.mediaType}-${movie.id}` !== `${selected.mediaType}-${selected.id}`).slice(0, 24) : allItems.slice(0, 24);
 
   useEffect(() => {
     setHeroIndex(0);
   }, [shuffleSeed]);
-
-  function openMovie(item: MovieItem) {
-    setInitialDetailTab('recommend');
-    setSelected(item);
-  }
-
-  function openHeroWatch(item: MovieItem) {
-    setInitialDetailTab('watch');
-    setSelected(item);
-  }
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#030303] text-white">
@@ -263,7 +248,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
             <h1 className="hero-title max-w-[92vw] text-[42px] font-black leading-[0.88] tracking-[-0.085em] text-white md:whitespace-nowrap md:text-[92px] lg:text-[112px] xl:text-[120px]">{shortTitle(hero)}</h1>
             <h2 className="mt-3 max-w-[92vw] text-[16px] font-black tracking-[-0.04em] text-white md:mt-6 md:text-[28px]">{heroEnglishReleaseLine(hero)}</h2>
             <p className="mt-2 line-clamp-3 max-w-[92vw] text-[12px] leading-5 text-white/56 md:mt-3 md:max-w-[620px] md:text-[18px] md:leading-7">{hero.overview}</p>
-            <div className="mt-5 flex gap-2.5 md:mt-8 md:gap-5"><button type="button" onClick={() => openHeroWatch(hero)} className="inline-flex h-[42px] items-center gap-2 rounded-lg bg-[#e50914] px-5 text-[13px] font-black text-white shadow-glow md:h-[55px] md:px-9 md:text-[16px]">▶ รับชม</button><button type="button" onClick={() => openMovie(hero)} className="inline-flex h-[42px] items-center gap-2 rounded-lg border border-white/10 bg-white/[0.12] px-5 text-[13px] font-black text-white/86 md:h-[55px] md:px-8 md:text-[16px]">ⓘ รายละเอียด</button></div>
+            <div className="mt-5 flex gap-2.5 md:mt-8 md:gap-5"><a href={`/${hero.mediaType}/${hero.id}#watch`} className="inline-flex h-[42px] items-center gap-2 rounded-lg bg-[#e50914] px-5 text-[13px] font-black text-white shadow-glow md:h-[55px] md:px-9 md:text-[16px]">▶ รับชม</a><a href={`/${hero.mediaType}/${hero.id}`} className="inline-flex h-[42px] items-center gap-2 rounded-lg border border-white/10 bg-white/[0.12] px-5 text-[13px] font-black text-white/86 md:h-[55px] md:px-8 md:text-[16px]">ⓘ รายละเอียด</a></div>
           </div>
         </div>
       </section>
@@ -273,13 +258,12 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
           {randomizedSections.map((section, sectionIndex) => (
             <div id={section.slug} key={section.slug} className="relative scroll-mt-[96px]" style={{ contentVisibility: sectionIndex > 1 ? 'auto' : 'visible', containIntrinsicSize: '360px 1000px' }}>
               <div className="mb-3 flex items-center justify-between md:mb-6"><div>{section.eyebrow ? <p className="text-[9px] font-black uppercase tracking-[0.26em] text-[#e50914]/80">{section.eyebrow}</p> : null}<h2 className="text-[20px] font-black tracking-[-0.04em] md:text-[30px]">{section.title}</h2></div><a href={`#${section.slug}`} className="text-[12px] font-black text-white/50 hover:text-white md:text-[16px]">ดูทั้งหมด ›</a></div>
-              <LazyMovieRail section={section} sectionIndex={sectionIndex} onSelect={openMovie} />
+              <LazyMovieRail section={section} sectionIndex={sectionIndex} />
             </div>
           ))}
         </div>
       </section>
 
-      {selected ? <PortalDetailWindow item={selected} recommendations={recommendations} onClose={() => setSelected(null)} onSelect={openMovie} initialTab={initialDetailTab} /> : null}
     </main>
   );
 }
