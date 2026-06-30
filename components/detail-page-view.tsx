@@ -142,7 +142,7 @@ function WatchReadyPanel({
   return (
     <section id="watch-ready" className="overflow-hidden rounded-[24px] border border-[#e50914]/18 bg-[linear-gradient(135deg,rgba(229,9,20,0.16),rgba(255,255,255,0.045))] shadow-[0_26px_95px_rgba(0,0,0,0.58)] backdrop-blur-xl md:rounded-[28px]">
       <div className="relative min-h-[168px] p-5 md:min-h-[190px] md:p-6">
-        {fallbackImage ? <img src={fallbackImage} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover opacity-18 blur-[1px]" /> : null}
+        {fallbackImage ? <img src={fallbackImage} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover opacity-14 blur-[1px]" /> : null}
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,5,5,0.97),rgba(5,5,5,0.8)_56%,rgba(5,5,5,0.62)),radial-gradient(circle_at_82%_20%,rgba(229,9,20,0.26),transparent_24rem)]" />
         <div className="relative z-10 flex min-h-[128px] flex-col justify-between gap-5 md:flex-row md:items-center">
           <div className="min-w-0">
@@ -243,7 +243,7 @@ export function DetailPageView({ detail }: { detail: DetailPayload }) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
 
       <div className="fixed inset-0 -z-10 bg-[#030303]" />
-      {fallbackImage ? <div className="fixed inset-0 -z-10 bg-cover bg-center opacity-26 blur-[2px] scale-105" style={{ backgroundImage: `url(${fallbackImage})` }} /> : null}
+      {fallbackImage ? <div className="fixed inset-0 -z-10 scale-105 bg-cover bg-center opacity-28 blur-[2px]" style={{ backgroundImage: `url(${fallbackImage})` }} /> : null}
       <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_18%_12%,rgba(229,9,20,0.24),transparent_24rem),radial-gradient(circle_at_80%_8%,rgba(255,255,255,0.08),transparent_22rem),linear-gradient(180deg,rgba(0,0,0,0.62),#030303_72%)]" />
 
       <article data-detail-layout={DETAIL_LAYOUT_VERSION} className="mx-auto w-full max-w-[920px] overflow-hidden rounded-[28px] bg-[#050505]/88 shadow-[0_42px_150px_rgba(0,0,0,0.94)] backdrop-blur-2xl md:rounded-[34px]">
