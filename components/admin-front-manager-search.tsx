@@ -104,7 +104,6 @@ export function AdminFrontManagerSearch({
           </select>
         </div>
       </div>
-      <p className="mt-2 text-xs font-bold text-white/50">Debounce 400ms · โหลดครั้งละ 36 เรื่อง · ไม่โหลด episodes จนกว่าจะเปิดการ์ดซีรีส์</p>
     </section>
   );
 }
