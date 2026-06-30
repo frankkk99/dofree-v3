@@ -1,5 +1,12 @@
+import type { Metadata } from 'next';
 import { BackLink } from '@/components/back-link';
 import { HistoryPanel } from '@/components/history-panel';
+import { noindexRobots } from '@/lib/seo';
+
+export const metadata: Metadata = {
+  title: 'ประวัติการรับชม',
+  robots: noindexRobots(false),
+};
 
 export default function HistoryPage() {
   return (

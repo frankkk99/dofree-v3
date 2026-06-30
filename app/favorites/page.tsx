@@ -1,5 +1,12 @@
+import type { Metadata } from 'next';
 import { BackLink } from '@/components/back-link';
 import { FavoritesPanel } from '@/components/favorites-panel';
+import { noindexRobots } from '@/lib/seo';
+
+export const metadata: Metadata = {
+  title: 'รายการโปรด',
+  robots: noindexRobots(false),
+};
 
 export default function FavoritesPage() {
   return (

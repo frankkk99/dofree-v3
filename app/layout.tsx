@@ -3,6 +3,7 @@ import { Inter, Noto_Sans_Thai } from 'next/font/google';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { AnalyticsTracker } from '@/components/analytics-tracker';
 import { BunnyEmbedFix } from '@/components/bunny-embed-fix';
+import { baseOpenGraph, defaultKeywords, englishSiteName, indexRobots, siteDescription, siteName, siteUrl } from '@/lib/seo';
 import './globals.css';
 
 const inter = Inter({
@@ -18,40 +19,29 @@ const notoSansThai = Noto_Sans_Thai({
   display: 'swap',
 });
 
-const siteName = 'ดูดีดี';
-const englishSiteName = 'DodeedeeV3';
-const siteUrl = 'https://www.xn--l3caa5kbu.online';
-const siteDescription = 'ดูดีดี (DodeedeeV3) เว็บค้นหาและจัดหมวดคอนเทนต์ภาพยนตร์และซีรีส์ โทนมืดพรีเมียม พร้อมหน้ารายละเอียด ตัวอย่าง และระบบรับชมสำหรับคอนเทนต์ที่มีสิทธิ์เผยแพร่';
-
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   applicationName: siteName,
   title: {
-    default: `${siteName} | ${englishSiteName} | เว็บดูหนังและซีรีส์ออนไลน์`,
+    default: `${siteName} | แพลตฟอร์มค้นหาหนัง ซีรีส์ และอนิเมะ`,
     template: `%s | ${siteName}`,
   },
   description: siteDescription,
-  keywords: [siteName, englishSiteName, 'ดูดีดีออนไลน์', 'Dodeedee', 'Dodeedee online', 'เว็บดูหนัง', 'ดูหนังออนไลน์', 'ซีรีส์ออนไลน์', 'Movie Website', 'Video Content Platform'],
+  keywords: defaultKeywords,
   alternates: {
     canonical: '/',
   },
   openGraph: {
-    title: `${siteName} | ${englishSiteName} | เว็บดูหนังและซีรีส์ออนไลน์`,
+    ...baseOpenGraph('/'),
+    title: `${siteName} | แพลตฟอร์มค้นหาหนัง ซีรีส์ และอนิเมะ`,
     description: siteDescription,
-    url: siteUrl,
-    siteName,
-    type: 'website',
-    locale: 'th_TH',
   },
   twitter: {
     card: 'summary_large_image',
-    title: `${siteName} | ${englishSiteName} | เว็บดูหนังและซีรีส์ออนไลน์`,
+    title: `${siteName} | ${englishSiteName}`,
     description: siteDescription,
   },
-  robots: {
-    index: true,
-    follow: true,
-  },
+  robots: indexRobots(),
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
