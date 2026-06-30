@@ -39,13 +39,13 @@ export function canonicalAdminRole(role: RoleSource): AdminRoleKey | null {
 }
 
 export function getAdminRoleLabel(role: RoleSource) {
-  if (isOwnerRole(role)) return 'Owner';
-  if (isSupervisorRole(role)) return 'Supervisor';
-  if (isContentCuratorRole(role)) return 'Content Curator';
+  if (isOwnerRole(role)) return 'เจ้าของระบบ';
+  if (isSupervisorRole(role)) return 'ผู้ดูแลภาพรวม';
+  if (isContentCuratorRole(role)) return 'ผู้ดูแลคอนเทนต์';
   const normalized = normalizeRole(role);
-  if (normalized === 'premium' || normalized === 'premium_user') return 'Premiere';
-  if (normalized === 'free_user' || normalized === 'viewer' || normalized === 'user') return 'Member';
-  return 'Guest';
+  if (normalized === 'premium' || normalized === 'premium_user') return 'สมาชิกพรีเมียม';
+  if (normalized === 'free_user' || normalized === 'viewer' || normalized === 'user') return 'สมาชิกทั่วไป';
+  return 'ผู้เยี่ยมชม';
 }
 
 export function canManageAccessControl(userOrProfile: UserOrProfile) {

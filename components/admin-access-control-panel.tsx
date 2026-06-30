@@ -21,7 +21,13 @@ type PermissionsPayload = {
 };
 
 const riskOptions: PermissionRiskLevel[] = ['low', 'medium', 'high', 'critical'];
-const tabs = ['Role Presets', 'Team Members', 'Permission Matrix', 'Approval Requirement'] as const;
+const riskLabels: Record<PermissionRiskLevel, string> = {
+  low: 'ต่ำ',
+  medium: 'กลาง',
+  high: 'สูง',
+  critical: 'วิกฤต',
+};
+const tabs = ['ชุดบทบาท', 'ทีมแอดมิน', 'ตารางสิทธิ์', 'เงื่อนไขอนุมัติ'] as const;
 
 function settingKey(roleKey: string, permissionKey: string) {
   return `${roleKey}:${permissionKey}`;
@@ -41,7 +47,7 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (val
 }
 
 export function AdminAccessControlPanel() {
-  const [activeTab, setActiveTab] = useState<(typeof tabs)[number]>('Role Presets');
+  const [activeTab, setActiveTab] = useState<(typeof tabs)[number]>('ชุดบทบาท');
   const [activeRole, setActiveRole] = useState<AdminRoleKey>('owner');
   const [query, setQuery] = useState('');
   const [moduleFilter, setModuleFilter] = useState('');
@@ -66,8 +72,8 @@ export function AdminAccessControlPanel() {
       ]);
       const permissionsPayload = (await permissionsResponse.json()) as PermissionsPayload;
       const teamPayload = (await teamResponse.json()) as { ok?: boolean; team?: TeamMember[]; error?: string };
-      if (!permissionsResponse.ok || !permissionsPayload.ok) throw new Error(permissionsPayload.error || 'Cannot load permissions');
-      if (!teamResponse.ok || !teamPayload.ok) throw new Error(teamPayload.error || 'Cannot load team');
+      if (!permissionsResponse.ok || !permissionsPayload.ok) throw new Error(permissionsPayload.error || 'โหลดข้อมูลสิทธิ์ไม่สำเร็จ');
+      if (!teamResponse.ok || !teamPayload.ok) throw new Error(teamPayload.error || 'โหลดข้อมูลทีมแอดมินไม่สำเร็จ');
 
       const nextPermissions = permissionsPayload.permissions || [];
       const nextSettings = new Map((permissionsPayload.rolePermissions || []).map((item) => [settingKey(item.roleKey, item.permissionKey), item]));
@@ -75,7 +81,7 @@ export function AdminAccessControlPanel() {
       setSettings(Object.fromEntries(nextSettings));
       setTeam(teamPayload.team || []);
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : 'Cannot load access control');
+      setError(nextError instanceof Error ? nextError.message : 'โหลดข้อมูลจัดการสิทธิ์ไม่สำเร็จ');
     } finally {
       setLoading(false);
     }
@@ -116,10 +122,10 @@ export function AdminAccessControlPanel() {
         body: JSON.stringify({ ...next, riskLevel: patch.riskLevel || permission.riskLevel }),
       });
       const payload = (await response.json()) as { ok?: boolean; error?: string };
-      if (!response.ok || !payload.ok) throw new Error(payload.error || 'Cannot save permission');
-      setNotice('Saved changes');
+      if (!response.ok || !payload.ok) throw new Error(payload.error || 'บันทึกสิทธิ์ไม่สำเร็จ');
+      setNotice('บันทึกการเปลี่ยนแปลงแล้ว');
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : 'Cannot save permission');
+      setError(nextError instanceof Error ? nextError.message : 'บันทึกสิทธิ์ไม่สำเร็จ');
     } finally {
       setSavingKey('');
     }
@@ -136,7 +142,7 @@ export function AdminAccessControlPanel() {
       const setting = defaultRolePermission(activeRole, permission);
       await saveSetting(permission, setting);
     }
-    setNotice('Role preset reset');
+    setNotice('รีเซ็ตชุดบทบาทแล้ว');
   }
 
   async function saveActiveRoleSettings() {
@@ -152,11 +158,11 @@ export function AdminAccessControlPanel() {
           body: JSON.stringify({ ...setting, riskLevel: permission.riskLevel }),
         });
         const payload = (await response.json()) as { ok?: boolean; error?: string };
-        if (!response.ok || !payload.ok) throw new Error(payload.error || 'Cannot save permission');
+        if (!response.ok || !payload.ok) throw new Error(payload.error || 'บันทึกสิทธิ์ไม่สำเร็จ');
       }
-      setNotice('Saved changes');
+      setNotice('บันทึกการเปลี่ยนแปลงแล้ว');
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : 'Cannot save role permissions');
+      setError(nextError instanceof Error ? nextError.message : 'บันทึกสิทธิ์ของบทบาทไม่สำเร็จ');
     } finally {
       setSavingKey('');
     }
@@ -169,13 +175,13 @@ export function AdminAccessControlPanel() {
       <section className="admin-floating-glass rounded-[28px] border border-white/10 p-4 md:p-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]">Owner only</p>
-            <h1 className="mt-2 text-3xl font-black tracking-[-0.05em] md:text-5xl">Access Control</h1>
-            <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-white/62">จัดการ Role, Permission และสิทธิ์การใช้งานระบบหลังบ้าน</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]">เฉพาะเจ้าของระบบ</p>
+            <h1 className="mt-2 text-3xl font-black tracking-[-0.05em] md:text-5xl">จัดการสิทธิ์หลังบ้าน</h1>
+            <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-white/62">กำหนดบทบาท สิทธิ์การใช้งาน ระดับความเสี่ยง และเงื่อนไขการอนุมัติสำหรับทีมแอดมิน</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={resetRolePreset} disabled={loading || Boolean(savingKey)} className="rounded-2xl bg-white/[0.08] px-4 py-3 text-xs font-black text-white/70 hover:bg-white/[0.14] disabled:opacity-45">Reset role preset</button>
-            <button type="button" onClick={() => void saveActiveRoleSettings()} disabled={loading || Boolean(savingKey)} className="rounded-2xl bg-[#e50914] px-4 py-3 text-xs font-black text-white shadow-glow disabled:opacity-45">Save Changes</button>
+            <button type="button" onClick={resetRolePreset} disabled={loading || Boolean(savingKey)} className="rounded-2xl bg-white/[0.08] px-4 py-3 text-xs font-black text-white/70 hover:bg-white/[0.14] disabled:opacity-45">รีเซ็ตบทบาทนี้</button>
+            <button type="button" onClick={() => void saveActiveRoleSettings()} disabled={loading || Boolean(savingKey)} className="rounded-2xl bg-[#e50914] px-4 py-3 text-xs font-black text-white shadow-glow disabled:opacity-45">บันทึกทั้งหมด</button>
           </div>
         </div>
 
@@ -191,7 +197,7 @@ export function AdminAccessControlPanel() {
 
       <section className="mt-4 grid gap-4 lg:grid-cols-[320px_1fr]">
         <aside className="admin-floating-glass rounded-[26px] border border-white/10 p-4">
-          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/36">Role Presets</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/36">ชุดบทบาท</p>
           <div className="mt-3 grid gap-2">
             {adminRolePresets.map((role) => (
               <button key={role.key} type="button" onClick={() => setActiveRole(role.key)} className={`rounded-2xl p-3 text-left transition ${activeRole === role.key ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.06] text-white/72 hover:bg-white/[0.1]'}`}>
@@ -208,9 +214,9 @@ export function AdminAccessControlPanel() {
         </aside>
 
         <main className="admin-floating-glass min-w-0 rounded-[26px] border border-white/10 p-4">
-          {activeTab === 'Team Members' ? (
+          {activeTab === 'ทีมแอดมิน' ? (
             <div>
-              <h2 className="text-xl font-black">Team Members</h2>
+              <h2 className="text-xl font-black">ทีมแอดมิน</h2>
               <div className="mt-3 grid gap-2 md:grid-cols-2">
                 {team.map((member) => (
                   <div key={member.id} className="rounded-2xl bg-white/[0.055] p-3">
@@ -218,26 +224,27 @@ export function AdminAccessControlPanel() {
                     <p className="mt-1 text-xs font-semibold text-white/46">{getAdminRoleLabel(member.role)} · {member.role || 'guest'}</p>
                   </div>
                 ))}
+                {!team.length && !loading ? <p className="rounded-2xl bg-white/[0.055] p-4 text-sm font-bold text-white/50">ยังไม่มีข้อมูลทีมแอดมิน</p> : null}
               </div>
             </div>
           ) : (
             <div>
               <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
-                <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหา permission" className="min-h-11 flex-1 rounded-2xl border border-white/10 bg-black/28 px-4 text-sm font-bold text-white outline-none placeholder:text-white/34" />
+                <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหาสิทธิ์หรือคำสั่ง" className="min-h-11 flex-1 rounded-2xl border border-white/10 bg-black/28 px-4 text-sm font-bold text-white outline-none placeholder:text-white/34" />
                 <select value={moduleFilter} onChange={(event) => setModuleFilter(event.target.value)} className="min-h-11 rounded-2xl border border-white/10 bg-black px-3 text-xs font-black text-white">
-                  <option value="">All modules</option>
+                  <option value="">ทุกหมวด</option>
                   {adminPermissionModules.map((module) => <option key={module.key} value={module.key}>{module.label}</option>)}
                 </select>
                 <select value={riskFilter} onChange={(event) => setRiskFilter(event.target.value)} className="min-h-11 rounded-2xl border border-white/10 bg-black px-3 text-xs font-black text-white">
-                  <option value="">All risk</option>
-                  {riskOptions.map((risk) => <option key={risk} value={risk}>{risk}</option>)}
+                  <option value="">ทุกระดับความเสี่ยง</option>
+                  {riskOptions.map((risk) => <option key={risk} value={risk}>{riskLabels[risk]}</option>)}
                 </select>
-                <Toggle checked={onlyAllowed} onChange={setOnlyAllowed} label="Allowed" />
-                <Toggle checked={onlyApproval} onChange={setOnlyApproval} label="Approval" />
+                <Toggle checked={onlyAllowed} onChange={setOnlyAllowed} label="อนุญาต" />
+                <Toggle checked={onlyApproval} onChange={setOnlyApproval} label="ต้องอนุมัติ" />
               </div>
 
               <div className="mt-4 grid gap-2">
-                {loading ? <p className="rounded-2xl bg-white/[0.055] p-4 text-sm font-bold text-white/50">Loading access control...</p> : null}
+                {loading ? <p className="rounded-2xl bg-white/[0.055] p-4 text-sm font-bold text-white/50">กำลังโหลดข้อมูลสิทธิ์...</p> : null}
                 {!loading && visiblePermissions.map((permission) => {
                   const current = settings[settingKey(activeRole, permission.key)] || defaultRolePermission(activeRole, permission);
                   const key = settingKey(activeRole, permission.key);
@@ -250,18 +257,19 @@ export function AdminAccessControlPanel() {
                           <p className="mt-1 text-xs font-semibold leading-5 text-white/48">{permission.description}</p>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          <Toggle checked={current.allowed} onChange={(allowed) => void saveSetting(permission, { allowed })} label="Allowed" />
-                          <Toggle checked={current.requiresApproval} onChange={(requiresApproval) => void saveSetting(permission, { requiresApproval })} label="Approval" />
-                          <Toggle checked={current.canBulk} onChange={(canBulk) => void saveSetting(permission, { canBulk })} label="Can Bulk" />
+                          <Toggle checked={current.allowed} onChange={(allowed) => void saveSetting(permission, { allowed })} label="อนุญาต" />
+                          <Toggle checked={current.requiresApproval} onChange={(requiresApproval) => void saveSetting(permission, { requiresApproval })} label="ต้องอนุมัติ" />
+                          <Toggle checked={current.canBulk} onChange={(canBulk) => void saveSetting(permission, { canBulk })} label="ทำเป็นชุด" />
                           <select value={permission.riskLevel} onChange={(event) => void saveSetting(permission, { riskLevel: event.target.value as PermissionRiskLevel })} className="h-8 rounded-full border border-white/10 bg-black px-3 text-[10px] font-black text-white">
-                            {riskOptions.map((risk) => <option key={risk} value={risk}>{risk}</option>)}
+                            {riskOptions.map((risk) => <option key={risk} value={risk}>{riskLabels[risk]}</option>)}
                           </select>
                         </div>
                       </div>
-                      {savingKey === key ? <p className="mt-2 text-[11px] font-bold text-white/38">Saving...</p> : null}
+                      {savingKey === key ? <p className="mt-2 text-[11px] font-bold text-white/38">กำลังบันทึก...</p> : null}
                     </article>
                   );
                 })}
+                {!loading && !visiblePermissions.length ? <p className="rounded-2xl bg-white/[0.055] p-4 text-sm font-bold text-white/50">ไม่พบสิทธิ์ที่ตรงกับตัวกรอง</p> : null}
               </div>
             </div>
           )}
