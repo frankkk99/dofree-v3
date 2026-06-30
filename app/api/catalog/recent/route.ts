@@ -45,7 +45,7 @@ function key(mediaType: MediaType, id: number) {
 }
 
 function publicWatchUrl(mediaType: MediaType, id: number) {
-  return `/watch/${mediaType}/${id}`;
+  return `/${mediaType}/${id}#watch`;
 }
 
 function rowIds(rows: Pick<CatalogRow, 'tmdb_id'>[]) {

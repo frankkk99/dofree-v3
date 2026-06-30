@@ -102,7 +102,7 @@ function rowToMovie(row: CatalogRow, links: Map<string, WatchLinkRecord>): Movie
     language: row.language || undefined,
     status: watchUrl ? 'published' : rating >= 8 ? 'review' : 'draft',
     isWatchReady: Boolean(watchUrl),
-    watchUrl: watchUrl ? `/watch/${row.media_type}/${row.tmdb_id}` : undefined,
+    watchUrl: watchUrl ? `/${row.media_type}/${row.tmdb_id}#watch` : undefined,
     trailerUrl,
     label: watchUrl ? 'พร้อมดู' : rating >= 8 ? '8+' : '6.5+',
   };

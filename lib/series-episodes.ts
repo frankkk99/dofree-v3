@@ -61,12 +61,8 @@ function activeEpisodeFilter(tmdbIds: number[]) {
 }
 
 export function episodeWatchHref(mediaType: MediaType, tmdbId: number, episode?: Pick<SeriesEpisode, 'season_number' | 'episode_number'>) {
-  if (mediaType !== 'tv' || !episode) return `/watch/${mediaType}/${tmdbId}`;
-  const params = new URLSearchParams({
-    season: String(episode.season_number),
-    episode: String(episode.episode_number),
-  });
-  return `/watch/tv/${tmdbId}?${params.toString()}`;
+  if (mediaType !== 'tv' || !episode) return `/${mediaType}/${tmdbId}#watch`;
+  return `/tv/${tmdbId}#watch`;
 }
 
 export function groupSeriesEpisodes(episodes: SeriesEpisode[]): SeriesSeason[] {

@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { MovieItem } from '@/lib/tmdb';
-import { DetailWindow } from '@/components/window-system';
 import { getStoredSession } from '@/lib/supabase-auth-browser';
 
 type WatchHistoryRecord = {
@@ -17,6 +16,11 @@ type WatchHistoryRecord = {
 };
 
 const fallbackImage = 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=1400&q=80';
+
+function detailHref(item: WatchHistoryRecord, section = '') {
+  const mediaType = item.media_type === 'tv' ? 'tv' : 'movie';
+  return `/${mediaType}/${item.media_id}${section}`;
+}
 
 function toMovieItem(item: WatchHistoryRecord): MovieItem {
   const poster = item.poster || fallbackImage;
@@ -57,10 +61,8 @@ export function HistoryPanel() {
   const [items, setItems] = useState<WatchHistoryRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
-  const [selected, setSelected] = useState<MovieItem | null>(null);
   const session = getStoredSession();
   const token = session?.access_token;
-  const movieItems = useMemo(() => items.map(toMovieItem), [items]);
 
   async function loadHistory() {
     setLoading(true);
@@ -137,26 +139,25 @@ export function HistoryPanel() {
       ) : items.length ? (
         <div className="grid gap-3">
           {items.map((item) => {
-            const movieItem = toMovieItem(item);
             return (
               <article key={item.id} className="grid grid-cols-[72px_1fr] gap-3 rounded-[24px] border border-white/8 bg-white/[0.045] p-3 shadow-[0_18px_70px_rgba(0,0,0,0.42)] md:grid-cols-[96px_1fr]">
-                <button type="button" onClick={() => setSelected(movieItem)} className="aspect-[2/3] overflow-hidden rounded-2xl bg-black/50 text-left">
+                <a href={detailHref(item, '#watch')} className="aspect-[2/3] overflow-hidden rounded-2xl bg-black/50 text-left">
                   {item.poster ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={item.poster} alt={item.title} className="h-full w-full object-cover transition duration-500 hover:scale-105" />
                   ) : (
                     <div className="grid h-full place-items-center text-[10px] font-black text-white/28">NO POSTER</div>
                   )}
-                </button>
+                </a>
                 <div className="min-w-0 py-1">
-                  <button type="button" onClick={() => setSelected(movieItem)} className="block text-left">
+                  <a href={detailHref(item)} className="block text-left">
                     <p className="line-clamp-2 text-lg font-black leading-6 tracking-[-0.04em] md:text-2xl md:leading-7">{item.title}</p>
                     <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white/36">{item.media_type} • {item.media_id}</p>
-                  </button>
+                  </a>
                   <p className="mt-3 text-xs font-bold text-white/48">{progressText(item)}</p>
                   <p className="mt-1 text-[11px] font-semibold text-white/32">ล่าสุด {formatDate(item.watched_at)}</p>
                   <div className="mt-4 flex flex-wrap gap-3">
-                    <button type="button" onClick={() => setSelected(movieItem)} className="text-xs font-black text-[#e50914] hover:text-red-300">ดูต่อ</button>
+                    <a href={detailHref(item, '#watch')} className="text-xs font-black text-[#e50914] hover:text-red-300">ดูต่อ</a>
                     <button type="button" onClick={() => removeItem(item)} className="text-xs font-black text-white/42 hover:text-white">ลบประวัติ</button>
                   </div>
                 </div>
@@ -171,9 +172,6 @@ export function HistoryPanel() {
         </div>
       )}
 
-      {selected ? (
-        <DetailWindow item={selected} recommendations={movieItems.filter((item) => `${item.mediaType}-${item.id}` !== `${selected.mediaType}-${selected.id}`)} onClose={() => setSelected(null)} onSelect={setSelected} />
-      ) : null}
     </div>
   );
 }

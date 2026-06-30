@@ -218,7 +218,7 @@ function watchLinkKey(mediaType: MediaType, id: number) {
 }
 
 function publicWatchUrl(item: Pick<MovieItem, 'mediaType' | 'id'>) {
-  return `/watch/${item.mediaType}/${item.id}`;
+  return `/${item.mediaType}/${item.id}#watch`;
 }
 
 function normalizeDrivePreviewUrl(value?: string | null) {

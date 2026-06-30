@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { MovieItem } from '@/lib/tmdb';
-import { DetailWindow } from '@/components/window-system';
 import { getStoredSession } from '@/lib/supabase-auth-browser';
 
 type FavoriteRecord = {
@@ -16,6 +15,10 @@ type FavoriteRecord = {
 };
 
 const fallbackImage = 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1400&q=80';
+
+function detailHref(item: FavoriteRecord) {
+  return `/${item.media_type === 'tv' ? 'tv' : 'movie'}/${item.media_id}`;
+}
 
 function toMovieItem(item: FavoriteRecord): MovieItem {
   const poster = item.poster || item.backdrop || fallbackImage;
@@ -42,10 +45,8 @@ export function FavoritesPanel() {
   const [items, setItems] = useState<FavoriteRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
-  const [selected, setSelected] = useState<MovieItem | null>(null);
   const session = getStoredSession();
   const token = session?.access_token;
-  const movieItems = useMemo(() => items.map(toMovieItem), [items]);
 
   async function loadFavorites() {
     setLoading(true);
@@ -122,10 +123,9 @@ export function FavoritesPanel() {
       ) : items.length ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {items.map((item) => {
-            const movieItem = toMovieItem(item);
             return (
               <article key={item.id} className="group overflow-hidden rounded-[24px] border border-white/8 bg-white/[0.045] shadow-[0_18px_70px_rgba(0,0,0,0.42)]">
-                <button type="button" onClick={() => setSelected(movieItem)} className="block w-full text-left">
+                <a href={detailHref(item)} className="block w-full text-left">
                   <div className="aspect-[2/3] bg-black/50">
                     {item.poster ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -138,7 +138,7 @@ export function FavoritesPanel() {
                     <p className="line-clamp-2 min-h-[38px] text-sm font-black leading-5 tracking-[-0.025em]">{item.title}</p>
                     <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white/36">{item.media_type} • {item.media_id}</p>
                   </div>
-                </button>
+                </a>
                 <div className="p-3 pt-0">
                   <button type="button" onClick={() => removeFavorite(item)} className="mt-3 text-xs font-black text-[#e50914] hover:text-red-300">
                     ลบออก
@@ -155,9 +155,6 @@ export function FavoritesPanel() {
         </div>
       )}
 
-      {selected ? (
-        <DetailWindow item={selected} recommendations={movieItems.filter((item) => `${item.mediaType}-${item.id}` !== `${selected.mediaType}-${selected.id}`)} onClose={() => setSelected(null)} onSelect={setSelected} />
-      ) : null}
     </div>
   );
 }
