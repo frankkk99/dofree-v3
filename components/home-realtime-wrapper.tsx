@@ -7,7 +7,8 @@ import { HomeExperienceV3 } from '@/components/home-experience-v3';
 import { UserHelpModal } from '@/components/user-help-modal';
 import { canUsePremiumFeature } from '@/lib/premium-access-config';
 import { usePremiumAccessSnapshot } from '@/lib/premium-access-client';
-import { getStoredSession, signOut, type DofreeUser } from '@/lib/supabase-auth-browser';
+import { getStoredSession, ensureProfile, signOut, type DofreeSession, type DofreeUser } from '@/lib/supabase-auth-browser';
+import { getAdminRoleLabel, isAdminRole, roleFromUserOrProfile } from '@/lib/admin-access-control';
 
 function railFromTarget(target: EventTarget | null) {
   if (!(target instanceof Element)) return null;
@@ -86,10 +87,6 @@ function DesktopRailScrollFix() {
   return null;
 }
 
-function roleIsAdmin(role?: string | null) {
-  return role === 'admin' || role === 'super_admin';
-}
-
 function HeaderAccountMenuPortal() {
   const [host, setHost] = useState<HTMLElement | null>(null);
   const [bodyHost, setBodyHost] = useState<HTMLElement | null>(null);
@@ -97,12 +94,15 @@ function HeaderAccountMenuPortal() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [user, setUser] = useState<DofreeUser | null>(null);
   const [role, setRole] = useState<string>('');
+  const [authRefreshing, setAuthRefreshing] = useState(false);
   const { config: premiumAccessConfig, userState: premiumUserState } = usePremiumAccessSnapshot();
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const hydratedTokenRef = useRef('');
   const isSignedIn = Boolean(user?.id || user?.email || user?.phone);
-  const isAdmin = isSignedIn && roleIsAdmin(role);
+  const isAdmin = isSignedIn && (isAdminRole(role) || premiumUserState.isAdmin);
   const userLabel = user?.email || user?.phone || (user?.id ? `User ${user.id.slice(0, 8)}` : 'Guest');
-  const accessUserState = { ...premiumUserState, isSignedIn, isAdmin: isAdmin || premiumUserState.isAdmin };
+  const roleLabel = role ? getAdminRoleLabel(role) : '';
+  const accessUserState = { ...premiumUserState, isSignedIn, isAdmin };
   const favoritesAllowed = canUsePremiumFeature('favorites', accessUserState, premiumAccessConfig);
   const historyAllowed = canUsePremiumFeature('history', accessUserState, premiumAccessConfig);
   const memberLinks = [
@@ -131,11 +131,27 @@ function HeaderAccountMenuPortal() {
 
   useEffect(() => {
     setBodyHost(document.body);
+    let cancelled = false;
+
+    function applySession(session: DofreeSession | null) {
+      if (cancelled) return;
+      setUser(session?.user || null);
+      setRole(session ? roleFromUserOrProfile(session) : '');
+    }
 
     function syncAuth() {
       const session = getStoredSession();
-      setUser(session?.user || null);
-      setRole(session?.profile?.role || session?.user?.role || '');
+      applySession(session);
+      if (!session?.access_token || hydratedTokenRef.current === session.access_token) return;
+
+      hydratedTokenRef.current = session.access_token;
+      setAuthRefreshing(true);
+      ensureProfile(session)
+        .then((freshSession) => applySession(freshSession))
+        .catch(() => applySession(getStoredSession()))
+        .finally(() => {
+          if (!cancelled) setAuthRefreshing(false);
+        });
     }
 
     function findHost() {
@@ -148,14 +164,19 @@ function HeaderAccountMenuPortal() {
 
     syncAuth();
     const timer = window.setInterval(findHost, 1000);
+    const authTimer = window.setInterval(syncAuth, 4500);
     findHost();
     window.addEventListener('storage', syncAuth);
     window.addEventListener('dofree-auth-change', syncAuth);
+    window.addEventListener('focus', syncAuth);
 
     return () => {
+      cancelled = true;
       window.clearInterval(timer);
+      window.clearInterval(authTimer);
       window.removeEventListener('storage', syncAuth);
       window.removeEventListener('dofree-auth-change', syncAuth);
+      window.removeEventListener('focus', syncAuth);
     };
   }, []);
 
@@ -184,6 +205,7 @@ function HeaderAccountMenuPortal() {
 
   async function handleLogout() {
     await signOut();
+    hydratedTokenRef.current = '';
     setUser(null);
     setRole('');
     setOpen(false);
@@ -223,6 +245,7 @@ function HeaderAccountMenuPortal() {
           <div className="mt-4 rounded-[28px] bg-[#1d0307]/64 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_22px_70px_rgba(229,9,20,0.08)]">
             <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#e50914]">Signed in</p>
             <p className="mt-3 break-all text-base font-black text-white/90">{userLabel}</p>
+            {roleLabel || authRefreshing ? <p className="mt-1 text-xs font-bold text-white/42">{roleLabel || 'กำลังตรวจสอบสิทธิ์บัญชี...'}</p> : null}
             <button type="button" onClick={handleLogout} className="mt-4 h-12 w-full rounded-[22px] bg-white/[0.09] text-sm font-black text-white/76 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:bg-white/[0.14] hover:text-white">ออกจากระบบ</button>
           </div>
         ) : null}
@@ -230,9 +253,14 @@ function HeaderAccountMenuPortal() {
         {isSignedIn ? <div className="mt-4 grid gap-2.5">
           {isAdmin ? (
             <a href="/admin" className="rounded-[24px] bg-[#e50914] px-4 py-4 text-left shadow-[0_18px_60px_rgba(229,9,20,0.32)] transition hover:scale-[1.01]">
-              <span className="block text-base font-black text-white">Admin Dashboard</span>
-              <span className="mt-1 block text-xs font-semibold text-white/72">จัดการข้อมูลและระบบหลังบ้าน</span>
+              <span className="block text-base font-black text-white">เข้าสู่หลังบ้านแอดมิน</span>
+              <span className="mt-1 block text-xs font-semibold text-white/72">Admin Dashboard · จัดการข้อมูลและระบบหลังบ้าน</span>
             </a>
+          ) : authRefreshing ? (
+            <div className="rounded-[24px] bg-white/[0.045] px-4 py-4 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+              <span className="block text-base font-black text-white/72">กำลังตรวจสอบสิทธิ์แอดมิน</span>
+              <span className="mt-1 block text-xs font-semibold text-white/40">รอสักครู่ ถ้าบัญชีนี้เป็นแอดมิน ปุ่มหลังบ้านจะแสดงอัตโนมัติ</span>
+            </div>
           ) : null}
           {memberLinks.map(({ href, title, desc, locked, badge }) => (
             <a key={href} href={href} className="rounded-[24px] bg-white/[0.065] px-4 py-4 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] transition hover:bg-white/[0.105]">
