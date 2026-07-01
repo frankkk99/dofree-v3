@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { HomePayload, MovieItem, MovieSection } from '@/lib/tmdb';
+import { AdSlot } from '@/components/ad-slot';
 import { HomeHeroMedia } from '@/components/home-hero-media';
 import { MovieCard } from '@/components/movie-card';
 
@@ -196,6 +197,12 @@ function LazyMovieRail({ section, sectionIndex }: { section: MovieSection; secti
           {items.map((item, index) => (
             <MovieCard key={`${section.slug}-${item.mediaType}-${item.id}-${index}`} item={item} priority={sectionIndex === 0 && index < 3} priorityBadge={section.slug === 'coming-soon' ? releaseWindowBadge(item) : index % 4 === 0 ? 'ใหม่' : undefined} />
           ))}
+          {sectionIndex === 0 ? (
+            <>
+              <AdSlot code="AD-PC-H02" variant="native" className="w-[180px] shrink-0 xl:w-[196px]" />
+              <AdSlot code="AD-MB-H03" variant="native" className="w-[116px] shrink-0 sm:w-[140px]" />
+            </>
+          ) : null}
           {loadingMore ? Array.from({ length: Math.min(RAIL_LOAD_STEP, Math.max(1, RAIL_LOAD_STEP - items.length)) }).map((_, index) => (
             <div key={`loading-${section.slug}-${index}`} className="h-[176px] w-[116px] shrink-0 animate-pulse rounded-[8px] bg-white/[0.045] sm:h-[220px] sm:w-[140px] md:h-[280px] md:w-[180px] xl:h-[300px] xl:w-[196px]" aria-hidden="true" />
           )) : null}
@@ -259,11 +266,22 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
         </div>
       </section>
 
+      <div className="mx-auto max-w-[1920px] bg-black px-4 pt-5 md:px-7">
+        <AdSlot code="AD-PC-H01" className="mx-auto max-w-5xl" />
+        <AdSlot code="AD-MB-H01" className="mx-auto max-w-sm" />
+      </div>
+
       <section id="sections" className="mx-auto max-w-[1920px] scroll-mt-[120px] bg-black px-4 py-7 md:px-7 md:py-10">
         <div className="space-y-8 md:space-y-12">
           {randomizedSections.map((section, sectionIndex) => (
             <div id={section.slug} key={section.slug} className="relative scroll-mt-[96px]" style={{ contentVisibility: sectionIndex > 1 ? 'auto' : 'visible', containIntrinsicSize: '360px 1000px' }}>
               <div className="mb-3 flex items-center justify-between md:mb-6"><div>{section.eyebrow ? <p className="text-[9px] font-black uppercase tracking-[0.26em] text-[#e50914]/80">{section.eyebrow}</p> : null}<h2 className="text-[20px] font-black tracking-[-0.04em] md:text-[30px]">{section.title}</h2></div><a href={`#${section.slug}`} className="text-[12px] font-black text-white/50 hover:text-white md:text-[16px]">ดูทั้งหมด ›</a></div>
+              {sectionIndex === 2 ? (
+                <div className="mb-6">
+                  <AdSlot code="AD-PC-H04" className="mx-auto max-w-5xl" />
+                  <AdSlot code="AD-MB-H04" className="mx-auto max-w-sm" />
+                </div>
+              ) : null}
               <LazyMovieRail section={section} sectionIndex={sectionIndex} />
             </div>
           ))}

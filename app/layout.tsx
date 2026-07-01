@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter, Noto_Sans_Thai } from 'next/font/google';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import { MobileStickyAd } from '@/components/ad-slot';
 import { AnalyticsTracker } from '@/components/analytics-tracker';
 import { BunnyEmbedFix } from '@/components/bunny-embed-fix';
 import { baseOpenGraph, defaultKeywords, englishSiteName, indexRobots, siteDescription, siteName, siteUrl } from '@/lib/seo';
@@ -49,6 +50,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="th-TH" className={`${inter.variable} ${notoSansThai.variable}`}>
       <body>
         {children}
+        <MobileStickyAd />
         <AnalyticsTracker />
         <BunnyEmbedFix />
         <SpeedInsights />

@@ -7,6 +7,7 @@ import { AdminCatalogBrowser } from '@/components/admin-catalog-browser';
 import { AdminControlCenter } from '@/components/admin-control-center';
 import { AdminDashboard } from '@/components/admin-dashboard';
 import { AdminFloatingTopbar, type AdminModuleId } from '@/components/admin-floating-topbar';
+import { AdminAdsPanel } from '@/components/admin-ads-panel';
 import { AdminNotificationManager } from '@/components/admin-notification-manager';
 import { AdminPremiumAccessPanel } from '@/components/admin-premium-access-panel';
 
@@ -27,6 +28,10 @@ const moduleCopy: Record<AdminModuleId, { title: string; description: string }> 
     title: 'Notifications',
     description: 'Create, schedule, pin, preview, and disable bell notifications.',
   },
+  ads: {
+    title: 'Ads Placements',
+    description: 'เปิด/ปิด placeholder โฆษณา ใส่ artwork และจัดการตำแหน่งขายแบบรายจุด',
+  },
   premium: {
     title: 'Premium Controls',
     description: 'Control free premium access flags without changing real payment logic.',
@@ -37,7 +42,7 @@ const moduleCopy: Record<AdminModuleId, { title: string; description: string }> 
   },
 };
 
-const validModules = new Set<AdminModuleId>(['dashboard', 'content', 'homepage', 'notifications', 'premium', 'audit']);
+const validModules = new Set<AdminModuleId>(['dashboard', 'content', 'homepage', 'notifications', 'ads', 'premium', 'audit']);
 
 function normalizeModule(value: string | null): AdminModuleId {
   return validModules.has(value as AdminModuleId) ? (value as AdminModuleId) : 'dashboard';
@@ -85,6 +90,7 @@ export function AdminWorkspace() {
       ) : null}
       {activeModule === 'homepage' ? <AdminControlCenter /> : null}
       {activeModule === 'notifications' ? <AdminNotificationManager /> : null}
+      {activeModule === 'ads' ? <AdminAdsPanel /> : null}
       {activeModule === 'premium' ? <AdminPremiumAccessPanel /> : null}
       {activeModule === 'audit' ? (
         <section id="admin-audit-log">
