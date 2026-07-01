@@ -38,7 +38,7 @@ type SearchPageClientProps = {
   initialFilters?: Partial<FilterState>;
 };
 
-const SEARCH_LIMIT = 24;
+const SEARCH_LIMIT = 8;
 const defaultFilters: FilterState = {
   category: '',
   type: '',
@@ -153,6 +153,7 @@ export function SearchPageClient({ initialQuery = '', initialFilters }: SearchPa
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState('');
   const requestIdRef = useRef(0);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const categoryOptions = useMemo(() => [{ value: '', label: 'ทุกหมวด' }, ...categories.map((category) => ({ value: category.slug, label: category.title }))], [categories]);
   const activeTitle = useMemo(() => categories.find((category) => category.slug === filters.category)?.title || '', [filters.category, categories]);
@@ -224,8 +225,7 @@ export function SearchPageClient({ initialQuery = '', initialFilters }: SearchPa
   }, []);
 
   useEffect(() => {
-    const hasInitialFilter = Boolean(initialQuery.trim()) || Object.entries(normalizeInitialFilters(initialFilters)).some(([key, value]) => key !== 'sort' && Boolean(value));
-    if (hasInitialFilter) void runSearch(initialQuery, normalizeInitialFilters(initialFilters), false, 0);
+    void runSearch(initialQuery, normalizeInitialFilters(initialFilters), false, 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -248,10 +248,21 @@ export function SearchPageClient({ initialQuery = '', initialFilters }: SearchPa
     if (typeof window !== 'undefined') window.history.replaceState(null, '', '/search');
   }
 
-  function loadMore() {
+  const loadMore = useCallback(() => {
     if (!searched || loading || loadingMore || !hasMore) return;
     void runSearch(query, filters, true, offset);
-  }
+  }, [filters, hasMore, loading, loadingMore, offset, query, runSearch, searched]);
+
+  useEffect(() => {
+    if (!searched || !hasMore || typeof IntersectionObserver === 'undefined') return;
+    const node = loadMoreRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) loadMore();
+    }, { rootMargin: '760px 0px' });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMore, loadMore, searched]);
 
   return (
     <main className="min-h-screen bg-[#030303] text-white">
@@ -310,14 +321,14 @@ export function SearchPageClient({ initialQuery = '', initialFilters }: SearchPa
             <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/38">ผลลัพธ์</p>
             <h2 className="mt-1 text-[24px] font-black tracking-[-0.05em] md:text-3xl">{filterSummary ? filterSummary : query.trim() ? `ค้นหา “${query.trim()}”` : 'ผลลัพธ์ทั้งหมด'}</h2>
           </div>
-          <p className="text-[11px] font-bold text-white/38">{loading ? 'กำลังค้นหา...' : searched ? `พบ ${total || items.length} เรื่อง${hasMore ? ' ขึ้นไป' : ''}` : 'พิมพ์คำค้นหาหรือเลือกตัวกรองเพื่อเริ่มค้นหา'}</p>
+          <p className="text-[11px] font-bold text-white/38">{loading ? 'กำลังค้นหา...' : searched ? `พบ ${total || items.length} เรื่อง${hasMore ? ' ขึ้นไป' : ''}` : 'กำลังเตรียมรายการแนะนำ'}</p>
         </div>
 
         {error ? <div className="mb-3 rounded-2xl bg-[#e50914]/12 px-4 py-3 text-xs font-bold text-red-100">{error}</div> : null}
 
         {loading ? (
           <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-5 md:grid-cols-6 md:gap-4 lg:grid-cols-7 xl:grid-cols-8">
-            {Array.from({ length: 16 }).map((_, index) => <div key={index} className="aspect-[2/3] animate-pulse rounded-lg bg-white/[0.055] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]" />)}
+            {Array.from({ length: 8 }).map((_, index) => <div key={index} className="aspect-[2/3] animate-pulse rounded-lg bg-white/[0.055] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]" />)}
           </div>
         ) : items.length ? (
           <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-5 md:grid-cols-6 md:gap-4 lg:grid-cols-7 xl:grid-cols-8">
@@ -326,22 +337,12 @@ export function SearchPageClient({ initialQuery = '', initialFilters }: SearchPa
         ) : searched ? (
           <div className="rounded-[24px] bg-white/[0.045] p-6 text-center text-sm font-bold text-white/58 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">ไม่พบหนังที่ตรงกับเงื่อนไขนี้</div>
         ) : (
-          <div className="rounded-[24px] bg-white/[0.045] p-6 text-center text-sm font-bold leading-6 text-white/58 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">พิมพ์คำค้นหาหรือเลือกตัวกรองเพื่อเริ่มค้นหา</div>
+          <div className="rounded-[24px] bg-white/[0.045] p-6 text-center text-sm font-bold leading-6 text-white/58 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">กำลังเตรียมรายการแนะนำ</div>
         )}
 
-        {loadingMore ? (
-          <div className="mt-3 grid grid-cols-4 gap-2.5 sm:grid-cols-5 md:grid-cols-6 md:gap-4 lg:grid-cols-7 xl:grid-cols-8">
-            {Array.from({ length: 8 }).map((_, index) => <div key={`loading-more-${index}`} className="aspect-[2/3] animate-pulse rounded-lg bg-white/[0.055] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]" />)}
-          </div>
-        ) : null}
-
-        {searched && hasMore && !loading ? (
-          <div className="mt-5 text-center">
-            <button type="button" onClick={loadMore} disabled={loadingMore} className="rounded-full bg-white/[0.09] px-5 py-3 text-xs font-black text-white/64 hover:bg-white/[0.14] hover:text-white disabled:opacity-45">
-              {loadingMore ? 'กำลังโหลดเพิ่ม...' : 'โหลดเพิ่ม'}
-            </button>
-          </div>
-        ) : null}
+        <div ref={loadMoreRef} className="min-h-8 py-5 text-center">
+          {loadingMore ? <span className="text-xs font-black text-white/38">กำลังโหลดเพิ่ม...</span> : searched && hasMore ? <span className="text-xs font-black text-white/30">เลื่อนลงเพื่อโหลดเพิ่ม</span> : searched && items.length ? <span className="text-xs font-black text-white/25">แสดงครบแล้ว</span> : null}
+        </div>
       </section>
     </main>
   );
