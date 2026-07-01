@@ -27,16 +27,16 @@ export function AdminAuthGuard({ children }: { children: ReactNode }) {
   const [signinHref, setSigninHref] = useState('/auth?mode=signin&next=/admin');
   const checkingRef = useRef(false);
   const checkedTokenRef = useRef('');
-  const mountedRef = useRef(false);
+  const hasResolvedOnceRef = useRef(false);
 
   useEffect(() => {
     let active = true;
-    mountedRef.current = true;
+    let authTimer: number | null = null;
 
     async function check(force = false) {
       if (checkingRef.current) return;
       checkingRef.current = true;
-      if (!mountedRef.current) setLoading(true);
+      if (!hasResolvedOnceRef.current) setLoading(true);
       setSigninHref(authHref());
 
       const session = await hydrateStoredSession().catch(() => null) || await getValidSession().catch(() => null);
@@ -48,11 +48,12 @@ export function AdminAuthGuard({ children }: { children: ReactNode }) {
         setIsAdmin(false);
         setMessage('เข้าสู่ระบบเพื่อดำเนินการต่อ');
         setLoading(false);
+        hasResolvedOnceRef.current = true;
         checkingRef.current = false;
         return;
       }
 
-      if (!force && checkedTokenRef.current === token && !loading) {
+      if (!force && checkedTokenRef.current === token && hasResolvedOnceRef.current) {
         checkingRef.current = false;
         return;
       }
@@ -83,29 +84,39 @@ export function AdminAuthGuard({ children }: { children: ReactNode }) {
         setMessage('ตรวจสอบสิทธิ์บัญชีไม่ได้');
       } finally {
         checkingRef.current = false;
+        hasResolvedOnceRef.current = true;
         if (active) setLoading(false);
       }
     }
 
-    let authTimer: number | null = null;
-
     function queueCheck(force = false) {
       if (authTimer) window.clearTimeout(authTimer);
-      authTimer = window.setTimeout(() => void check(force), 120);
+      authTimer = window.setTimeout(() => void check(force), 160);
+    }
+
+    function onStorage() {
+      queueCheck(true);
+    }
+
+    function onAuthChange() {
+      queueCheck(true);
+    }
+
+    function onFocus() {
+      queueCheck(false);
     }
 
     void check(true);
-    window.addEventListener('storage', () => queueCheck(true));
-    window.addEventListener('dofree-auth-change', () => queueCheck(true));
-    window.addEventListener('focus', () => queueCheck(false));
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('dofree-auth-change', onAuthChange);
+    window.addEventListener('focus', onFocus);
 
     return () => {
       active = false;
-      mountedRef.current = false;
       if (authTimer) window.clearTimeout(authTimer);
-      window.removeEventListener('storage', () => queueCheck(true));
-      window.removeEventListener('dofree-auth-change', () => queueCheck(true));
-      window.removeEventListener('focus', () => queueCheck(false));
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('dofree-auth-change', onAuthChange);
+      window.removeEventListener('focus', onFocus);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
