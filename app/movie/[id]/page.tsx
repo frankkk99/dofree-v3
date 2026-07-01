@@ -51,6 +51,17 @@ async function loadMovieDetail(rawId: string): Promise<DetailPayload> {
   }
 }
 
+function canonicalPath(rawId: string, detail: DetailPayload) {
+  return mediaDetailPath('movie', detail.item.id || mediaIdFromSlug(rawId) || rawId, detail.item.title);
+}
+
+function shouldRedirectToCanonical(rawId: string, canonical: string) {
+  const id = mediaIdFromSlug(rawId);
+  if (!id) return false;
+  const canonicalSlug = canonical.replace(/^\/movie\//, '');
+  return rawId !== canonicalSlug;
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id: rawId } = await params;
   const detail = await loadMovieDetail(rawId);
@@ -60,7 +71,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     detail.item.overview,
     `ดูข้อมูลหนัง ${detail.item.title}${year} พร้อมเรื่องย่อ นักแสดง ตัวอย่าง รายการแนะนำ และสถานะพร้อมรับชมบน${siteName}`,
   );
-  const canonical = mediaDetailPath('movie', detail.item.id || mediaIdFromSlug(rawId) || rawId, detail.item.title);
+  const canonical = canonicalPath(rawId, detail);
 
   return {
     title,
@@ -89,7 +100,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function MovieDetailPage({ params }: PageProps) {
   const { id: rawId } = await params;
   const detail = await loadMovieDetail(rawId);
-  const canonical = mediaDetailPath('movie', detail.item.id || mediaIdFromSlug(rawId) || rawId, detail.item.title);
-  if (`/movie/${rawId}` !== canonical) redirect(canonical);
+  const canonical = canonicalPath(rawId, detail);
+  if (shouldRedirectToCanonical(rawId, canonical)) redirect(canonical);
   return <DetailPageView detail={detail} />;
 }
