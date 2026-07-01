@@ -1,26 +1,39 @@
 'use client';
 
 import { useEffect, useState, type ReactNode } from 'react';
-import { getStoredSession } from '@/lib/supabase-auth-browser';
+import { getValidSession, hydrateStoredSession, signOut } from '@/lib/supabase-auth-browser';
 
 type ProfileResponse = {
   ok?: boolean;
   role?: string;
+  roleLabel?: string;
   isAdmin?: boolean;
   error?: string;
 };
+
+function currentAdminNext() {
+  if (typeof window === 'undefined') return '/admin';
+  return `${window.location.pathname}${window.location.search}` || '/admin';
+}
+
+function authHref() {
+  return `/auth?mode=signin&next=${encodeURIComponent(currentAdminNext())}`;
+}
 
 export function AdminAuthGuard({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [message, setMessage] = useState('กำลังตรวจสอบสิทธิ์บัญชี...');
+  const [signinHref, setSigninHref] = useState('/auth?mode=signin&next=/admin');
 
   useEffect(() => {
     let active = true;
 
     async function check() {
       setLoading(true);
-      const session = getStoredSession();
+      setSigninHref(authHref());
+
+      const session = await hydrateStoredSession().catch(() => null) || await getValidSession().catch(() => null);
       const token = session?.access_token;
 
       if (!token) {
@@ -39,8 +52,16 @@ export function AdminAuthGuard({ children }: { children: ReactNode }) {
         const payload = (await response.json()) as ProfileResponse;
         if (!active) return;
 
-        setIsAdmin(Boolean(response.ok && payload.ok && payload.isAdmin));
-        setMessage(payload.isAdmin ? 'พร้อมใช้งาน' : 'บัญชีนี้ไม่มีสิทธิ์เข้าพื้นที่นี้');
+        if (response.status === 401) {
+          await signOut();
+          setIsAdmin(false);
+          setMessage('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');
+          return;
+        }
+
+        const allowed = Boolean(response.ok && payload.ok && payload.isAdmin);
+        setIsAdmin(allowed);
+        setMessage(allowed ? `พร้อมใช้งาน${payload.roleLabel ? ` · ${payload.roleLabel}` : ''}` : 'บัญชีนี้ไม่มีสิทธิ์เข้าพื้นที่นี้');
       } catch {
         if (!active) return;
         setIsAdmin(false);
@@ -57,11 +78,13 @@ export function AdminAuthGuard({ children }: { children: ReactNode }) {
     void check();
     window.addEventListener('storage', onAuthChange);
     window.addEventListener('dofree-auth-change', onAuthChange);
+    window.addEventListener('focus', onAuthChange);
 
     return () => {
       active = false;
       window.removeEventListener('storage', onAuthChange);
       window.removeEventListener('dofree-auth-change', onAuthChange);
+      window.removeEventListener('focus', onAuthChange);
     };
   }, []);
 
@@ -80,10 +103,13 @@ export function AdminAuthGuard({ children }: { children: ReactNode }) {
           <p className="text-[11px] font-black uppercase tracking-[0.26em] text-[#e50914]">Secure Access</p>
           <h1 className="mt-3 text-3xl font-black tracking-[-0.06em]">ต้องเข้าสู่ระบบก่อน</h1>
           <p className="mt-3 text-sm font-semibold leading-6 text-white/78">{message}</p>
-          <div className="mt-6 flex justify-center gap-3">
-            <a href="/auth?mode=signin&next=/admin" className="rounded-2xl bg-[#e50914] px-5 py-3 text-sm font-black text-white shadow-glow">
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <a href={signinHref} className="rounded-2xl bg-[#e50914] px-5 py-3 text-sm font-black text-white shadow-glow">
               เข้าสู่ระบบ
             </a>
+            <button type="button" onClick={() => void signOut()} className="rounded-2xl bg-white/[0.08] px-5 py-3 text-sm font-black text-white/72">
+              ล้างเซสชัน
+            </button>
             <a href="/" className="rounded-2xl bg-white/[0.08] px-5 py-3 text-sm font-black text-white/72">
               กลับหน้าแรก
             </a>
