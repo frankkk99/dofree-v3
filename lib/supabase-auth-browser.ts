@@ -186,7 +186,9 @@ async function refreshSessionTokens(session: DofreeSession) {
     method: 'POST',
     body: JSON.stringify({ refresh_token: refreshToken }),
   });
-  return normalizeSession({ ...session, ...refreshed, refresh_token: refreshed.refresh_token || refreshToken });
+  const merged: DofreeSession = { ...session, ...refreshed, refresh_token: refreshed.refresh_token || refreshToken };
+  if (!refreshed.expires_at && refreshed.expires_in) merged.expires_at = nowSeconds() + Number(refreshed.expires_in);
+  return normalizeSession(merged);
 }
 
 export async function ensureProfile(session: DofreeSession) {
