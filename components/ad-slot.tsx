@@ -3,33 +3,39 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { AdSlotConfig, AdSlotDefinition, AdSlotDevice } from '@/lib/ads-config';
 
+type PublicAdsConfig = {
+  enabled: boolean;
+  showPlaceholders: boolean;
+  contactUrl: string;
+  definitions: AdSlotDefinition[];
+  slots: Record<string, AdSlotConfig>;
+};
+
 type PublicAdsPayload = {
   ok?: boolean;
-  config?: {
-    enabled: boolean;
-    showPlaceholders: boolean;
-    contactUrl: string;
-    definitions: AdSlotDefinition[];
-    slots: Record<string, AdSlotConfig>;
-  };
+  config?: PublicAdsConfig;
 };
 
 type AdSlotProps = {
   code: string;
   className?: string;
   variant?: 'banner' | 'native' | 'sticky';
+  onVisibilityChange?: (visible: boolean) => void;
 };
 
-let configPromise: Promise<PublicAdsPayload['config'] | null> | null = null;
+const adsConfigUpdatedEvent = 'dofree-ads-config-updated';
 
-function loadAdsConfig() {
-  if (!configPromise) {
-    configPromise = fetch('/api/ads/config', { cache: 'no-store' })
-      .then((response) => response.json())
-      .then((payload: PublicAdsPayload) => payload.ok ? payload.config || null : null)
-      .catch(() => null);
-  }
-  return configPromise;
+async function loadAdsConfig() {
+  return fetch(`/api/ads/config?t=${Date.now()}`, { cache: 'no-store' })
+    .then((response) => response.json())
+    .then((payload: PublicAdsPayload) => payload.ok ? payload.config || null : null)
+    .catch(() => null);
+}
+
+function isPublicAdsConfig(value: unknown): value is PublicAdsConfig {
+  if (!value || typeof value !== 'object') return false;
+  const config = value as Partial<PublicAdsConfig>;
+  return typeof config.enabled === 'boolean' && typeof config.showPlaceholders === 'boolean' && Array.isArray(config.definitions) && Boolean(config.slots && typeof config.slots === 'object');
 }
 
 function deviceClass(device: AdSlotDevice) {
@@ -42,7 +48,7 @@ function isActiveNow(slot?: AdSlotConfig) {
   if (!slot?.enabled || slot.mode === 'off') return false;
   const now = Date.now();
   const startsAt = slot.startsAt ? new Date(slot.startsAt).getTime() : 0;
-  const endsAt = slot.endsAt ? new Date(slot.endsAt).getTime() : 0;
+  const endsAt = slot.endsAt ? new Date(`${slot.endsAt}T23:59:59`).getTime() : 0;
   if (startsAt && Number.isFinite(startsAt) && now < startsAt) return false;
   if (endsAt && Number.isFinite(endsAt) && now > endsAt) return false;
   return true;
@@ -55,24 +61,45 @@ function adHeightClass(variant: AdSlotProps['variant'], definition?: AdSlotDefin
   return 'min-h-[86px] md:min-h-[112px]';
 }
 
-export function AdSlot({ code, className = '', variant = 'banner' }: AdSlotProps) {
-  const [config, setConfig] = useState<PublicAdsPayload['config'] | null>(null);
+export function AdSlot({ code, className = '', variant = 'banner', onVisibilityChange }: AdSlotProps) {
+  const [config, setConfig] = useState<PublicAdsConfig | null>(null);
 
   useEffect(() => {
     let active = true;
-    void loadAdsConfig().then((nextConfig) => {
+
+    async function refreshConfig() {
+      const nextConfig = await loadAdsConfig();
       if (active) setConfig(nextConfig);
-    });
+    }
+
+    function handleAdsConfigUpdated(event: Event) {
+      const detail = event instanceof CustomEvent ? event.detail : null;
+      if (isPublicAdsConfig(detail)) {
+        setConfig(detail);
+        return;
+      }
+      void refreshConfig();
+    }
+
+    void refreshConfig();
+    window.addEventListener(adsConfigUpdatedEvent, handleAdsConfigUpdated);
+
     return () => {
       active = false;
+      window.removeEventListener(adsConfigUpdatedEvent, handleAdsConfigUpdated);
     };
   }, []);
 
   const definition = useMemo(() => config?.definitions.find((item) => item.code === code), [code, config?.definitions]);
   const slot = config?.slots?.[code];
   const visible = Boolean(config?.enabled && isActiveNow(slot) && (slot?.mode === 'ad' || config.showPlaceholders));
+  const shouldRender = Boolean(visible && definition && slot);
 
-  if (!visible || !definition || !slot) return null;
+  useEffect(() => {
+    onVisibilityChange?.(shouldRender);
+  }, [onVisibilityChange, shouldRender]);
+
+  if (!shouldRender || !definition || !slot) return null;
 
   const href = slot.mode === 'ad' && slot.targetUrl ? slot.targetUrl : config?.contactUrl || '/membership';
   const isRealAd = slot.mode === 'ad' && Boolean(slot.imageUrl);
@@ -98,6 +125,7 @@ export function AdSlot({ code, className = '', variant = 'banner' }: AdSlotProps
 
 export function MobileStickyAd() {
   const [closed, setClosed] = useState(false);
+  const [adVisible, setAdVisible] = useState(false);
 
   useEffect(() => {
     setClosed(sessionStorage.getItem('dofree_ad_sticky_closed') === '1');
@@ -106,19 +134,21 @@ export function MobileStickyAd() {
   if (closed) return null;
 
   return (
-    <div className="fixed inset-x-3 bottom-3 z-[90] md:hidden">
-      <button
-        type="button"
-        aria-label="ปิดโฆษณา"
-        onClick={() => {
-          sessionStorage.setItem('dofree_ad_sticky_closed', '1');
-          setClosed(true);
-        }}
-        className="absolute -right-1 -top-2 z-10 grid h-7 w-7 place-items-center rounded-full bg-black text-sm font-black text-white shadow-lg"
-      >
-        ×
-      </button>
-      <AdSlot code="AD-MB-H02" variant="sticky" />
+    <div className={`fixed inset-x-3 bottom-3 z-[90] md:hidden ${adVisible ? '' : 'hidden'}`}>
+      {adVisible ? (
+        <button
+          type="button"
+          aria-label="ปิดโฆษณา"
+          onClick={() => {
+            sessionStorage.setItem('dofree_ad_sticky_closed', '1');
+            setClosed(true);
+          }}
+          className="absolute -right-1 -top-2 z-10 grid h-7 w-7 place-items-center rounded-full bg-black text-sm font-black text-white shadow-lg"
+        >
+          ×
+        </button>
+      ) : null}
+      <AdSlot code="AD-MB-H02" variant="sticky" onVisibilityChange={setAdVisible} />
     </div>
   );
 }
