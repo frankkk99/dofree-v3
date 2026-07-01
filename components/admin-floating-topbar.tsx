@@ -61,6 +61,12 @@ export function AdminFloatingTopbar({
         <div className="flex items-center gap-2 border-b border-white/8 pb-2">
           <a href="/admin" className="shrink-0 rounded-xl bg-[#e50914] px-3 py-2 text-xs font-black text-white md:rounded-2xl md:px-4">Admin Console</a>
           <AdminFrontManagerLink />
+          <a
+            href="/admin/sync"
+            className="hidden h-9 shrink-0 items-center rounded-xl bg-[#e50914]/18 px-3 text-xs font-black text-red-100 ring-1 ring-[#e50914]/30 transition hover:bg-[#e50914] hover:text-white sm:inline-flex"
+          >
+            Sync
+          </a>
           <div className="ml-auto min-w-0 text-right text-[10px] font-bold text-white/42 max-sm:hidden">
             <span className="inline-block max-w-[220px] truncate align-bottom">{accountLabel(session)}</span>
             <span className="ml-2 rounded-full bg-white/[0.08] px-2 py-1 text-white/58">{roleLabel(session)}</span>
@@ -85,6 +91,10 @@ export function AdminFloatingTopbar({
             {menuOpen ? (
               <div className="admin-floating-glass absolute right-0 top-11 z-10 grid min-w-44 gap-1 rounded-2xl border border-white/10 p-2">
                 <a href="/" className="rounded-xl px-3 py-2 text-xs font-black text-white/72 hover:bg-white/[0.08] hover:text-white">Back to site</a>
+                <a href="/admin/sync" className="rounded-xl px-3 py-2 text-xs font-black text-red-100 hover:bg-[#e50914]/18 hover:text-white">
+                  <span className="block">Sync Catalog</span>
+                  <span className="mt-0.5 block text-[10px] font-semibold leading-4 text-white/40">นำเข้า/อัปเดต TMDB catalog</span>
+                </a>
                 <button
                   type="button"
                   onClick={() => {
