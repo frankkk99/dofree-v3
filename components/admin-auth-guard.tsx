@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { getValidSession, hydrateStoredSession, signOut } from '@/lib/supabase-auth-browser';
 
 type ProfileResponse = {
@@ -25,12 +25,18 @@ export function AdminAuthGuard({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [message, setMessage] = useState('กำลังตรวจสอบสิทธิ์บัญชี...');
   const [signinHref, setSigninHref] = useState('/auth?mode=signin&next=/admin');
+  const checkingRef = useRef(false);
+  const checkedTokenRef = useRef('');
+  const mountedRef = useRef(false);
 
   useEffect(() => {
     let active = true;
+    mountedRef.current = true;
 
-    async function check() {
-      setLoading(true);
+    async function check(force = false) {
+      if (checkingRef.current) return;
+      checkingRef.current = true;
+      if (!mountedRef.current) setLoading(true);
       setSigninHref(authHref());
 
       const session = await hydrateStoredSession().catch(() => null) || await getValidSession().catch(() => null);
@@ -38,9 +44,16 @@ export function AdminAuthGuard({ children }: { children: ReactNode }) {
 
       if (!token) {
         if (!active) return;
+        checkedTokenRef.current = '';
         setIsAdmin(false);
         setMessage('เข้าสู่ระบบเพื่อดำเนินการต่อ');
         setLoading(false);
+        checkingRef.current = false;
+        return;
+      }
+
+      if (!force && checkedTokenRef.current === token && !loading) {
+        checkingRef.current = false;
         return;
       }
 
@@ -54,12 +67,14 @@ export function AdminAuthGuard({ children }: { children: ReactNode }) {
 
         if (response.status === 401) {
           await signOut();
+          checkedTokenRef.current = '';
           setIsAdmin(false);
           setMessage('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');
           return;
         }
 
         const allowed = Boolean(response.ok && payload.ok && payload.isAdmin);
+        checkedTokenRef.current = token;
         setIsAdmin(allowed);
         setMessage(allowed ? `พร้อมใช้งาน${payload.roleLabel ? ` · ${payload.roleLabel}` : ''}` : 'บัญชีนี้ไม่มีสิทธิ์เข้าพื้นที่นี้');
       } catch {
@@ -67,25 +82,32 @@ export function AdminAuthGuard({ children }: { children: ReactNode }) {
         setIsAdmin(false);
         setMessage('ตรวจสอบสิทธิ์บัญชีไม่ได้');
       } finally {
+        checkingRef.current = false;
         if (active) setLoading(false);
       }
     }
 
-    function onAuthChange() {
-      void check();
+    let authTimer: number | null = null;
+
+    function queueCheck(force = false) {
+      if (authTimer) window.clearTimeout(authTimer);
+      authTimer = window.setTimeout(() => void check(force), 120);
     }
 
-    void check();
-    window.addEventListener('storage', onAuthChange);
-    window.addEventListener('dofree-auth-change', onAuthChange);
-    window.addEventListener('focus', onAuthChange);
+    void check(true);
+    window.addEventListener('storage', () => queueCheck(true));
+    window.addEventListener('dofree-auth-change', () => queueCheck(true));
+    window.addEventListener('focus', () => queueCheck(false));
 
     return () => {
       active = false;
-      window.removeEventListener('storage', onAuthChange);
-      window.removeEventListener('dofree-auth-change', onAuthChange);
-      window.removeEventListener('focus', onAuthChange);
+      mountedRef.current = false;
+      if (authTimer) window.clearTimeout(authTimer);
+      window.removeEventListener('storage', () => queueCheck(true));
+      window.removeEventListener('dofree-auth-change', () => queueCheck(true));
+      window.removeEventListener('focus', () => queueCheck(false));
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loading) {
