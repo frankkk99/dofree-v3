@@ -188,13 +188,20 @@ export function getStoredSession(): DofreeSession | null {
 
 export function storeSession(session: DofreeSession | null) {
   if (typeof window === 'undefined') return;
+  const previous = window.localStorage.getItem(sessionKey);
   const normalized = normalizeSession(session);
+  let changed = false;
+
   if (!normalized) {
-    window.localStorage.removeItem(sessionKey);
+    changed = previous !== null;
+    if (changed) window.localStorage.removeItem(sessionKey);
   } else {
-    window.localStorage.setItem(sessionKey, JSON.stringify(normalized));
+    const next = JSON.stringify(normalized);
+    changed = previous !== next;
+    if (changed) window.localStorage.setItem(sessionKey, next);
   }
-  window.dispatchEvent(new CustomEvent('dofree-auth-change'));
+
+  if (changed) window.dispatchEvent(new CustomEvent('dofree-auth-change'));
 }
 
 async function refreshSessionTokens(session: DofreeSession) {
