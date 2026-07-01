@@ -33,6 +33,10 @@ function uniqueImageCandidates(urls: Array<string | undefined | null>) {
   return Array.from(new Set(urls.filter((url): url is string => Boolean(url))));
 }
 
+function isTmdbImage(url?: string) {
+  return Boolean(url?.includes('image.tmdb.org'));
+}
+
 export function MovieCard({ item, priorityBadge, compact = false, grid = false, priority = false }: MovieCardProps) {
   const [imageIndex, setImageIndex] = useState(0);
   const [detailImages, setDetailImages] = useState<string[]>([]);
@@ -48,10 +52,11 @@ export function MovieCard({ item, priorityBadge, compact = false, grid = false, 
       ? 'h-[158px] w-[104px] sm:h-[206px] sm:w-[132px] md:h-[260px] md:w-[170px]'
       : 'h-[176px] w-[116px] sm:h-[220px] sm:w-[140px] md:h-[280px] md:w-[180px] xl:h-[300px] xl:w-[196px]';
   const cardClass = `${sizeClass} group relative ${grid ? '' : 'shrink-0'} overflow-hidden rounded-[8px] border border-white/[0.07] bg-[#111] text-left shadow-[0_16px_44px_rgba(0,0,0,0.62)] transition duration-300 hover:-translate-y-1 hover:border-[#e50914]/80 hover:shadow-glow md:rounded-[10px] md:shadow-[0_24px_70px_rgba(0,0,0,0.65)]`;
-  const candidates = useMemo(() => uniqueImageCandidates([item.posterUrl, item.backdropUrl, ...detailImages]), [detailImages, item.backdropUrl, item.posterUrl]);
+  const baseCandidates = useMemo(() => uniqueImageCandidates([item.posterUrl, item.backdropUrl]), [item.backdropUrl, item.posterUrl]);
+  const candidates = useMemo(() => uniqueImageCandidates([...detailImages, ...baseCandidates]), [baseCandidates, detailImages]);
   const imageUrl = candidates[imageIndex] || '';
   const optimizeImage = canUseNextImage(imageUrl);
-  const needsDetailImage = imageIndex >= candidates.length && !detailAttempted && !detailLoading;
+  const shouldFetchDetailImage = !detailAttempted && !detailLoading && (imageIndex >= candidates.length || !baseCandidates.some(isTmdbImage));
 
   useEffect(() => {
     setImageIndex(0);
@@ -61,7 +66,7 @@ export function MovieCard({ item, priorityBadge, compact = false, grid = false, 
   }, [item.id, item.mediaType, item.posterUrl, item.backdropUrl]);
 
   useEffect(() => {
-    if (!needsDetailImage) return;
+    if (!shouldFetchDetailImage) return;
     const controller = new AbortController();
     setDetailLoading(true);
     fetch(`/api/tmdb/images?mediaType=${encodeURIComponent(item.mediaType)}&id=${encodeURIComponent(String(item.id))}`, {
@@ -74,8 +79,10 @@ export function MovieCard({ item, priorityBadge, compact = false, grid = false, 
       })
       .then((payload) => {
         const nextImages = uniqueImageCandidates([payload?.item?.posterUrl, payload?.item?.backdropUrl]);
-        setDetailImages(nextImages);
-        setImageIndex(candidates.length);
+        if (nextImages.length) {
+          setDetailImages(nextImages);
+          setImageIndex(0);
+        }
       })
       .catch(() => undefined)
       .finally(() => {
@@ -83,7 +90,7 @@ export function MovieCard({ item, priorityBadge, compact = false, grid = false, 
         setDetailLoading(false);
       });
     return () => controller.abort();
-  }, [candidates.length, item.id, item.mediaType, needsDetailImage]);
+  }, [baseCandidates, candidates.length, imageIndex, item.id, item.mediaType, shouldFetchDetailImage]);
 
   const tryNextImage = () => {
     setImageIndex((current) => current + 1);

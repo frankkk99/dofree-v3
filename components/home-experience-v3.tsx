@@ -53,7 +53,9 @@ function shuffleMovies(items: MovieItem[], seed: number, scope: string) {
 }
 
 function shuffleSections(sections: MovieSection[], seed: number) {
-  return sections.map((section, index) => ({
+  const comingSoon = sections.find((section) => section.slug === 'coming-soon');
+  const orderedSections = comingSoon ? [comingSoon, ...sections.filter((section) => section.slug !== 'coming-soon')] : sections;
+  return orderedSections.map((section, index) => ({
     ...section,
     items: shuffleMovies(section.items, seed + index + 11, section.slug),
   }));
@@ -207,6 +209,10 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
   const [shuffleSeed] = useState(() => dailySeed());
   const randomizedSections = useMemo(() => shuffleSections(home.sections, shuffleSeed), [home.sections, shuffleSeed]);
   const heroItems = useMemo(() => {
+    const comingSoonItems = randomizedSections.find((section) => section.slug === 'coming-soon')?.items || [];
+    const comingSoonCandidates = uniqueMovies(comingSoonItems).filter((item) => (item.backdropUrl || item.posterUrl) && isRecentEnoughForHero(item));
+    if (comingSoonCandidates.length) return comingSoonCandidates.slice(0, HERO_CANDIDATE_LIMIT);
+
     const sectionHeroItems = randomizedSections.flatMap((section) => section.items || []);
     const candidates = uniqueMovies([
       ...(home.heroItems || []),
