@@ -17,6 +17,7 @@ const modes: { value: AdSlotMode; label: string }[] = [
 ];
 
 const buttonClass = 'rounded-2xl px-4 py-3 text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-45';
+const priceInputClass = 'min-h-10 rounded-xl border border-white/10 bg-black px-3 text-xs font-black text-white outline-none placeholder:text-white/32 focus:border-[#e50914]';
 const adsConfigUpdatedEvent = 'dofree-ads-config-updated';
 
 function formatUpdatedAt(value?: string | null) {
@@ -28,6 +29,11 @@ function formatUpdatedAt(value?: string | null) {
 
 function broadcastAdsConfig(config: AdsConfig) {
   window.dispatchEvent(new CustomEvent(adsConfigUpdatedEvent, { detail: config }));
+}
+
+function slotPrice(slot: Partial<AdSlotConfig>, fallback: string, key: 'monthlyPrice' | 'weeklyPrice' | 'dailyPrice') {
+  const value = slot[key];
+  return typeof value === 'string' && value.trim() ? value : fallback;
 }
 
 export function AdminAdsPanel() {
@@ -105,6 +111,16 @@ export function AdminAdsPanel() {
     }));
   }
 
+  function resetSlotPrices(code: string) {
+    const definition = adSlotDefinitions.find((item) => item.code === code);
+    if (!definition) return;
+    patchSlot(code, {
+      monthlyPrice: definition.monthlyPrice,
+      weeklyPrice: definition.weeklyPrice,
+      dailyPrice: definition.dailyPrice,
+    });
+  }
+
   useEffect(() => {
     void loadConfig();
   }, []);
@@ -116,7 +132,7 @@ export function AdminAdsPanel() {
           <div className="max-w-2xl">
             <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#e50914]">Owner Ads</p>
             <h2 className="mt-1 text-2xl font-black tracking-[-0.04em] md:text-3xl">จัดการพื้นที่โฆษณา</h2>
-            <p className="mt-1 text-sm font-semibold leading-6 text-white/55">เปิด/ปิด placeholder, ใส่ artwork โฆษณาจริง และจัดการตำแหน่งขายแบบรายจุด</p>
+            <p className="mt-1 text-sm font-semibold leading-6 text-white/55">เปิด/ปิด placeholder, ใส่ artwork โฆษณาจริง และปรับราคาขายรายจุดได้ทั้งหมด</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => void loadConfig()} disabled={loading || saving} className={`${buttonClass} bg-white/[0.08] text-white/72 hover:bg-white/[0.14]`}>รีเฟรช</button>
@@ -164,6 +180,9 @@ export function AdminAdsPanel() {
         <div className="mt-4 grid gap-3">
           {visibleDefinitions.map((definition) => {
             const slot = config.slots[definition.code] || { code: definition.code, enabled: false, mode: 'off' as const };
+            const monthlyPrice = slotPrice(slot, definition.monthlyPrice, 'monthlyPrice');
+            const weeklyPrice = slotPrice(slot, definition.weeklyPrice, 'weeklyPrice');
+            const dailyPrice = slotPrice(slot, definition.dailyPrice, 'dailyPrice');
             return (
               <article key={definition.code} className="rounded-2xl border border-white/8 bg-black/35 p-3">
                 <div className="grid gap-3 xl:grid-cols-[1.15fr_0.85fr]">
@@ -175,7 +194,7 @@ export function AdminAdsPanel() {
                     </div>
                     <h3 className="mt-2 text-base font-black text-white">{definition.position}</h3>
                     <p className="mt-1 text-xs font-semibold leading-5 text-white/50">{definition.page} · {definition.format} · {definition.size}</p>
-                    <p className="mt-2 text-xs font-black text-white/70">เดือน {definition.monthlyPrice} · สัปดาห์ {definition.weeklyPrice} · วัน {definition.dailyPrice} บาท</p>
+                    <p className="mt-2 text-xs font-black text-white/70">เดือน {monthlyPrice} · สัปดาห์ {weeklyPrice} · วัน {dailyPrice} บาท</p>
                   </div>
                   <div className="grid gap-2">
                     <div className="grid gap-2 sm:grid-cols-[120px_1fr]">
@@ -188,6 +207,12 @@ export function AdminAdsPanel() {
                       </select>
                     </div>
                     <button type="button" onClick={() => patchSlot(definition.code, { enabled: true, mode: 'placeholder' })} className="min-h-10 rounded-xl bg-[#e50914] px-3 text-xs font-black text-white transition hover:brightness-110">เปิดเป็น Placeholder ทันที</button>
+                    <div className="grid gap-2 rounded-2xl border border-white/8 bg-white/[0.035] p-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
+                      <input value={monthlyPrice} onChange={(event) => patchSlot(definition.code, { monthlyPrice: event.target.value })} placeholder="ราคาเดือน" className={priceInputClass} />
+                      <input value={weeklyPrice} onChange={(event) => patchSlot(definition.code, { weeklyPrice: event.target.value })} placeholder="ราคาสัปดาห์" className={priceInputClass} />
+                      <input value={dailyPrice} onChange={(event) => patchSlot(definition.code, { dailyPrice: event.target.value })} placeholder="ราคาวัน" className={priceInputClass} />
+                      <button type="button" onClick={() => resetSlotPrices(definition.code)} className="min-h-10 rounded-xl bg-white/[0.08] px-3 text-[10px] font-black text-white/60 hover:bg-white/[0.14]">รีเซ็ตราคา</button>
+                    </div>
                     <input value={slot.advertiser || ''} onChange={(event) => patchSlot(definition.code, { advertiser: event.target.value })} placeholder="ชื่อลูกค้า / Advertiser" className="min-h-10 rounded-xl border border-white/10 bg-white/[0.06] px-3 text-xs font-bold text-white outline-none placeholder:text-white/32" />
                     <input value={slot.campaign || ''} onChange={(event) => patchSlot(definition.code, { campaign: event.target.value })} placeholder="ชื่อแคมเปญ" className="min-h-10 rounded-xl border border-white/10 bg-white/[0.06] px-3 text-xs font-bold text-white outline-none placeholder:text-white/32" />
                     <input value={slot.imageUrl || ''} onChange={(event) => patchSlot(definition.code, { imageUrl: event.target.value })} placeholder="Artwork URL" className="min-h-10 rounded-xl border border-white/10 bg-white/[0.06] px-3 text-xs font-bold text-white outline-none placeholder:text-white/32" />
