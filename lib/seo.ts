@@ -25,10 +25,22 @@ export const defaultKeywords = [
   'นักแสดง',
 ];
 
+function safeDecodeURIComponent(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function safePathSegment(value: string | number) {
+  return encodeURIComponent(String(value).trim()).replace(/%2F/gi, '-');
+}
+
 export function absoluteUrl(path = '/') {
   if (/^https?:\/\//i.test(path)) return path;
   const normalized = path.startsWith('/') ? path : `/${path}`;
-  return `${siteUrl}${normalized}`;
+  return new URL(normalized, siteUrl).toString();
 }
 
 export function safeDescription(text?: string | null, fallback = siteDescription, maxLength = 158) {
@@ -57,15 +69,21 @@ export function seoSlug(title: string) {
 }
 
 export function mediaIdFromSlug(value: string | number) {
-  const match = String(value).trim().match(/^(\d+)/);
+  const decoded = safeDecodeURIComponent(String(value).trim());
+  const match = decoded.match(/^(\d+)/);
   return match?.[1] || '';
+}
+
+export function mediaSlugFromPath(value: string | number) {
+  return safeDecodeURIComponent(String(value).trim());
 }
 
 export function mediaDetailPath(mediaType: 'movie' | 'tv', id: string | number, title?: string | null, hash = '') {
   const numericId = mediaIdFromSlug(id);
   const titleSlug = seoSlug(title || '') || 'detail';
+  const rawSegment = `${numericId || id}-${titleSlug}`;
   const suffix = hash ? (hash.startsWith('#') ? hash : `#${hash}`) : '';
-  return `/${mediaType}/${numericId || id}-${titleSlug}${suffix}`;
+  return `/${mediaType}/${safePathSegment(rawSegment)}${suffix}`;
 }
 
 export function indexRobots(): Metadata['robots'] {
