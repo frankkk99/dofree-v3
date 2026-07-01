@@ -8,6 +8,7 @@ import { absoluteUrl, mediaDetailPath, siteName } from '@/lib/seo';
 import type { DetailPayload, MediaType } from '@/lib/tmdb';
 
 const detailTabs = [
+  { label: 'ตัวอย่าง', href: '#trailer' },
   { label: 'แนะนำ', href: '#recommend' },
   { label: 'นักแสดง', href: '#cast' },
   { label: 'รายละเอียด', href: '#detail' },
@@ -67,7 +68,7 @@ function TrailerPreview({ title, trailerUrl, fallbackImage }: { title: string; t
   const youtubeSearchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(`${title} official trailer`)}`;
 
   return (
-    <section className="px-4 sm:px-5">
+    <section id="trailer" className="scroll-mt-20 px-4 sm:px-5">
       <div className="mb-2 flex items-center justify-between gap-3">
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-red-100/68 md:text-xs">Trailer Preview</p>
         <span className="rounded-full bg-white/[0.08] px-2.5 py-1 text-[9px] font-black text-white/42 backdrop-blur-xl md:text-[10px]">ตัวอย่าง</span>
@@ -144,7 +145,7 @@ export function DetailPageViewInline({ detail }: { detail: DetailPayload }) {
   };
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[#030303] px-2 py-4 text-white md:px-4 md:py-7">
+    <main className="min-h-screen overflow-x-hidden bg-[#030303] px-2 py-4 pb-[calc(11rem+env(safe-area-inset-bottom))] text-white md:px-4 md:py-7">
       <ActorProfileBridge />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
@@ -229,7 +230,7 @@ export function DetailPageViewInline({ detail }: { detail: DetailPayload }) {
           </div>
         </section>
 
-        <div className="pb-5 md:pb-6">
+        <div className="pb-[calc(11rem+env(safe-area-inset-bottom))] md:pb-6">
           <DetailInlineWatchSection tmdbId={item.id} mediaType={item.mediaType} title={item.title} fallbackImage={fallbackImage} />
         </div>
       </article>
