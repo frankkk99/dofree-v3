@@ -60,12 +60,6 @@ const smartSearchExamples = [
   'อนิเมะแฟนตาซี',
 ];
 
-const capabilityCards = [
-  { title: 'ไม่ต้องจำชื่อเรื่อง', desc: 'พิมพ์แนว ประเทศ หรือความรู้สึกที่อยากดูได้' },
-  { title: 'กรองได้ละเอียด', desc: 'เลือกหมวด ประเภท ประเทศ ภาษา ปี และคะแนน' },
-  { title: 'ค้นได้ทั้งไทย/อังกฤษ', desc: 'รองรับชื่อหนัง คำใกล้เคียง และคำค้นยอดนิยม' },
-];
-
 const selectClass = 'h-10 w-full min-w-0 appearance-none truncate rounded-[14px] border border-white/8 bg-white/[0.075] px-3 pr-7 text-[11px] font-black text-white outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl focus:border-[#e50914]/70 focus:ring-2 focus:ring-[#e50914]/30 md:h-11 md:rounded-[16px] md:text-xs';
 
 const typeOptions = [
@@ -153,7 +147,7 @@ function buildParams(query: string, filters: FilterState, limit = SEARCH_LIMIT, 
 }
 
 function hasAdvancedInitialFilter(value?: Partial<FilterState>) {
-  return Boolean(value?.country || value?.language || value?.quality || value?.year || (value?.sort && value.sort !== defaultFilters.sort));
+  return Boolean(value?.category || value?.type || value?.country || value?.language || value?.quality || value?.year || (value?.sort && value.sort !== defaultFilters.sort));
 }
 
 export function SearchPageClient({ initialQuery = '', initialFilters }: SearchPageClientProps) {
@@ -300,10 +294,9 @@ export function SearchPageClient({ initialQuery = '', initialFilters }: SearchPa
               <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#e50914]">Smart Search</p>
               <h1 className="mt-1 text-[34px] font-black leading-none tracking-[-0.08em] md:text-7xl">ค้นหาแบบไม่ต้องจำชื่อเรื่อง</h1>
             </div>
-            <p className="hidden max-w-xl text-sm font-bold leading-6 text-white/45 md:block">พิมพ์ชื่อหนัง แนวหนัง ประเทศ ภาษา หรือความรู้สึกที่อยากดู ระบบจะช่วยคัดรายการที่ใกล้เคียงให้</p>
           </div>
 
-          <div className="mt-4 max-h-[48dvh] overflow-y-auto rounded-[24px] border border-white/10 bg-black/48 p-2.5 shadow-[0_18px_70px_rgba(0,0,0,0.46),inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-2xl md:mt-8 md:max-h-none md:rounded-[28px] md:p-4">
+          <div className="mt-4 rounded-[24px] border border-white/10 bg-black/48 p-2.5 shadow-[0_18px_70px_rgba(0,0,0,0.46),inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-2xl md:mt-8 md:rounded-[28px] md:p-4">
             <form onSubmit={(event) => { event.preventDefault(); void runSearch(query, filters, false, 0); }}>
               <div className="grid gap-2 md:grid-cols-[minmax(280px,1fr)_auto]">
                 <div className="flex h-12 items-center gap-2 rounded-[18px] bg-white/[0.08] px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] md:h-13">
@@ -314,17 +307,17 @@ export function SearchPageClient({ initialQuery = '', initialFilters }: SearchPa
                 <button type="submit" className="h-11 rounded-[16px] bg-[#e50914] px-6 text-xs font-black text-white shadow-[0_18px_52px_rgba(229,9,20,0.38)] md:h-12 md:min-w-[130px]">ค้นหา</button>
               </div>
 
-              <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-[1.35fr_0.95fr_auto_auto]">
-                <FilterSelect label="หมวดหมู่" value={filters.category} options={categoryOptions} onChange={(value) => updateFilter('category', value)} />
-                <FilterSelect label="ประเภท" value={filters.type} options={typeOptions} onChange={(value) => updateFilter('type', value)} />
-                <button type="button" onClick={() => setFiltersOpen((value) => !value)} className="h-10 rounded-[14px] bg-white/[0.075] px-3 text-[11px] font-black text-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-white/[0.12] md:h-11 md:min-w-[132px]">
+              <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-[auto_auto] md:justify-start">
+                <button type="button" onClick={() => setFiltersOpen((value) => !value)} className="h-10 rounded-[14px] bg-white/[0.075] px-4 text-[11px] font-black text-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-white/[0.12] md:h-11 md:min-w-[132px]">
                   ตัวกรอง {activeFilterCount ? `(${activeFilterCount})` : ''} {filtersOpen ? '⌃' : '⌄'}
                 </button>
-                <button type="button" onClick={clearSearch} className="h-10 rounded-[14px] bg-white/[0.055] px-3 text-[11px] font-black text-white/58 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-white/[0.10] hover:text-white md:h-11 md:min-w-[92px]">ล้าง</button>
+                <button type="button" onClick={clearSearch} className="h-10 rounded-[14px] bg-white/[0.055] px-4 text-[11px] font-black text-white/58 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-white/[0.10] hover:text-white md:h-11 md:min-w-[92px]">ล้าง</button>
               </div>
 
               {filtersOpen ? (
-                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
+                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-7">
+                  <FilterSelect label="หมวดหมู่" value={filters.category} options={categoryOptions} onChange={(value) => updateFilter('category', value)} />
+                  <FilterSelect label="ประเภท" value={filters.type} options={typeOptions} onChange={(value) => updateFilter('type', value)} />
                   <FilterSelect label="ประเทศ" value={filters.country} options={countryOptions} onChange={(value) => updateFilter('country', value)} />
                   <FilterSelect label="ภาษา" value={filters.language} options={languageOptions} onChange={(value) => updateFilter('language', value)} />
                   <FilterSelect label="ความชัด" value={filters.quality} options={qualityOptions} onChange={(value) => updateFilter('quality', value)} />
@@ -346,21 +339,15 @@ export function SearchPageClient({ initialQuery = '', initialFilters }: SearchPa
                   </button>
                 ))}
               </div>
+              <p className="mt-2 rounded-full bg-white/[0.035] px-3 py-2 text-[10px] font-bold leading-4 text-white/42">
+                ตัวช่วยค้นหาอัจฉริยะกำลังอยู่ระหว่างพัฒนา ทดลองใช้ได้แล้วตอนนี้ และผลลัพธ์จะค่อย ๆ แม่นขึ้นตามฐานข้อมูล
+              </p>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-[1440px] px-3 py-5 pb-[calc(6rem+env(safe-area-inset-bottom))] md:px-6 md:py-10">
-        <div className="mb-4 grid gap-2 md:grid-cols-3">
-          {capabilityCards.map((card) => (
-            <div key={card.title} className="rounded-[22px] bg-white/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-              <p className="text-sm font-black text-white/86">{card.title}</p>
-              <p className="mt-1 text-xs font-semibold leading-5 text-white/42">{card.desc}</p>
-            </div>
-          ))}
-        </div>
-
+      <section className="mx-auto max-w-[1440px] px-3 py-4 pb-[calc(6rem+env(safe-area-inset-bottom))] md:px-6 md:py-8">
         <div className="mb-3 flex flex-wrap items-end justify-between gap-3 md:mb-6">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/38">ผลลัพธ์</p>
