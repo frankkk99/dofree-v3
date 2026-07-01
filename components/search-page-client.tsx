@@ -49,7 +49,7 @@ const defaultFilters: FilterState = {
   sort: 'rating-desc',
 };
 
-const selectClass = 'h-11 w-full min-w-0 appearance-none truncate rounded-[16px] bg-white/[0.085] px-3 pr-7 text-[11px] font-black text-white outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-xl focus:ring-2 focus:ring-[#e50914]/50';
+const selectClass = 'h-10 w-full min-w-0 appearance-none truncate rounded-[14px] border border-white/8 bg-white/[0.075] px-3 pr-7 text-[11px] font-black text-white outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl focus:border-[#e50914]/70 focus:ring-2 focus:ring-[#e50914]/30 md:h-11 md:rounded-[16px] md:text-xs';
 
 const typeOptions = [
   { value: '', label: 'ทุกประเภท' },
@@ -135,9 +135,14 @@ function buildParams(query: string, filters: FilterState, limit = SEARCH_LIMIT, 
   return params;
 }
 
+function hasAdvancedInitialFilter(value?: Partial<FilterState>) {
+  return Boolean(value?.country || value?.language || value?.quality || value?.year || (value?.sort && value.sort !== defaultFilters.sort));
+}
+
 export function SearchPageClient({ initialQuery = '', initialFilters }: SearchPageClientProps) {
   const [query, setQuery] = useState(initialQuery);
   const [filters, setFilters] = useState<FilterState>(() => normalizeInitialFilters(initialFilters));
+  const [filtersOpen, setFiltersOpen] = useState(() => hasAdvancedInitialFilter(initialFilters));
   const [categories, setCategories] = useState<SearchCategory[]>([]);
   const [items, setItems] = useState<MovieItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -151,6 +156,7 @@ export function SearchPageClient({ initialQuery = '', initialFilters }: SearchPa
 
   const categoryOptions = useMemo(() => [{ value: '', label: 'ทุกหมวด' }, ...categories.map((category) => ({ value: category.slug, label: category.title }))], [categories]);
   const activeTitle = useMemo(() => categories.find((category) => category.slug === filters.category)?.title || '', [filters.category, categories]);
+  const activeFilterCount = useMemo(() => Object.entries(filters).filter(([key, value]) => key !== 'sort' && Boolean(value)).length + (filters.sort !== defaultFilters.sort ? 1 : 0), [filters]);
   const filterSummary = useMemo(() => {
     const selected = [
       activeTitle,
@@ -249,51 +255,60 @@ export function SearchPageClient({ initialQuery = '', initialFilters }: SearchPa
 
   return (
     <main className="min-h-screen bg-[#030303] text-white">
-      <section className="sticky top-0 z-30 max-h-[50dvh] overflow-y-auto border-b border-white/10 bg-[#050505]/94 px-3 pb-3 pt-[calc(env(safe-area-inset-top)+14px)] shadow-[0_24px_80px_rgba(0,0,0,0.64)] backdrop-blur-2xl md:static md:max-h-none md:px-6 md:py-20 md:shadow-none">
+      <section className="relative border-b border-white/10 bg-[radial-gradient(circle_at_20%_0%,rgba(229,9,20,0.18),transparent_16rem),linear-gradient(180deg,#080101,#030303)] px-3 pb-4 pt-[calc(env(safe-area-inset-top)+12px)] md:px-6 md:py-16">
         <div className="mx-auto max-w-[1440px]">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <a href="/" className="text-xs font-black text-red-200/75 hover:text-red-100 md:text-sm">← กลับหน้าแรก</a>
-              <p className="mt-4 text-[10px] font-black uppercase tracking-[0.28em] text-[#e50914] md:mt-8">Search</p>
-              <h1 className="mt-1 text-[30px] font-black tracking-[-0.08em] md:text-7xl">ค้นหา</h1>
-              <p className="mt-1 hidden max-w-2xl text-sm font-bold leading-6 text-white/45 md:block">ค้นหาหนัง ซีรีส์ และกรองด้วยหมวด ประเภท ประเทศ ภาษา ความชัด ปี และคะแนน</p>
-            </div>
-            <a href="/" aria-label="ปิดหน้าค้นหา" className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/[0.08] text-2xl font-black text-white/78 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-[#e50914] hover:text-white">×</a>
+          <div className="flex items-center justify-between gap-3">
+            <a href="/" className="rounded-full bg-white/[0.06] px-3 py-2 text-xs font-black text-red-100/80 hover:bg-white/[0.10] hover:text-white md:text-sm">← หน้าแรก</a>
+            <a href="/" aria-label="ปิดหน้าค้นหา" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/[0.08] text-xl font-black text-white/78 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-[#e50914] hover:text-white md:h-12 md:w-12 md:text-2xl">×</a>
           </div>
 
-          <form
-            onSubmit={(event) => { event.preventDefault(); void runSearch(query, filters, false, 0); }}
-            className="mt-3 rounded-[24px] bg-black/46 p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_22px_80px_rgba(0,0,0,0.34)] backdrop-blur-2xl md:mt-8 md:rounded-[26px] md:p-3"
-          >
-            <div className="flex h-12 items-center gap-2 rounded-[19px] bg-white/[0.07] px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.10)]">
-              <span className="text-lg text-white/58">⌕</span>
-              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหาหนัง ซีรีส์ หรือคำสำคัญ" className="min-w-0 flex-1 bg-transparent text-sm font-bold text-white outline-none placeholder:text-white/36" />
-              {query ? <button type="button" onClick={() => setQuery('')} className="grid h-8 w-8 place-items-center rounded-full bg-white/[0.10] text-sm text-white/75">×</button> : null}
+          <div className="mt-3 flex items-end justify-between gap-4 md:mt-8">
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#e50914]">Search</p>
+              <h1 className="mt-1 text-[34px] font-black leading-none tracking-[-0.08em] md:text-7xl">ค้นหา</h1>
             </div>
+            <p className="hidden max-w-xl text-sm font-bold leading-6 text-white/45 md:block">ค้นหาหนัง ซีรีส์ และกรองด้วยหมวด ประเภท ประเทศ ภาษา ความชัด ปี และคะแนน</p>
+          </div>
 
-            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 md:mt-3 md:grid-cols-[1.35fr_0.95fr_0.95fr_0.95fr_1fr_0.82fr_1.25fr] md:gap-2">
-              <FilterSelect label="หมวดหมู่" value={filters.category} options={categoryOptions} onChange={(value) => updateFilter('category', value)} />
-              <FilterSelect label="ประเภท" value={filters.type} options={typeOptions} onChange={(value) => updateFilter('type', value)} />
-              <FilterSelect label="ประเทศ" value={filters.country} options={countryOptions} onChange={(value) => updateFilter('country', value)} />
-              <FilterSelect label="ภาษา" value={filters.language} options={languageOptions} onChange={(value) => updateFilter('language', value)} />
-              <FilterSelect label="ความชัด" value={filters.quality} options={qualityOptions} onChange={(value) => updateFilter('quality', value)} />
-              <FilterSelect label="ปี" value={filters.year} options={yearOptions} onChange={(value) => updateFilter('year', value)} />
-              <FilterSelect label="เรียงคะแนน" value={filters.sort} options={sortOptions} onChange={(value) => updateFilter('sort', value)} />
-            </div>
+          <div className="mt-4 max-h-[48dvh] overflow-y-auto rounded-[24px] border border-white/10 bg-black/48 p-2.5 shadow-[0_18px_70px_rgba(0,0,0,0.46),inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-2xl md:mt-8 md:max-h-none md:rounded-[28px] md:p-4">
+            <form onSubmit={(event) => { event.preventDefault(); void runSearch(query, filters, false, 0); }}>
+              <div className="grid gap-2 md:grid-cols-[minmax(280px,1fr)_auto]">
+                <div className="flex h-12 items-center gap-2 rounded-[18px] bg-white/[0.08] px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] md:h-13">
+                  <span className="text-lg text-white/58">⌕</span>
+                  <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหาหนัง ซีรีส์ หรือคำสำคัญ" className="min-w-0 flex-1 bg-transparent text-sm font-bold text-white outline-none placeholder:text-white/36 md:text-base" />
+                  {query ? <button type="button" onClick={() => setQuery('')} className="grid h-8 w-8 place-items-center rounded-full bg-white/[0.10] text-sm text-white/75">×</button> : null}
+                </div>
+                <button type="submit" className="h-11 rounded-[16px] bg-[#e50914] px-6 text-xs font-black text-white shadow-[0_18px_52px_rgba(229,9,20,0.38)] md:h-12 md:min-w-[130px]">ค้นหา</button>
+              </div>
 
-            <div className="mt-2 flex gap-2 md:mt-3">
-              <button type="submit" className="h-11 flex-1 rounded-[17px] bg-[#e50914] text-xs font-black text-white shadow-[0_18px_52px_rgba(229,9,20,0.38)]">ค้นหา</button>
-              <button type="button" onClick={clearSearch} className="h-11 w-[84px] rounded-[17px] bg-white/[0.075] text-xs font-black text-white/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-white/[0.12] hover:text-white">ล้าง</button>
-            </div>
-          </form>
+              <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-[1.35fr_0.95fr_auto_auto]">
+                <FilterSelect label="หมวดหมู่" value={filters.category} options={categoryOptions} onChange={(value) => updateFilter('category', value)} />
+                <FilterSelect label="ประเภท" value={filters.type} options={typeOptions} onChange={(value) => updateFilter('type', value)} />
+                <button type="button" onClick={() => setFiltersOpen((value) => !value)} className="h-10 rounded-[14px] bg-white/[0.075] px-3 text-[11px] font-black text-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-white/[0.12] md:h-11 md:min-w-[132px]">
+                  ตัวกรอง {activeFilterCount ? `(${activeFilterCount})` : ''} {filtersOpen ? '⌃' : '⌄'}
+                </button>
+                <button type="button" onClick={clearSearch} className="h-10 rounded-[14px] bg-white/[0.055] px-3 text-[11px] font-black text-white/58 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-white/[0.10] hover:text-white md:h-11 md:min-w-[92px]">ล้าง</button>
+              </div>
+
+              {filtersOpen ? (
+                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
+                  <FilterSelect label="ประเทศ" value={filters.country} options={countryOptions} onChange={(value) => updateFilter('country', value)} />
+                  <FilterSelect label="ภาษา" value={filters.language} options={languageOptions} onChange={(value) => updateFilter('language', value)} />
+                  <FilterSelect label="ความชัด" value={filters.quality} options={qualityOptions} onChange={(value) => updateFilter('quality', value)} />
+                  <FilterSelect label="ปี" value={filters.year} options={yearOptions} onChange={(value) => updateFilter('year', value)} />
+                  <FilterSelect label="เรียงคะแนน" value={filters.sort} options={sortOptions} onChange={(value) => updateFilter('sort', value)} />
+                </div>
+              ) : null}
+            </form>
+          </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-[1440px] px-3 py-5 md:px-6 md:py-10">
+      <section className="mx-auto max-w-[1440px] px-3 py-5 pb-[calc(6rem+env(safe-area-inset-bottom))] md:px-6 md:py-10">
         <div className="mb-3 flex flex-wrap items-end justify-between gap-3 md:mb-6">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/38">ผลลัพธ์</p>
-            <h2 className="mt-1 text-xl font-black tracking-[-0.04em] md:text-3xl">{filterSummary ? filterSummary : query.trim() ? `ค้นหา “${query.trim()}”` : 'ผลลัพธ์ทั้งหมด'}</h2>
+            <h2 className="mt-1 text-[24px] font-black tracking-[-0.05em] md:text-3xl">{filterSummary ? filterSummary : query.trim() ? `ค้นหา “${query.trim()}”` : 'ผลลัพธ์ทั้งหมด'}</h2>
           </div>
           <p className="text-[11px] font-bold text-white/38">{loading ? 'กำลังค้นหา...' : searched ? `พบ ${total || items.length} เรื่อง${hasMore ? ' ขึ้นไป' : ''}` : 'พิมพ์คำค้นหาหรือเลือกตัวกรองเพื่อเริ่มค้นหา'}</p>
         </div>
