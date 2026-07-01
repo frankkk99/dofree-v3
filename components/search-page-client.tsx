@@ -30,6 +30,7 @@ type FilterState = {
   language: string;
   quality: string;
   year: string;
+  rating: string;
   sort: string;
 };
 
@@ -46,6 +47,7 @@ const defaultFilters: FilterState = {
   language: '',
   quality: '',
   year: '',
+  rating: '',
   sort: 'rating-desc',
 };
 
@@ -90,10 +92,10 @@ const languageOptions = [
 ];
 
 const qualityOptions = [
-  { value: '', label: 'ทุกความชัด' },
+  { value: '', label: 'ทุกสถานะ' },
   { value: 'ready', label: 'พร้อมดู' },
   { value: 'hd', label: 'HD' },
-  { value: 'review', label: 'รีวิว' },
+  { value: 'review', label: 'รีวิว/ข้อมูล' },
 ];
 
 const yearOptions = [
@@ -106,6 +108,13 @@ const yearOptions = [
   { value: '2020s', label: '2020s' },
   { value: '2010s', label: '2010s' },
   { value: 'before-2010', label: 'ก่อน 2010' },
+];
+
+const ratingOptions = [
+  { value: '', label: 'ทุกคะแนน' },
+  { value: '6', label: '6+ น่าดู' },
+  { value: '7', label: '7+ คะแนนดี' },
+  { value: '8', label: '8+ ยอดนิยม' },
 ];
 
 const sortOptions = [
@@ -140,6 +149,7 @@ function buildParams(query: string, filters: FilterState, limit = SEARCH_LIMIT, 
   if (filters.language) params.set('language', filters.language);
   if (filters.quality) params.set('quality', filters.quality);
   if (filters.year) params.set('year', filters.year);
+  if (filters.rating) params.set('rating', filters.rating);
   if (filters.sort) params.set('sort', filters.sort);
   params.set('limit', String(limit));
   params.set('offset', String(offset));
@@ -147,7 +157,7 @@ function buildParams(query: string, filters: FilterState, limit = SEARCH_LIMIT, 
 }
 
 function hasAdvancedInitialFilter(value?: Partial<FilterState>) {
-  return Boolean(value?.category || value?.type || value?.country || value?.language || value?.quality || value?.year || (value?.sort && value.sort !== defaultFilters.sort));
+  return Boolean(value?.category || value?.type || value?.country || value?.language || value?.quality || value?.year || value?.rating || (value?.sort && value.sort !== defaultFilters.sort));
 }
 
 export function SearchPageClient({ initialQuery = '', initialFilters }: SearchPageClientProps) {
@@ -177,6 +187,7 @@ export function SearchPageClient({ initialQuery = '', initialFilters }: SearchPa
       languageOptions.find((option) => option.value === filters.language && option.value)?.label,
       qualityOptions.find((option) => option.value === filters.quality && option.value)?.label,
       yearOptions.find((option) => option.value === filters.year && option.value)?.label,
+      ratingOptions.find((option) => option.value === filters.rating && option.value)?.label,
     ].filter(Boolean);
     return selected.length ? selected.join(' · ') : '';
   }, [activeTitle, filters]);
@@ -309,20 +320,27 @@ export function SearchPageClient({ initialQuery = '', initialFilters }: SearchPa
 
               <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-[auto_auto] md:justify-start">
                 <button type="button" onClick={() => setFiltersOpen((value) => !value)} className="h-10 rounded-[14px] bg-white/[0.075] px-4 text-[11px] font-black text-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-white/[0.12] md:h-11 md:min-w-[132px]">
-                  ตัวกรอง {activeFilterCount ? `(${activeFilterCount})` : ''} {filtersOpen ? '⌃' : '⌄'}
+                  ตัวกรองทั้งหมด {activeFilterCount ? `(${activeFilterCount})` : ''} {filtersOpen ? '⌃' : '⌄'}
                 </button>
                 <button type="button" onClick={clearSearch} className="h-10 rounded-[14px] bg-white/[0.055] px-4 text-[11px] font-black text-white/58 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-white/[0.10] hover:text-white md:h-11 md:min-w-[92px]">ล้าง</button>
               </div>
 
               {filtersOpen ? (
-                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-7">
-                  <FilterSelect label="หมวดหมู่" value={filters.category} options={categoryOptions} onChange={(value) => updateFilter('category', value)} />
-                  <FilterSelect label="ประเภท" value={filters.type} options={typeOptions} onChange={(value) => updateFilter('type', value)} />
-                  <FilterSelect label="ประเทศ" value={filters.country} options={countryOptions} onChange={(value) => updateFilter('country', value)} />
-                  <FilterSelect label="ภาษา" value={filters.language} options={languageOptions} onChange={(value) => updateFilter('language', value)} />
-                  <FilterSelect label="ความชัด" value={filters.quality} options={qualityOptions} onChange={(value) => updateFilter('quality', value)} />
-                  <FilterSelect label="ปี" value={filters.year} options={yearOptions} onChange={(value) => updateFilter('year', value)} />
-                  <FilterSelect label="เรียงคะแนน" value={filters.sort} options={sortOptions} onChange={(value) => updateFilter('sort', value)} />
+                <div className="mt-2 rounded-[18px] border border-white/8 bg-white/[0.035] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1">
+                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#e50914]/80">Filter Group</p>
+                    <p className="text-[10px] font-semibold text-white/38">รองรับหมวดใหม่จาก catalog ที่ดึงเพิ่มเข้ามา</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8">
+                    <FilterSelect label="หมวดหมู่" value={filters.category} options={categoryOptions} onChange={(value) => updateFilter('category', value)} />
+                    <FilterSelect label="ประเภท" value={filters.type} options={typeOptions} onChange={(value) => updateFilter('type', value)} />
+                    <FilterSelect label="ประเทศ" value={filters.country} options={countryOptions} onChange={(value) => updateFilter('country', value)} />
+                    <FilterSelect label="ภาษา" value={filters.language} options={languageOptions} onChange={(value) => updateFilter('language', value)} />
+                    <FilterSelect label="สถานะ" value={filters.quality} options={qualityOptions} onChange={(value) => updateFilter('quality', value)} />
+                    <FilterSelect label="ปี" value={filters.year} options={yearOptions} onChange={(value) => updateFilter('year', value)} />
+                    <FilterSelect label="คะแนน" value={filters.rating} options={ratingOptions} onChange={(value) => updateFilter('rating', value)} />
+                    <FilterSelect label="เรียง" value={filters.sort} options={sortOptions} onChange={(value) => updateFilter('sort', value)} />
+                  </div>
                 </div>
               ) : null}
             </form>
