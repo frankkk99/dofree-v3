@@ -5,11 +5,23 @@ import { useEffect, useMemo, useState } from 'react';
 import { adminSessionHeaders } from '@/lib/admin-session-browser';
 import { adminInputClass, adminSelectClass } from '@/lib/admin-ui-classes';
 
-type Category = { slug: string; title_th: string; subtitle_th?: string | null; enabled: boolean; autoplay?: boolean; sort_order: number; updated_at?: string; card_count?: number };
+type Category = {
+  slug: string;
+  title_th: string;
+  subtitle_th?: string | null;
+  enabled: boolean;
+  autoplay?: boolean;
+  sort_order: number;
+  updated_at?: string;
+  card_count?: number;
+  active_card_count?: number;
+  visible_card_count?: number;
+};
 type Card = { tmdb_id: number; media_type: 'movie' | 'tv'; title: string; title_en?: string | null; poster_url?: string | null; rating?: number | string | null; release_year?: string | null; source_bucket?: string | null; sort_score?: number | string | null; is_active: boolean };
 
 type CategoryPayload = { ok?: boolean; categories?: Category[]; category?: Category; error?: string };
 type CardPayload = { ok?: boolean; cards?: Card[]; card?: Card; error?: string };
+type CategoryDisplayFilter = 'all' | 'enabled' | 'disabled' | 'has_visible' | 'no_visible' | 'enabled_empty';
 
 const input = adminInputClass;
 const selectInput = adminSelectClass;
@@ -31,12 +43,35 @@ function uniqueCards(cards: Card[]) {
   return [...map.values()];
 }
 
+function numberValue(value: unknown) {
+  return Number(value || 0);
+}
+
+function activeCardCount(category: Category) {
+  return numberValue(category.active_card_count ?? category.card_count);
+}
+
+function visibleCardCount(category: Category) {
+  if (category.visible_card_count !== undefined) return numberValue(category.visible_card_count);
+  return category.enabled ? activeCardCount(category) : 0;
+}
+
+function displayFilterLabel(value: CategoryDisplayFilter) {
+  if (value === 'enabled') return 'หมวดที่เปิดอยู่';
+  if (value === 'disabled') return 'หมวดที่ปิดอยู่';
+  if (value === 'has_visible') return 'มีการ์ดแสดง';
+  if (value === 'no_visible') return 'ไม่มีการ์ดแสดง';
+  if (value === 'enabled_empty') return 'เปิดอยู่แต่ไม่มีการ์ด';
+  return 'ทุกหมวดหมู่';
+}
+
 export function AdminControlCenter() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
   const [q, setQ] = useState('');
   const [bucket, setBucket] = useState('all');
   const [active, setActive] = useState('all');
+  const [categoryDisplay, setCategoryDisplay] = useState<CategoryDisplayFilter>('all');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -52,6 +87,16 @@ export function AdminControlCenter() {
   const [modalSelectedSearch, setModalSelectedSearch] = useState<string[]>([]);
 
   const categoryOptions = useMemo(() => categories.filter((item) => item.slug), [categories]);
+  const filteredCategories = useMemo(() => categories.filter((category) => {
+    const visible = visibleCardCount(category);
+    if (categoryDisplay === 'enabled') return category.enabled;
+    if (categoryDisplay === 'disabled') return !category.enabled;
+    if (categoryDisplay === 'has_visible') return visible > 0;
+    if (categoryDisplay === 'no_visible') return visible === 0;
+    if (categoryDisplay === 'enabled_empty') return category.enabled && visible === 0;
+    return true;
+  }), [categories, categoryDisplay]);
+  const emptyVisibleCount = useMemo(() => categories.filter((category) => visibleCardCount(category) === 0).length, [categories]);
   const selectedCategoryCount = selectedCategories.length;
   const selectedCardCount = selectedCards.length;
   const modalAssigned = useMemo(() => {
@@ -111,11 +156,13 @@ export function AdminControlCenter() {
 
   async function patchCategory(slug: string, patch: Partial<Category>) {
     const previous = categories;
-    setCategories((current) => current.map((item) => item.slug === slug ? { ...item, ...patch } : item));
+    setCategories((current) => current.map((item) => item.slug === slug ? { ...item, ...patch, visible_card_count: patch.enabled === false ? 0 : item.visible_card_count } : item));
     try {
       const response = await fetch('/api/admin/categories', { method: 'PATCH', headers: adminSessionHeaders({ 'content-type': 'application/json' }), body: JSON.stringify({ slug, ...patch }) });
       const payload = await response.json() as CategoryPayload;
       if (!payload.ok) throw new Error(payload.error || 'บันทึกหมวดไม่สำเร็จ');
+      const saved = (payload.categories || [payload.category]).filter(Boolean);
+      if (saved.length) setCategories((current) => current.map((item) => saved.find((cat) => cat.slug === item.slug) || item));
       setMessage('บันทึกหมวดแล้ว');
     } catch (error) {
       setCategories(previous);
@@ -168,7 +215,7 @@ export function AdminControlCenter() {
       const payload = await response.json() as CardPayload;
       if (!payload.ok) throw new Error(payload.error || 'บันทึกการ์ดไม่สำเร็จ');
       setMessage('บันทึกการ์ดแล้ว');
-      if (patch.source_bucket !== undefined) void loadCategories();
+      if (patch.source_bucket !== undefined || patch.is_active !== undefined) void loadCategories();
     } catch (error) {
       setCards(previous);
       setMessage(error instanceof Error ? error.message : 'บันทึกการ์ดไม่สำเร็จ');
@@ -302,8 +349,19 @@ export function AdminControlCenter() {
         <div className="mt-6 grid gap-6 lg:grid-cols-[0.95fr_1.3fr]">
           <div className="rounded-2xl border border-white/8 bg-black/35 p-3 md:p-4">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <div><h3 className="text-lg font-black">หมวดหมู่หน้าแรก</h3><p className="text-[10px] font-black text-white/35">{categories.length} หมวด · เลือก {selectedCategoryCount}</p></div>
-              <div className="flex flex-wrap gap-1.5"><button className={ghostBtn} onClick={() => setSelectedCategories(categories.map((cat) => cat.slug))}>เลือกทั้งหมด</button><button className={ghostBtn} onClick={() => setSelectedCategories([])}>ไม่เลือกทั้งหมด</button></div>
+              <div><h3 className="text-lg font-black">หมวดหมู่หน้าแรก</h3><p className="text-[10px] font-black text-white/35">{filteredCategories.length} / {categories.length} หมวด · เลือก {selectedCategoryCount} · ไม่มีการ์ดแสดง {emptyVisibleCount}</p></div>
+              <div className="flex flex-wrap gap-1.5"><button className={ghostBtn} onClick={() => setSelectedCategories(filteredCategories.map((cat) => cat.slug))}>เลือกที่กรอง</button><button className={ghostBtn} onClick={() => setSelectedCategories([])}>ไม่เลือกทั้งหมด</button></div>
+            </div>
+            <div className="mb-3 grid gap-2 md:grid-cols-[1fr_auto] md:items-center">
+              <select className={selectInput} value={categoryDisplay} onChange={(event) => setCategoryDisplay(event.target.value as CategoryDisplayFilter)}>
+                <option value="all">ทุกหมวดหมู่</option>
+                <option value="enabled">หมวดที่เปิดอยู่</option>
+                <option value="disabled">หมวดที่ปิดอยู่</option>
+                <option value="has_visible">มีการ์ดแสดง</option>
+                <option value="no_visible">ไม่มีการ์ดแสดง</option>
+                <option value="enabled_empty">เปิดอยู่แต่ไม่มีการ์ด</option>
+              </select>
+              <p className="text-[10px] font-bold text-white/38">ตัวกรอง: {displayFilterLabel(categoryDisplay)}</p>
             </div>
             <div className="mb-3 flex flex-wrap gap-1.5">
               <button className={ghostBtn} disabled={!selectedCategoryCount || loading} onClick={() => void bulkPatchCategories(true)}>เปิดที่เลือก</button>
@@ -311,12 +369,15 @@ export function AdminControlCenter() {
               <button className={redBtn} disabled={!selectedCategoryCount || loading} onClick={() => void deleteCategories(selectedCategories)}>ลบที่เลือก</button>
             </div>
             <div className="grid max-h-[680px] gap-3 overflow-y-auto pr-1">
-              {categories.map((cat) => {
+              {filteredCategories.map((cat) => {
                 const selected = selectedCategories.includes(cat.slug);
+                const totalCards = numberValue(cat.card_count);
+                const activeCards = activeCardCount(cat);
+                const visibleCards = visibleCardCount(cat);
                 return (
-                  <article key={cat.slug} className={`rounded-2xl border p-3 ${selected ? 'border-[#e50914]/70 bg-[#e50914]/8' : 'border-white/8 bg-white/[0.04]'}`}>
+                  <article key={cat.slug} className={`rounded-2xl border p-3 ${selected ? 'border-[#e50914]/70 bg-[#e50914]/8' : visibleCards === 0 ? 'border-amber-300/30 bg-amber-300/[0.045]' : 'border-white/8 bg-white/[0.04]'}`}>
                     <div className="flex items-start justify-between gap-2">
-                      <label className="flex min-w-0 gap-2"><input type="checkbox" checked={selected} onChange={(event) => setSelectedCategories((current) => event.target.checked ? [...new Set([...current, cat.slug])] : current.filter((slug) => slug !== cat.slug))} className="mt-1 h-4 w-4 accent-[#e50914]" /><div className="min-w-0"><p className="truncate text-[10px] font-black uppercase tracking-[0.16em] text-[#e50914]/80">{cat.slug}</p><p className="text-xs font-bold text-white/38">แสดงบนหน้าเว็บ: {cat.enabled ? 'เปิด' : 'ปิด'} · {cat.card_count || 0} การ์ด</p></div></label>
+                      <label className="flex min-w-0 gap-2"><input type="checkbox" checked={selected} onChange={(event) => setSelectedCategories((current) => event.target.checked ? [...new Set([...current, cat.slug])] : current.filter((slug) => slug !== cat.slug))} className="mt-1 h-4 w-4 accent-[#e50914]" /><div className="min-w-0"><p className="truncate text-[10px] font-black uppercase tracking-[0.16em] text-[#e50914]/80">{cat.slug}</p><p className="text-xs font-bold text-white/38">แสดงบนหน้าเว็บ: {cat.enabled ? 'เปิด' : 'ปิด'} · แสดงจริง {visibleCards} / เปิด {activeCards} / ทั้งหมด {totalCards}</p>{visibleCards === 0 ? <p className="mt-1 text-[10px] font-black text-amber-100">ไม่มีการ์ดแสดงบนหน้าเว็บ</p> : null}</div></label>
                       <button onClick={() => void patchCategory(cat.slug, { enabled: !cat.enabled })} className={`rounded-xl px-3 py-2 text-[10px] font-black ${cat.enabled ? 'bg-emerald-400/15 text-emerald-100' : 'bg-white/[0.08] text-white/45'}`}>{cat.enabled ? 'ON' : 'OFF'}</button>
                     </div>
                     <div className="mt-3 grid gap-2">
@@ -324,10 +385,11 @@ export function AdminControlCenter() {
                       <input className={input} value={cat.subtitle_th || ''} onChange={(event) => setCategories((current) => current.map((item) => item.slug === cat.slug ? { ...item, subtitle_th: event.target.value } : item))} onBlur={(event) => void patchCategory(cat.slug, { subtitle_th: event.target.value })} placeholder="คำอธิบายหมวด" />
                       <input className={input} type="number" value={cat.sort_order} onChange={(event) => setCategories((current) => current.map((item) => item.slug === cat.slug ? { ...item, sort_order: Number(event.target.value) } : item))} onBlur={(event) => void patchCategory(cat.slug, { sort_order: Number(event.target.value) })} placeholder="ลำดับ" />
                     </div>
-                    <div className="mt-3 flex flex-wrap gap-1.5"><button className={ghostBtn} onClick={() => openCategoryModal(cat)}>ดูการ์ดทั้งหมด ({cat.card_count || 0})</button><button className={redBtn} onClick={() => void deleteCategories([cat.slug])}>ลบหมวด</button></div>
+                    <div className="mt-3 flex flex-wrap gap-1.5"><button className={ghostBtn} onClick={() => openCategoryModal(cat)}>ดูการ์ดทั้งหมด ({totalCards})</button>{visibleCards === 0 ? <button className={ghostBtn} onClick={() => { setBucket(cat.slug); setActive('false'); void loadCards(cat.slug); }}>ดูการ์ดที่ถูกซ่อน</button> : null}<button className={redBtn} onClick={() => void deleteCategories([cat.slug])}>ลบหมวด</button></div>
                   </article>
                 );
               })}
+              {!filteredCategories.length ? <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 text-center text-xs font-black text-white/45">ไม่พบหมวดตามตัวกรองนี้</div> : null}
             </div>
           </div>
 
