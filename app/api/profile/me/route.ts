@@ -124,6 +124,7 @@ export async function GET(request: Request) {
       hasPremiumAccess: isPremium,
     });
   } catch (error) {
-    return jsonError(error instanceof Error ? error.message : 'Cannot load profile', 500);
+    const message = error instanceof Error ? error.message : 'Cannot load profile';
+    return jsonError(message, message === 'Unauthorized' ? 401 : 500);
   }
 }
