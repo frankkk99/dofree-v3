@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import type { AdSlotConfig, AdSlotDefinition, AdSlotDevice } from '@/lib/ads-config';
 
 type PublicAdsConfig = {
@@ -130,6 +131,7 @@ export function AdSlot({ code, className = '', variant = 'banner', onVisibilityC
 }
 
 export function MobileStickyAd() {
+  const pathname = usePathname();
   const [closed, setClosed] = useState(false);
   const [adVisible, setAdVisible] = useState(false);
 
@@ -137,7 +139,7 @@ export function MobileStickyAd() {
     setClosed(sessionStorage.getItem('dofree_ad_sticky_closed') === '1');
   }, []);
 
-  if (closed) return null;
+  if (pathname?.startsWith('/search') || closed) return null;
 
   return (
     <div className={`fixed inset-x-3 bottom-3 z-[90] md:hidden ${adVisible ? '' : 'hidden'}`}>
