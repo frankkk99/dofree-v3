@@ -18,9 +18,13 @@ function isModifiedClick(event: MouseEvent) {
   return event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0;
 }
 
+function isSamePageUrl(url: URL) {
+  return url.origin === window.location.origin && url.pathname === window.location.pathname && url.search === window.location.search;
+}
+
 function shouldIgnoreUrl(url: URL) {
   if (url.origin !== window.location.origin) return true;
-  if (url.pathname === window.location.pathname && url.search === window.location.search) return true;
+  if (isSamePageUrl(url)) return true;
   return false;
 }
 
@@ -35,6 +39,7 @@ export function RouteTransitionLoader() {
   const maxTimerRef = useRef<number | null>(null);
   const progressTimerRef = useRef<number | null>(null);
   const messageTimerRef = useRef<number | null>(null);
+  const lastRouteRef = useRef('');
 
   function clearTimers() {
     if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
@@ -92,12 +97,23 @@ export function RouteTransitionLoader() {
     }, delay);
   }
 
+  function hardStopLoading() {
+    clearTimers();
+    activeRef.current = false;
+    setVisible(false);
+    setProgress(0);
+    setMessageIndex(0);
+  }
+
   useEffect(() => {
+    lastRouteRef.current = `${window.location.pathname}${window.location.search}`;
     finishLoading();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
   useEffect(() => {
+    lastRouteRef.current = `${window.location.pathname}${window.location.search}`;
+
     function handleClick(event: MouseEvent) {
       if (isModifiedClick(event)) return;
       const target = event.target;
@@ -107,6 +123,8 @@ export function RouteTransitionLoader() {
       if (anchor.closest('[data-no-route-loader="true"]')) return;
       if (anchor.target && anchor.target !== '_self') return;
       if (anchor.hasAttribute('download')) return;
+      const rawHref = anchor.getAttribute('href') || '';
+      if (rawHref.startsWith('#')) return;
 
       try {
         const url = new URL(anchor.href, window.location.href);
@@ -116,7 +134,17 @@ export function RouteTransitionLoader() {
     }
 
     function handlePopState() {
+      const nextRoute = `${window.location.pathname}${window.location.search}`;
+      if (nextRoute === lastRouteRef.current) {
+        hardStopLoading();
+        return;
+      }
+      lastRouteRef.current = nextRoute;
       startLoading(10);
+    }
+
+    function handleHashChange() {
+      hardStopLoading();
     }
 
     function handlePageShow() {
@@ -125,11 +153,13 @@ export function RouteTransitionLoader() {
 
     document.addEventListener('click', handleClick, true);
     window.addEventListener('popstate', handlePopState);
+    window.addEventListener('hashchange', handleHashChange);
     window.addEventListener('pageshow', handlePageShow);
 
     return () => {
       document.removeEventListener('click', handleClick, true);
       window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('hashchange', handleHashChange);
       window.removeEventListener('pageshow', handlePageShow);
       clearTimers();
     };
