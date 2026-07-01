@@ -97,6 +97,11 @@ function releaseWindowBadge(item: MovieItem) {
   return releaseDate > today ? 'เร็ว ๆ นี้' : 'เข้าใหม่';
 }
 
+function sectionHref(section: MovieSection) {
+  if (section.slug === 'watch-ready') return '/watch-ready';
+  return `/category/${encodeURIComponent(section.slug)}`;
+}
+
 function useLazyMount(rootMargin = RAIL_OBSERVER_MARGIN) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -284,7 +289,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
         <div className="space-y-8 md:space-y-12">
           {liveRandomizedSections.map((section, sectionIndex) => (
             <div id={section.slug} key={section.slug} className="relative scroll-mt-[96px]" style={{ contentVisibility: sectionIndex > 1 ? 'auto' : 'visible', containIntrinsicSize: '360px 1000px' }}>
-              <div className="mb-3 flex items-center justify-between md:mb-6"><div>{section.eyebrow ? <p className="text-[9px] font-black uppercase tracking-[0.26em] text-[#e50914]/80">{section.eyebrow}</p> : null}<h2 className="text-[20px] font-black tracking-[-0.04em] md:text-[30px]">{section.title}</h2></div><a href={`#${section.slug}`} className="text-[12px] font-black text-white/50 hover:text-white md:text-[16px]">ดูทั้งหมด ›</a></div>
+              <div className="mb-3 flex items-center justify-between md:mb-6"><div>{section.eyebrow ? <p className="text-[9px] font-black uppercase tracking-[0.26em] text-[#e50914]/80">{section.eyebrow}</p> : null}<h2 className="text-[20px] font-black tracking-[-0.04em] md:text-[30px]">{section.title}</h2></div><a href={sectionHref(section)} className="text-[12px] font-black text-white/50 hover:text-white md:text-[16px]">ทั้งหมด ›</a></div>
               {sectionIndex === 2 ? (
                 <div className="mb-6">
                   <AdSlot code="AD-PC-H04" className="mx-auto max-w-5xl" />
