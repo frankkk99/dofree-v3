@@ -22,6 +22,13 @@ export type DofreeSession = {
   profile?: DofreeProfile | null;
 };
 
+type AppProfilePayload = {
+  ok?: boolean;
+  user?: DofreeUser;
+  profile?: DofreeProfile | null;
+  role?: string;
+};
+
 const sessionKey = 'dodeedee_auth_session';
 const defaultRole = 'viewer';
 const refreshSkewSeconds = 90;
@@ -120,6 +127,17 @@ async function restFetch<T>(path: string, options: RequestInit = {}, token: stri
   return data as T;
 }
 
+async function appProfileFetch(token: string) {
+  if (typeof window === 'undefined') return null;
+  const response = await fetch('/api/profile/me', {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+  const payload = await response.json().catch(() => null) as AppProfilePayload | null;
+  if (!response.ok || !payload?.ok || !payload.user) return null;
+  return payload;
+}
+
 function profileName(user: DofreeUser) {
   return user.email?.split('@')[0] || user.phone || `user-${user.id.slice(0, 8)}`;
 }
@@ -200,10 +218,19 @@ export async function ensureProfile(session: DofreeSession) {
   }
 
   const token = normalized.access_token;
-  const user = normalized.user || await authFetch<DofreeUser>('user', { method: 'GET' }, token);
+  let user = normalized.user;
+  let profile: DofreeProfile | null = null;
 
-  let profile = await loadProfile(user.id, token);
-  if (!profile) profile = await createProfile(user, token);
+  try {
+    user = user || await authFetch<DofreeUser>('user', { method: 'GET' }, token);
+    profile = await loadProfile(user.id, token);
+    if (!profile) profile = await createProfile(user, token);
+  } catch {
+    const appProfile = await appProfileFetch(token);
+    if (!appProfile?.user) throw new Error('Cannot load profile');
+    user = appProfile.user;
+    profile = appProfile.profile || null;
+  }
 
   const nextSession = { ...normalized, user: { ...user, role: profile?.role || user.role || defaultRole }, profile };
   storeSession(nextSession);
