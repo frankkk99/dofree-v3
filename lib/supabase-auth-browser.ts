@@ -179,9 +179,24 @@ export function storeSession(session: DofreeSession | null) {
   window.dispatchEvent(new CustomEvent('dofree-auth-change'));
 }
 
+async function refreshSessionTokens(session: DofreeSession) {
+  const refreshToken = session.refresh_token;
+  if (!refreshToken) return null;
+  const refreshed = await authFetch<DofreeSession>('token?grant_type=refresh_token', {
+    method: 'POST',
+    body: JSON.stringify({ refresh_token: refreshToken }),
+  });
+  return normalizeSession({ ...session, ...refreshed, refresh_token: refreshed.refresh_token || refreshToken });
+}
+
 export async function ensureProfile(session: DofreeSession) {
-  const normalized = normalizeSession(session);
+  let normalized = normalizeSession(session);
   if (!normalized?.access_token) throw new Error('Session expired');
+  if (isExpired(normalized)) {
+    normalized = await refreshSessionTokens(normalized);
+    if (!normalized?.access_token) throw new Error('Session expired');
+  }
+
   const token = normalized.access_token;
   const user = normalized.user || await authFetch<DofreeUser>('user', { method: 'GET' }, token);
 
@@ -195,18 +210,14 @@ export async function ensureProfile(session: DofreeSession) {
 
 export async function refreshSession(session = getStoredSession()) {
   const current = normalizeSession(session);
-  const refreshToken = current?.refresh_token;
-  if (!refreshToken) {
+  if (!current?.refresh_token) {
     storeSession(null);
     return null;
   }
 
   try {
-    const refreshed = await authFetch<DofreeSession>('token?grant_type=refresh_token', {
-      method: 'POST',
-      body: JSON.stringify({ refresh_token: refreshToken }),
-    });
-    return ensureProfile({ ...current, ...refreshed, refresh_token: refreshed.refresh_token || refreshToken });
+    const refreshed = await refreshSessionTokens(current);
+    return refreshed ? ensureProfile(refreshed) : null;
   } catch {
     storeSession(null);
     return null;
