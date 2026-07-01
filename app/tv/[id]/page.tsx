@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { DetailPageView } from '@/components/detail-page-view';
-import { absoluteUrl, baseOpenGraph, buildOgImages, indexRobots, mediaDetailPath, mediaIdFromSlug, safeDescription, siteName } from '@/lib/seo';
+import { absoluteUrl, baseOpenGraph, buildOgImages, indexRobots, mediaDetailPath, mediaIdFromSlug, mediaSlugFromPath, safeDescription, siteName } from '@/lib/seo';
 import { getDetailPayload, type DetailPayload } from '@/lib/tmdb';
 
 type PageProps = {
@@ -12,7 +12,8 @@ const fallbackBackdrop = 'https://images.unsplash.com/photo-1489599849927-2ee91c
 const fallbackPoster = 'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?auto=format&fit=crop&w=900&q=80';
 
 function titleFromSlug(rawId: string, fallback = 'ข้อมูลซีรีส์') {
-  const withoutId = rawId.replace(/^\d+[-_]?/, '').replace(/[-_]+/g, ' ').trim();
+  const decoded = mediaSlugFromPath(rawId);
+  const withoutId = decoded.replace(/^\d+[-_]?/, '').replace(/[-_]+/g, ' ').trim();
   return withoutId ? withoutId.replace(/\b\w/g, (char) => char.toUpperCase()) : fallback;
 }
 
@@ -59,7 +60,7 @@ function shouldRedirectToCanonical(rawId: string, canonical: string) {
   const id = mediaIdFromSlug(rawId);
   if (!id) return false;
   const canonicalSlug = canonical.replace(/^\/tv\//, '');
-  return rawId !== canonicalSlug;
+  return mediaSlugFromPath(rawId) !== mediaSlugFromPath(canonicalSlug);
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
