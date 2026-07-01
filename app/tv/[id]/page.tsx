@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { DetailPageView } from '@/components/detail-page-view';
-import { absoluteUrl, baseOpenGraph, buildOgImages, indexRobots, mediaDetailPath, mediaIdFromSlug, safeDescription, siteName } from '@/lib/seo';
+import { absoluteUrl, baseOpenGraph, buildOgImages, indexRobots, mediaDetailPath, mediaIdFromSlug, safeDescription, safePathSegment, siteName } from '@/lib/seo';
 import { getDetailPayload } from '@/lib/tmdb';
 
 type PageProps = {
@@ -49,6 +49,6 @@ export default async function TvDetailPage({ params }: PageProps) {
   const id = mediaIdFromSlug(rawId);
   const detail = await getDetailPayload('tv', id);
   const canonical = mediaDetailPath('tv', detail.item.id, detail.item.title);
-  if (`/tv/${rawId}` !== canonical) redirect(canonical);
+  if (`/tv/${safePathSegment(rawId)}` !== canonical) redirect(canonical);
   return <DetailPageView detail={detail} />;
 }

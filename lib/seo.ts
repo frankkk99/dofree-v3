@@ -61,11 +61,20 @@ export function mediaIdFromSlug(value: string | number) {
   return match?.[1] || '';
 }
 
+export function safePathSegment(value: string | number) {
+  const raw = String(value);
+  try {
+    return encodeURIComponent(decodeURIComponent(raw));
+  } catch {
+    return encodeURIComponent(raw);
+  }
+}
+
 export function mediaDetailPath(mediaType: 'movie' | 'tv', id: string | number, title?: string | null, hash = '') {
   const numericId = mediaIdFromSlug(id);
-  const titleSlug = seoSlug(title || '') || 'detail';
+  const titleSlug = safePathSegment(seoSlug(title || '') || 'detail');
   const suffix = hash ? (hash.startsWith('#') ? hash : `#${hash}`) : '';
-  return `/${mediaType}/${numericId || id}-${titleSlug}${suffix}`;
+  return `/${mediaType}/${safePathSegment(numericId || id)}-${titleSlug}${suffix}`;
 }
 
 export function indexRobots(): Metadata['robots'] {
