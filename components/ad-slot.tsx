@@ -68,6 +68,8 @@ function slotPrice(slot: AdSlotConfig, definition: AdSlotDefinition, key: 'month
 }
 
 export function AdSlot({ code, className = '', variant = 'banner', onVisibilityChange }: AdSlotProps) {
+  const pathname = usePathname();
+  const isAdminRoute = pathname?.startsWith('/admin');
   const [config, setConfig] = useState<PublicAdsConfig | null>(null);
 
   useEffect(() => {
@@ -98,7 +100,7 @@ export function AdSlot({ code, className = '', variant = 'banner', onVisibilityC
 
   const definition = useMemo(() => config?.definitions.find((item) => item.code === code), [code, config?.definitions]);
   const slot = config?.slots?.[code];
-  const visible = Boolean(config?.enabled && isActiveNow(slot) && (slot?.mode === 'ad' || config.showPlaceholders));
+  const visible = Boolean(!isAdminRoute && config?.enabled && isActiveNow(slot) && (slot?.mode === 'ad' || config.showPlaceholders));
   const shouldRender = Boolean(visible && definition && slot);
 
   useEffect(() => {
@@ -132,7 +134,7 @@ export function AdSlot({ code, className = '', variant = 'banner', onVisibilityC
 
 export function MobileStickyAd() {
   const pathname = usePathname();
-  const shouldHide = pathname?.startsWith('/search');
+  const shouldHide = pathname?.startsWith('/search') || pathname?.startsWith('/admin');
   const [closed, setClosed] = useState(false);
   const [adVisible, setAdVisible] = useState(false);
 
