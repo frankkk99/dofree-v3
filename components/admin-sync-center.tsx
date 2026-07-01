@@ -168,8 +168,18 @@ const statusTone: Record<string, string> = {
   queued: 'bg-white/[0.08] text-white/70 ring-1 ring-white/10',
 };
 
+const syncNavItems = [
+  { href: '#sync-status', label: 'Status' },
+  { href: '#sync-profiles', label: 'Profiles' },
+  { href: '#sync-sources', label: 'Sources' },
+  { href: '#sync-options', label: 'Options' },
+  { href: '#sync-jobs', label: 'Jobs' },
+  { href: '#sync-logs', label: 'Logs' },
+  { href: '#sync-note', label: 'Note' },
+];
+
 function cardClass(extra = '') {
-  return `rounded-[26px] border border-white/14 bg-[#121212]/96 p-4 shadow-[0_20px_70px_rgba(0,0,0,0.38),inset_0_1px_0_rgba(255,255,255,0.055)] md:p-5 ${extra}`;
+  return `scroll-mt-28 rounded-[26px] border border-white/14 bg-[#121212]/96 p-4 shadow-[0_20px_70px_rgba(0,0,0,0.38),inset_0_1px_0_rgba(255,255,255,0.055)] md:p-5 ${extra}`;
 }
 
 function inputClass() {
@@ -180,6 +190,10 @@ function buttonClass(tone: 'red' | 'dark' | 'gold' = 'dark') {
   if (tone === 'red') return 'h-11 rounded-2xl bg-[#e50914] px-5 text-xs font-black text-white shadow-[0_14px_34px_rgba(229,9,20,0.28)] transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-45';
   if (tone === 'gold') return 'h-11 rounded-2xl bg-amber-300 px-5 text-xs font-black text-black shadow-[0_14px_34px_rgba(251,191,36,0.16)] transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-45';
   return 'h-11 rounded-2xl bg-white/[0.11] px-5 text-xs font-black text-white/86 ring-1 ring-white/10 transition hover:bg-white/[0.16] hover:text-white disabled:cursor-not-allowed disabled:opacity-45';
+}
+
+function shortcutClass() {
+  return 'min-w-max rounded-full border border-white/10 bg-white/[0.075] px-3.5 py-2 text-[11px] font-black text-white/70 transition hover:border-[#e50914]/50 hover:bg-[#e50914]/16 hover:text-white md:px-4 md:text-xs';
 }
 
 function formatNumber(value: number) {
@@ -391,7 +405,7 @@ export function AdminSyncCenter() {
   return (
     <main className="min-h-screen bg-[#080808] px-4 py-5 text-white md:px-8 md:py-8">
       <div className="mx-auto max-w-7xl space-y-5">
-        <section className="rounded-[30px] border border-white/12 bg-[#151515] p-5 shadow-[0_26px_90px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.06)] md:p-7">
+        <section id="sync-top" className="scroll-mt-28 rounded-[30px] border border-white/12 bg-[#151515] p-5 shadow-[0_26px_90px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.06)] md:p-7">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="min-w-0">
               <p className="text-[11px] font-black uppercase tracking-[0.28em] text-[#ff3b45]">Admin Sync Center</p>
@@ -407,13 +421,20 @@ export function AdminSyncCenter() {
           </div>
         </section>
 
+        <nav className="sticky top-2 z-40 overflow-x-auto rounded-[24px] border border-white/12 bg-[#101010]/94 p-2 shadow-[0_18px_60px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-2xl">
+          <div className="flex min-w-max items-center gap-2">
+            <a href="#sync-top" className="min-w-max rounded-full bg-[#e50914] px-3.5 py-2 text-[11px] font-black text-white shadow-[0_10px_26px_rgba(229,9,20,0.24)] md:px-4 md:text-xs">Top</a>
+            {syncNavItems.map((item) => <a key={item.href} href={item.href} className={shortcutClass()}>{item.label}</a>)}
+          </div>
+        </nav>
+
         {loading ? <div className={cardClass('text-sm font-black text-white/70')}>กำลังโหลด Sync Center...</div> : null}
         {error ? <div className="rounded-[22px] border border-[#e50914]/35 bg-[#2a0508] p-4 text-sm font-black leading-6 text-red-100">{error}</div> : null}
         {notice ? <div className="rounded-[22px] border border-emerald-400/25 bg-emerald-500/12 p-4 text-sm font-black leading-6 text-emerald-100">{notice}</div> : null}
 
         {status ? (
           <>
-            <section className={cardClass()}>
+            <section id="sync-status" className={cardClass()}>
               <div className="flex flex-wrap items-end justify-between gap-3 border-b border-white/10 pb-4">
                 <div>
                   <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#ff3b45]">Catalog Status</p>
@@ -431,7 +452,7 @@ export function AdminSyncCenter() {
             </section>
 
             <section className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
-              <div className={cardClass()}>
+              <div id="sync-profiles" className={cardClass()}>
                 <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#ff3b45]">Sync Profiles</p>
                 <h2 className="mt-1 text-2xl font-black tracking-[-0.04em] text-white">เลือกชุดข้อมูล</h2>
                 <p className="mt-1 text-xs font-semibold text-white/56">เลือกแหล่งข้อมูลที่ต้องการดึงเข้า catalog</p>
@@ -454,7 +475,7 @@ export function AdminSyncCenter() {
                 </div>
               </div>
 
-              <div className={cardClass()}>
+              <div id="sync-sources" className={cardClass()}>
                 <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#ff3b45]">Dashboard Truth</p>
                 <h2 className="mt-1 text-2xl font-black tracking-[-0.04em] text-white">แหล่งข้อมูล</h2>
                 <p className="mt-1 text-xs font-semibold text-white/56">สถานะตารางที่อ่านได้จาก database</p>
@@ -474,7 +495,7 @@ export function AdminSyncCenter() {
               </div>
             </section>
 
-            <section className={cardClass()}>
+            <section id="sync-options" className={cardClass()}>
               <div className="flex flex-wrap items-end justify-between gap-3 border-b border-white/10 pb-4">
                 <div>
                   <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#ff3b45]">Refresh / Reset Options</p>
@@ -539,7 +560,7 @@ export function AdminSyncCenter() {
             </section>
 
             <section className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
-              <div className={cardClass()}>
+              <div id="sync-jobs" className={cardClass()}>
                 <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#ff3b45]">Job Progress</p>
                 <h2 className="mt-1 text-2xl font-black tracking-[-0.04em] text-white">งานล่าสุด</h2>
                 <div className="mt-4 space-y-3">
@@ -575,7 +596,7 @@ export function AdminSyncCenter() {
                 </div>
               </div>
 
-              <div className={cardClass()}>
+              <div id="sync-logs" className={cardClass()}>
                 <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#ff3b45]">Sync Logs</p>
                 <h2 className="mt-1 text-2xl font-black tracking-[-0.04em] text-white">ล่าสุด 20 รายการ</h2>
                 <div className="mt-4 space-y-2">
@@ -594,7 +615,7 @@ export function AdminSyncCenter() {
             </section>
 
             {latestJob ? (
-              <section className={cardClass('text-xs font-semibold leading-5 text-white/62')}>
+              <section id="sync-note" className={cardClass('text-xs font-semibold leading-5 text-white/62')}>
                 <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#ff3b45]">Safety Note</p>
                 <p className="mt-2">
                   Job ล่าสุด {latestJob.dry_run ? 'เป็น Dry run ไม่เขียน catalog จริง' : 'เขียนเฉพาะ metadata ลง catalog'} และระบบนี้ไม่ลบ user/favorites/history/memberships/analytics หรือ watch links เดิม
