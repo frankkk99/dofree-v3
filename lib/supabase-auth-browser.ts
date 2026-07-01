@@ -24,6 +24,7 @@ export type DofreeSession = {
 
 const sessionKey = 'dodeedee_auth_session';
 const defaultRole = 'viewer';
+const refreshSkewSeconds = 90;
 
 function baseUrl() {
   return process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/$/, '');
@@ -31,6 +32,26 @@ function baseUrl() {
 
 function anonKey() {
   return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+}
+
+function nowSeconds() {
+  return Math.floor(Date.now() / 1000);
+}
+
+function normalizeSession(session: DofreeSession | null | undefined): DofreeSession | null {
+  if (!session?.access_token) return null;
+  const expiresIn = Number(session.expires_in || 0);
+  const expiresAt = Number(session.expires_at || 0) || (expiresIn ? nowSeconds() + expiresIn : undefined);
+  return {
+    ...session,
+    expires_at: expiresAt,
+  };
+}
+
+function isExpired(session: DofreeSession | null | undefined, skewSeconds = refreshSkewSeconds) {
+  const expiresAt = Number(session?.expires_at || 0);
+  if (!expiresAt) return false;
+  return expiresAt <= nowSeconds() + skewSeconds;
 }
 
 function currentOrigin() {
@@ -134,32 +155,79 @@ export function getStoredSession(): DofreeSession | null {
   if (typeof window === 'undefined') return null;
   try {
     const raw = window.localStorage.getItem(sessionKey);
-    return raw ? (JSON.parse(raw) as DofreeSession) : null;
+    const session = normalizeSession(raw ? (JSON.parse(raw) as DofreeSession) : null);
+    if (!session) return null;
+    if (session.expires_at && session.expires_at <= nowSeconds() - 86400) {
+      window.localStorage.removeItem(sessionKey);
+      return null;
+    }
+    return session;
   } catch {
+    window.localStorage.removeItem(sessionKey);
     return null;
   }
 }
 
 export function storeSession(session: DofreeSession | null) {
   if (typeof window === 'undefined') return;
-  if (!session?.access_token) {
+  const normalized = normalizeSession(session);
+  if (!normalized) {
     window.localStorage.removeItem(sessionKey);
   } else {
-    window.localStorage.setItem(sessionKey, JSON.stringify(session));
+    window.localStorage.setItem(sessionKey, JSON.stringify(normalized));
   }
   window.dispatchEvent(new CustomEvent('dofree-auth-change'));
 }
 
 export async function ensureProfile(session: DofreeSession) {
-  const token = session.access_token;
-  const user = session.user || await authFetch<DofreeUser>('user', { method: 'GET' }, token);
+  const normalized = normalizeSession(session);
+  if (!normalized?.access_token) throw new Error('Session expired');
+  const token = normalized.access_token;
+  const user = normalized.user || await authFetch<DofreeUser>('user', { method: 'GET' }, token);
 
   let profile = await loadProfile(user.id, token);
   if (!profile) profile = await createProfile(user, token);
 
-  const nextSession = { ...session, user: { ...user, role: profile?.role || user.role || defaultRole }, profile };
+  const nextSession = { ...normalized, user: { ...user, role: profile?.role || user.role || defaultRole }, profile };
   storeSession(nextSession);
   return nextSession;
+}
+
+export async function refreshSession(session = getStoredSession()) {
+  const current = normalizeSession(session);
+  const refreshToken = current?.refresh_token;
+  if (!refreshToken) {
+    storeSession(null);
+    return null;
+  }
+
+  try {
+    const refreshed = await authFetch<DofreeSession>('token?grant_type=refresh_token', {
+      method: 'POST',
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+    return ensureProfile({ ...current, ...refreshed, refresh_token: refreshed.refresh_token || refreshToken });
+  } catch {
+    storeSession(null);
+    return null;
+  }
+}
+
+export async function getValidSession() {
+  const session = getStoredSession();
+  if (!session?.access_token) return null;
+  if (isExpired(session)) return refreshSession(session);
+  return session;
+}
+
+export async function hydrateStoredSession() {
+  const session = await getValidSession();
+  if (!session?.access_token) return null;
+  try {
+    return await ensureProfile(session);
+  } catch {
+    return refreshSession(session);
+  }
 }
 
 export async function consumeAuthRedirectFromUrl() {
@@ -182,6 +250,7 @@ export async function consumeAuthRedirectFromUrl() {
     access_token: accessToken,
     refresh_token: params.get('refresh_token') || undefined,
     expires_in: params.get('expires_in') ? Number(params.get('expires_in')) : undefined,
+    expires_at: params.get('expires_at') ? Number(params.get('expires_at')) : undefined,
     token_type: params.get('token_type') || undefined,
   };
 
@@ -218,11 +287,16 @@ export async function resendConfirmationEmail(email: string) {
 }
 
 export async function getCurrentUser() {
-  const session = getStoredSession();
+  const session = await getValidSession();
   if (!session?.access_token) return null;
-  const user = await authFetch<DofreeUser>('user', { method: 'GET' }, session.access_token);
-  await ensureProfile({ ...session, user });
-  return user;
+  try {
+    const user = await authFetch<DofreeUser>('user', { method: 'GET' }, session.access_token);
+    await ensureProfile({ ...session, user });
+    return user;
+  } catch {
+    const refreshed = await refreshSession(session);
+    return refreshed?.user || null;
+  }
 }
 
 export async function signOut() {
