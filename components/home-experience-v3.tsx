@@ -67,6 +67,11 @@ function dailySeed() {
   return day.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
 }
 
+function freshShuffleSeed() {
+  const random = Math.floor(Math.random() * 1_000_000);
+  return (Date.now() % 1_000_000) + random;
+}
+
 function shortTitle(item: MovieItem) {
   return item.title.length > 14 ? item.title.slice(0, 13) : item.title;
 }
@@ -214,28 +219,33 @@ function LazyMovieRail({ section, sectionIndex }: { section: MovieSection; secti
 
 export function HomeExperienceV3({ home }: { home: HomePayload }) {
   const [shuffleSeed] = useState(() => dailySeed());
-  const randomizedSections = useMemo(() => shuffleSections(home.sections, shuffleSeed), [home.sections, shuffleSeed]);
+  const [liveSeed, setLiveSeed] = useState(shuffleSeed);
+  const liveRandomizedSections = useMemo(() => shuffleSections(home.sections, liveSeed), [home.sections, liveSeed]);
   const heroItems = useMemo(() => {
-    const comingSoonItems = randomizedSections.find((section) => section.slug === 'coming-soon')?.items || [];
+    const comingSoonItems = liveRandomizedSections.find((section) => section.slug === 'coming-soon')?.items || [];
     const comingSoonCandidates = uniqueMovies(comingSoonItems).filter((item) => (item.backdropUrl || item.posterUrl) && isRecentEnoughForHero(item));
     if (comingSoonCandidates.length) return comingSoonCandidates.slice(0, HERO_CANDIDATE_LIMIT);
 
-    const sectionHeroItems = randomizedSections.flatMap((section) => section.items || []);
+    const sectionHeroItems = liveRandomizedSections.flatMap((section) => section.items || []);
     const candidates = uniqueMovies([
       ...(home.heroItems || []),
       ...sectionHeroItems,
       home.hero,
     ]).filter((item) => isRecentEnoughForHero(item));
-    const shuffledCandidates = shuffleMovies(candidates, shuffleSeed + 97, 'homepage-hero');
+    const shuffledCandidates = shuffleMovies(candidates, liveSeed + 97, 'homepage-hero');
     return shuffledCandidates.length ? shuffledCandidates.slice(0, HERO_CANDIDATE_LIMIT) : [home.hero];
-  }, [home.hero, home.heroItems, randomizedSections, shuffleSeed]);
+  }, [home.hero, home.heroItems, liveRandomizedSections, liveSeed]);
   const [heroIndex, setHeroIndex] = useState(0);
   const hero = heroItems[heroIndex] || home.hero;
   const heroImage = hero.backdropUrl || hero.posterUrl;
 
   useEffect(() => {
     setHeroIndex(0);
-  }, [shuffleSeed]);
+  }, [liveSeed]);
+
+  useEffect(() => {
+    setLiveSeed(freshShuffleSeed());
+  }, []);
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#030303] text-white">
@@ -273,7 +283,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
 
       <section id="sections" className="mx-auto max-w-[1920px] scroll-mt-[120px] bg-black px-4 py-7 md:px-7 md:py-10">
         <div className="space-y-8 md:space-y-12">
-          {randomizedSections.map((section, sectionIndex) => (
+          {liveRandomizedSections.map((section, sectionIndex) => (
             <div id={section.slug} key={section.slug} className="relative scroll-mt-[96px]" style={{ contentVisibility: sectionIndex > 1 ? 'auto' : 'visible', containIntrinsicSize: '360px 1000px' }}>
               <div className="mb-3 flex items-center justify-between md:mb-6"><div>{section.eyebrow ? <p className="text-[9px] font-black uppercase tracking-[0.26em] text-[#e50914]/80">{section.eyebrow}</p> : null}<h2 className="text-[20px] font-black tracking-[-0.04em] md:text-[30px]">{section.title}</h2></div><a href={`#${section.slug}`} className="text-[12px] font-black text-white/50 hover:text-white md:text-[16px]">ดูทั้งหมด ›</a></div>
               {sectionIndex === 2 ? (

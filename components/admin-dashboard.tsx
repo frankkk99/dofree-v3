@@ -17,6 +17,12 @@ type Metrics = {
   reports7d: number;
   sections: number;
   categories: number;
+  posterReady: number;
+  backdropReady: number;
+  trailerLinks: number;
+  missingPosters: number;
+  missingBackdrops: number;
+  contentQualityScore: number;
   visitorsToday: number;
   visitors7d: number;
   pageViewsToday: number;
@@ -130,6 +136,21 @@ function EmptyState({ children }: { children: string }) {
   return <div className="rounded-2xl border border-white/8 bg-white/[0.035] p-4 text-sm font-semibold text-white/42">{children}</div>;
 }
 
+function QualityBar({ label, value, total, tone = 'bg-[#e50914]' }: { label: string; value: number; total: number; tone?: string }) {
+  const pct = percent(value, total);
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between gap-3 text-[11px] font-black text-white/58">
+        <span>{label}</span>
+        <span>{pct}%</span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-white/[0.08]">
+        <div className={`h-full rounded-full ${tone}`} style={{ width: `${Math.max(4, pct)}%` }} />
+      </div>
+    </div>
+  );
+}
+
 export function AdminDashboard() {
   const [data, setData] = useState<DashboardPayload | null>(null);
   const [loading, setLoading] = useState(true);
@@ -191,6 +212,20 @@ export function AdminDashboard() {
                   <p className="mt-1 truncate text-[11px] font-semibold text-white/36">{item.hint}</p>
                 </article>
               ))}
+            </div>
+
+            <div className="mt-3 grid gap-3 rounded-2xl border border-white/8 bg-black/35 p-4 lg:grid-cols-[220px_1fr]">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/36">Content Quality</p>
+                <p className="mt-2 text-4xl font-black tracking-[-0.05em] text-emerald-100">{data.metrics.contentQualityScore}%</p>
+                <p className="mt-1 text-xs font-semibold text-white/38">รวมความพร้อมของลิงก์ รูป และ trailer</p>
+              </div>
+              <div className="grid gap-3">
+                <QualityBar label="Watch links" value={data.metrics.readyLinks} total={data.metrics.totalCatalog} tone="bg-[#e50914]" />
+                <QualityBar label="Posters" value={data.metrics.posterReady} total={data.metrics.totalCatalog} tone="bg-[#f4c46b]" />
+                <QualityBar label="Backdrops" value={data.metrics.backdropReady} total={data.metrics.totalCatalog} tone="bg-sky-300" />
+                <QualityBar label="Trailers" value={data.metrics.trailerLinks} total={data.metrics.totalCatalog} tone="bg-emerald-300" />
+              </div>
             </div>
 
             <div id="maintenance" className="mt-3 rounded-2xl border border-white/8 bg-black/35 p-3 md:p-4">

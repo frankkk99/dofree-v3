@@ -247,6 +247,9 @@ export async function GET(request: Request) {
       reports7d,
       sections,
       categories,
+      posterReady,
+      backdropReady,
+      trailerLinks,
       events7d,
     ] = await Promise.all([
       countRows('tmdb_catalog?select=tmdb_id'),
@@ -261,6 +264,9 @@ export async function GET(request: Request) {
       countRows(`link_reports?created_at=gte.${encodeURIComponent(since7d)}&select=id`),
       countRows('admin_sections?select=id'),
       countRows('admin_categories?select=id'),
+      countRows('tmdb_catalog?poster_url=not.is.null&select=tmdb_id'),
+      countRows('tmdb_catalog?backdrop_url=not.is.null&select=tmdb_id'),
+      countRows('admin_movie_links?trailer_url=not.is.null&select=tmdb_id'),
       getRows<AnalyticsEvent>(`analytics_events?select=event_name,page_path,media_type,media_id,title,search_query,visitor_id,user_id,device,created_at&created_at=gte.${encodeURIComponent(since7d)}&order=created_at.desc&limit=10000`),
     ]);
 
@@ -271,6 +277,11 @@ export async function GET(request: Request) {
     const detailOpens7d = events7d.filter((event) => isDetailOpen(event.event_name)).length;
     const searches7d = events7d.filter((event) => event.event_name === 'search').length;
     const missingLinks = Math.max(totalCatalog - readyLinks, 0);
+    const missingPosters = Math.max(totalCatalog - posterReady, 0);
+    const missingBackdrops = Math.max(totalCatalog - backdropReady, 0);
+    const contentQualityScore = totalCatalog
+      ? Math.round(((readyLinks / totalCatalog) * 45) + ((posterReady / totalCatalog) * 25) + ((backdropReady / totalCatalog) * 15) + ((Math.min(trailerLinks, totalCatalog) / totalCatalog) * 15))
+      : 0;
 
     const [readyLinkRows, missingCandidates] = await Promise.all([
       getRows<ReadyLinkRow>('admin_movie_links?watch_url=not.is.null&select=tmdb_id,media_type&limit=10000'),
@@ -295,6 +306,12 @@ export async function GET(request: Request) {
         reports7d,
         sections,
         categories,
+        posterReady,
+        backdropReady,
+        trailerLinks,
+        missingPosters,
+        missingBackdrops,
+        contentQualityScore,
         visitorsToday: uniqueVisitors(todayEvents),
         visitors7d: uniqueVisitors(events7d),
         pageViewsToday,
