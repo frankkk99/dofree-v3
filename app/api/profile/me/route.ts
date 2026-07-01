@@ -40,6 +40,10 @@ function jsonError(message: string, status = 400) {
   return NextResponse.json({ ok: false, error: message }, { status });
 }
 
+function profileName(user: AuthUser) {
+  return user.email?.split('@')[0] || user.phone || `user-${user.id.slice(0, 8)}`;
+}
+
 async function currentUser(token: string) {
   const url = supabaseUrl();
   const key = anonKey();
@@ -57,21 +61,32 @@ async function currentUser(token: string) {
   return (await response.json()) as AuthUser;
 }
 
-async function supabaseRest(path: string, token: string, init: RequestInit = {}) {
-  const url = supabaseUrl();
-  const key = anonKey();
-  if (!url || !key) throw new Error('Missing Supabase public env');
+async function loadProfile(user: AuthUser) {
+  const rows = await supabaseServiceRest<ProfileRecord[]>(
+    `profiles?id=eq.${encodeURIComponent(user.id)}&select=id,display_name,avatar_url,role&limit=1`,
+    { mode: 'service', cache: 'no-store' },
+  ).catch(() => []);
 
-  return fetch(`${url}/rest/v1/${path}`, {
-    ...init,
-    headers: {
-      apikey: key,
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      ...(init.headers || {}),
+  if (rows?.[0]) return rows[0];
+
+  const created = await supabaseServiceRest<ProfileRecord[]>(
+    'profiles',
+    {
+      mode: 'service',
+      method: 'POST',
+      prefer: 'return=representation',
+      body: {
+        id: user.id,
+        display_name: profileName(user),
+        role: 'viewer',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      cache: 'no-store',
     },
-    cache: 'no-store',
-  });
+  ).catch(() => []);
+
+  return created?.[0] || null;
 }
 
 function membershipIsActive(membership?: MembershipRecord | null) {
@@ -88,15 +103,7 @@ export async function GET(request: Request) {
     if (!token) return jsonError('Login required', 401);
 
     const user = await currentUser(token);
-    const response = await supabaseRest(
-      `profiles?id=eq.${encodeURIComponent(user.id)}&select=id,display_name,avatar_url,role&limit=1`,
-      token,
-    );
-
-    const data = (await response.json().catch(() => [])) as ProfileRecord[];
-    if (!response.ok) return jsonError('Cannot load profile', response.status);
-
-    const profile = data[0] || null;
+    const profile = await loadProfile(user);
     const role = profile?.role || 'viewer';
     const isAdmin = isAdminRole(role);
     const membership = await supabaseServiceRest<MembershipRecord[]>(
