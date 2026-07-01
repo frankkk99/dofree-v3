@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
+import { usePathname } from 'next/navigation';
 
 const loadingMessages = [
   'กำลังโหลดหน้าใหม่',
@@ -26,22 +26,23 @@ function shouldIgnoreUrl(url: URL) {
 
 export function RouteTransitionLoader() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const routeKey = useMemo(() => `${pathname}?${searchParams.toString()}`, [pathname, searchParams]);
   const [visible, setVisible] = useState(false);
   const [progress, setProgress] = useState(0);
   const [messageIndex, setMessageIndex] = useState(0);
   const activeRef = useRef(false);
   const startedAtRef = useRef(0);
   const hideTimerRef = useRef<number | null>(null);
+  const maxTimerRef = useRef<number | null>(null);
   const progressTimerRef = useRef<number | null>(null);
   const messageTimerRef = useRef<number | null>(null);
 
   function clearTimers() {
     if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
+    if (maxTimerRef.current) window.clearTimeout(maxTimerRef.current);
     if (progressTimerRef.current) window.clearInterval(progressTimerRef.current);
     if (messageTimerRef.current) window.clearInterval(messageTimerRef.current);
     hideTimerRef.current = null;
+    maxTimerRef.current = null;
     progressTimerRef.current = null;
     messageTimerRef.current = null;
   }
@@ -65,6 +66,10 @@ export function RouteTransitionLoader() {
     messageTimerRef.current = window.setInterval(() => {
       setMessageIndex((current) => (current + 1) % loadingMessages.length);
     }, 760);
+
+    maxTimerRef.current = window.setTimeout(() => {
+      finishLoading();
+    }, 4200);
   }
 
   function finishLoading() {
@@ -72,8 +77,10 @@ export function RouteTransitionLoader() {
     activeRef.current = false;
     if (progressTimerRef.current) window.clearInterval(progressTimerRef.current);
     if (messageTimerRef.current) window.clearInterval(messageTimerRef.current);
+    if (maxTimerRef.current) window.clearTimeout(maxTimerRef.current);
     progressTimerRef.current = null;
     messageTimerRef.current = null;
+    maxTimerRef.current = null;
     setProgress(100);
 
     const elapsed = Date.now() - startedAtRef.current;
@@ -88,7 +95,7 @@ export function RouteTransitionLoader() {
   useEffect(() => {
     finishLoading();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [routeKey]);
+  }, [pathname]);
 
   useEffect(() => {
     function handleClick(event: MouseEvent) {
