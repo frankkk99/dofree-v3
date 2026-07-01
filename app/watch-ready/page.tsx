@@ -29,7 +29,7 @@ export default async function WatchReadyPage() {
 
   return (
     <main className="min-h-screen bg-[#030303] text-white">
-      <section className="relative overflow-hidden border-b border-white/10 px-6 py-24">
+      <section className="relative overflow-hidden border-b border-white/10 px-4 py-20 md:px-6 md:py-24">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(229,9,20,0.22),transparent_30rem),linear-gradient(180deg,#030303,#050000)]" />
         <div className="relative z-10 mx-auto max-w-[1440px]">
           <a href="/" className="text-sm font-black text-red-200/75 hover:text-red-100">← กลับหน้าแรก</a>
@@ -45,10 +45,10 @@ export default async function WatchReadyPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-[1440px] px-6 py-10">
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+      <section className="mx-auto max-w-[1440px] px-3 py-8 md:px-6 md:py-10">
+        <div className="grid grid-cols-4 gap-2 sm:grid-cols-5 sm:gap-3 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8">
           {items.map((item, index) => (
-            <MovieCard key={`${item.mediaType}-${item.id}-${index}`} item={item} compact priorityBadge={index % 5 === 0 ? 'พร้อมดู' : undefined} />
+            <MovieCard key={`${item.mediaType}-${item.id}-${index}`} item={item} grid priorityBadge={index % 5 === 0 ? 'พร้อมดู' : undefined} />
           ))}
         </div>
       </section>
