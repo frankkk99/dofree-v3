@@ -376,12 +376,20 @@ function matchesQuality(item: MovieItem, quality: string) {
   return true;
 }
 
+function matchesRating(item: MovieItem, ratingFilter: string) {
+  if (!ratingFilter) return true;
+  const minRating = Number(ratingFilter);
+  if (!Number.isFinite(minRating)) return true;
+  return item.rating >= minRating;
+}
+
 function applyFilters(items: MovieItem[], filters: URLSearchParams, intent: SmartIntent, rawQuery: string) {
   const mediaType = filters.get('type') || '';
   const country = filters.get('country') || '';
   const language = filters.get('language') || '';
   const quality = filters.get('quality') || '';
   const year = filters.get('year') || '';
+  const rating = filters.get('rating') || '';
   const sort = filters.get('sort') || 'rating-desc';
   const hasRawQuery = Boolean(rawQuery.trim());
 
@@ -392,6 +400,7 @@ function applyFilters(items: MovieItem[], filters: URLSearchParams, intent: Smar
     if (!matchesLanguage(item, language)) return false;
     if (!matchesQuality(item, quality)) return false;
     if (!matchesYear(item, year)) return false;
+    if (!matchesRating(item, rating)) return false;
     return true;
   });
 
