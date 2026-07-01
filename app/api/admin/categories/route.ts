@@ -18,6 +18,8 @@ type CategoryRow = {
   sort_order: number;
   updated_at?: string;
   card_count?: number;
+  active_card_count?: number;
+  visible_card_count?: number;
 };
 
 type DefaultCategory = [string, string, string, number];
@@ -62,8 +64,17 @@ async function admin(request: Request) {
 
 async function attachCounts(categories: CategoryRow[]) {
   const counted = await Promise.all(categories.map(async (category) => {
-    const cardCount = await supabaseRestCount(`tmdb_catalog?source_bucket=eq.${encodeURIComponent(category.slug)}`, { mode: 'service' }).catch(() => 0);
-    return { ...category, card_count: cardCount };
+    const encodedSlug = encodeURIComponent(category.slug);
+    const [cardCount, activeCardCount] = await Promise.all([
+      supabaseRestCount(`tmdb_catalog?source_bucket=eq.${encodedSlug}`, { mode: 'service' }).catch(() => 0),
+      supabaseRestCount(`tmdb_catalog?source_bucket=eq.${encodedSlug}&is_active=eq.true`, { mode: 'service' }).catch(() => 0),
+    ]);
+    return {
+      ...category,
+      card_count: cardCount,
+      active_card_count: activeCardCount,
+      visible_card_count: category.enabled ? activeCardCount : 0,
+    };
   }));
   return counted;
 }
