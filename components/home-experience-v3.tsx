@@ -13,12 +13,6 @@ const RAIL_OBSERVER_MARGIN = '160px';
 const HERO_CANDIDATE_LIMIT = 32;
 const thaiMonthShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 const homeSmartExamples = ['หนังผีเกาหลีคะแนนดี', 'หนังไทยตลก', 'ซีรีส์จีนย้อนยุค', 'หนังคล้าย John Wick', 'หนังดูคืนนี้ไม่เครียด'];
-const homeFeatureCards = [
-  { title: 'ค้นด้วยชื่อเรื่อง', desc: 'รองรับชื่อไทย อังกฤษ และคำใกล้เคียง' },
-  { title: 'ค้นด้วยแนวที่อยากดู', desc: 'เช่น ผี แอ็กชัน ตลก โรแมนติก หรือไซไฟ' },
-  { title: 'กรองให้แคบลง', desc: 'เลือกประเทศ ภาษา ปี คะแนน และสถานะพร้อมดู' },
-  { title: 'ดูระบบทั้งหมด', desc: 'เปิดคู่มือเพื่อดูว่าเว็บนี้ทำอะไรได้บ้าง', href: '/how-to-use' },
-];
 
 type SectionItemsResponse = {
   ok?: boolean;
@@ -228,6 +222,30 @@ function LazyMovieRail({ section, sectionIndex }: { section: MovieSection; secti
   );
 }
 
+function HomeSmartSearchBlock() {
+  return (
+    <section className="mt-6 rounded-[26px] border border-white/10 bg-[radial-gradient(circle_at_20%_0%,rgba(229,9,20,0.16),transparent_18rem),rgba(255,255,255,0.04)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] md:mt-8 md:rounded-[30px] md:p-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="max-w-3xl">
+          <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#e50914]/80">Smart Search</p>
+          <h2 className="mt-1 text-2xl font-black tracking-[-0.05em] md:text-4xl">ค้นหาหนังแบบไม่ต้องจำชื่อเรื่อง</h2>
+          <p className="mt-2 text-sm font-semibold leading-6 text-white/52 md:text-base md:leading-7">พิมพ์ชื่อหนัง แนวหนัง ประเทศ ภาษา หรือความรู้สึกที่อยากดู ระบบจะช่วยคัดรายการที่ใกล้เคียงให้</p>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <a href="/search" className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#e50914] px-10 text-xs font-black text-white shadow-glow sm:w-[220px] md:w-[260px]">เริ่มค้นหา</a>
+          <a href="/how-to-use" className="inline-flex h-12 items-center justify-center rounded-full bg-white/[0.09] px-5 text-xs font-black text-white/72 hover:bg-white/[0.14] hover:text-white">วิธีใช้งาน</a>
+        </div>
+      </div>
+      <div className="mt-4 flex gap-2 overflow-x-auto pb-1 md:flex-wrap md:overflow-visible">
+        {homeSmartExamples.map((example) => (
+          <a key={example} href={`/search?q=${encodeURIComponent(example)}`} className="shrink-0 rounded-full bg-white/[0.08] px-3 py-2 text-[10px] font-black text-white/70 hover:bg-[#e50914] hover:text-white md:text-xs">{example}</a>
+        ))}
+      </div>
+      <p className="mt-3 text-[10px] font-semibold leading-4 text-white/34">ตัวช่วยค้นหาอัจฉริยะกำลังอยู่ระหว่างพัฒนา ทดลองใช้ได้แล้ว และจะค่อย ๆ แม่นขึ้นตามฐานข้อมูลที่เพิ่มเข้ามา</p>
+    </section>
+  );
+}
+
 export function HomeExperienceV3({ home }: { home: HomePayload }) {
   const [shuffleSeed] = useState(() => dailySeed());
   const [liveSeed, setLiveSeed] = useState(shuffleSeed);
@@ -292,35 +310,6 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
         <AdSlot code="AD-MB-H01" className="mx-auto max-w-sm" />
       </div>
 
-      <section className="mx-auto max-w-[1920px] bg-black px-4 py-7 md:px-7 md:py-10">
-        <div className="rounded-[30px] border border-white/10 bg-[radial-gradient(circle_at_20%_0%,rgba(229,9,20,0.18),transparent_22rem),rgba(255,255,255,0.045)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] md:p-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl">
-              <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#e50914]/80">Smart Search</p>
-              <h2 className="mt-1 text-2xl font-black tracking-[-0.05em] md:text-4xl">ค้นหาหนังแบบไม่ต้องจำชื่อเรื่อง</h2>
-              <p className="mt-2 text-sm font-semibold leading-6 text-white/52 md:text-base md:leading-7">พิมพ์ชื่อหนัง แนวหนัง ประเทศ ภาษา หรือความรู้สึกที่อยากดู ระบบจะช่วยคัดรายการที่ใกล้เคียงให้</p>
-            </div>
-            <div className="flex gap-2">
-              <a href="/search" className="rounded-full bg-[#e50914] px-5 py-3 text-xs font-black text-white shadow-glow">เริ่มค้นหา</a>
-              <a href="/how-to-use" className="rounded-full bg-white/[0.09] px-5 py-3 text-xs font-black text-white/72 hover:bg-white/[0.14] hover:text-white">วิธีใช้งาน</a>
-            </div>
-          </div>
-          <div className="mt-4 grid gap-2 md:grid-cols-4">
-            {homeFeatureCards.map((card) => (
-              <a key={card.title} href={card.href || '/search'} className="rounded-[22px] bg-black/28 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition hover:bg-white/[0.075]">
-                <p className="text-sm font-black text-white/86">{card.title}</p>
-                <p className="mt-1 text-xs font-semibold leading-5 text-white/42">{card.desc}</p>
-              </a>
-            ))}
-          </div>
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-1 md:flex-wrap md:overflow-visible">
-            {homeSmartExamples.map((example) => (
-              <a key={example} href={`/search?q=${encodeURIComponent(example)}`} className="shrink-0 rounded-full bg-white/[0.08] px-3 py-2 text-[10px] font-black text-white/70 hover:bg-[#e50914] hover:text-white md:text-xs">{example}</a>
-            ))}
-          </div>
-        </div>
-      </section>
-
       <section id="sections" className="mx-auto max-w-[1920px] scroll-mt-[120px] bg-black px-4 py-7 md:px-7 md:py-10">
         <div className="space-y-8 md:space-y-12">
           {liveRandomizedSections.map((section, sectionIndex) => (
@@ -333,6 +322,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
                 </div>
               ) : null}
               <LazyMovieRail section={section} sectionIndex={sectionIndex} />
+              {sectionIndex === 0 ? <HomeSmartSearchBlock /> : null}
             </div>
           ))}
         </div>
