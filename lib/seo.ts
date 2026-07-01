@@ -56,6 +56,18 @@ export function seoSlug(title: string) {
     .slice(0, 80);
 }
 
+export function mediaIdFromSlug(value: string | number) {
+  const match = String(value).trim().match(/^(\d+)/);
+  return match?.[1] || '';
+}
+
+export function mediaDetailPath(mediaType: 'movie' | 'tv', id: string | number, title?: string | null, hash = '') {
+  const numericId = mediaIdFromSlug(id);
+  const titleSlug = seoSlug(title || '') || 'detail';
+  const suffix = hash ? (hash.startsWith('#') ? hash : `#${hash}`) : '';
+  return `/${mediaType}/${numericId || id}-${titleSlug}${suffix}`;
+}
+
 export function indexRobots(): Metadata['robots'] {
   return {
     index: true,

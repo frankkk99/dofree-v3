@@ -4,7 +4,7 @@ import { ActorProfileBridge } from '@/components/actor-profile-bridge';
 import { DetailInlineWatchSection } from '@/components/detail-inline-watch-section';
 import { DetailPosterImage } from '@/components/detail-poster-image';
 import { DetailRecommendationCarousel } from '@/components/detail-recommendation-carousel';
-import { absoluteUrl, siteName } from '@/lib/seo';
+import { absoluteUrl, mediaDetailPath, siteName } from '@/lib/seo';
 import type { DetailPayload, MediaType } from '@/lib/tmdb';
 
 const detailTabs = [
@@ -111,7 +111,7 @@ export function DetailPageViewInline({ detail }: { detail: DetailPayload }) {
   const fallbackImage = item.backdropUrl || item.posterUrl || '';
   const overview = item.overview || 'ยังไม่มีคำอธิบายเรื่องนี้ แต่ระบบเตรียมโครงหน้าไว้สำหรับแสดงรายละเอียด ตัวอย่าง นักแสดง และรายการแนะนำที่เกี่ยวข้อง';
   const hasWatchLink = Boolean(item.watchUrl || item.isWatchReady || item.mediaType === 'tv');
-  const canonicalPath = `/${item.mediaType}/${item.id}`;
+  const canonicalPath = mediaDetailPath(item.mediaType, item.id, item.title);
   const canonicalUrl = absoluteUrl(canonicalPath);
   const imageUrls = [item.backdropUrl, item.posterUrl].filter(Boolean).map((url) => absoluteUrl(String(url)));
   const contentTypeLabel = item.mediaType === 'tv' ? 'ซีรีส์' : 'หนัง';

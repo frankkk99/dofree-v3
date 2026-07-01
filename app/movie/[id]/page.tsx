@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import { DetailPageView } from '@/components/detail-page-view';
-import { absoluteUrl, baseOpenGraph, buildOgImages, indexRobots, safeDescription, siteName } from '@/lib/seo';
+import { absoluteUrl, baseOpenGraph, buildOgImages, indexRobots, mediaDetailPath, mediaIdFromSlug, safeDescription, siteName } from '@/lib/seo';
 import { getDetailPayload } from '@/lib/tmdb';
 
 type PageProps = {
@@ -8,7 +9,8 @@ type PageProps = {
 };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { id } = await params;
+  const { id: rawId } = await params;
+  const id = mediaIdFromSlug(rawId);
   const detail = await getDetailPayload('movie', id);
   const year = detail.item.year ? ` (${detail.item.year})` : '';
   const title = `ดูหนัง ${detail.item.title}${year} เรื่องย่อ นักแสดง ตัวอย่าง`;
@@ -16,7 +18,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     detail.item.overview,
     `ดูข้อมูลหนัง ${detail.item.title}${year} พร้อมเรื่องย่อ นักแสดง ตัวอย่าง รายการแนะนำ และสถานะพร้อมรับชมบน${siteName}`,
   );
-  const canonical = `/movie/${id}`;
+  const canonical = mediaDetailPath('movie', detail.item.id, detail.item.title);
 
   return {
     title,
@@ -43,7 +45,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function MovieDetailPage({ params }: PageProps) {
-  const { id } = await params;
+  const { id: rawId } = await params;
+  const id = mediaIdFromSlug(rawId);
   const detail = await getDetailPayload('movie', id);
+  const canonical = mediaDetailPath('movie', detail.item.id, detail.item.title);
+  if (`/movie/${rawId}` !== canonical) redirect(canonical);
   return <DetailPageView detail={detail} />;
 }

@@ -1,5 +1,6 @@
 import { supabaseRest } from './supabase-rest';
 import { episodeWatchHref, getSeriesEpisodeSummaries } from './series-episodes';
+import { mediaDetailPath } from './seo';
 import { getFreshComingSoonItems, TMDB_RELEASE_SECTION_LIMIT } from './tmdb-release-window';
 import { getHomePayload as getTmdbHomePayload, type HomePayload, type MediaType, type MovieItem, type MovieSection } from './tmdb';
 
@@ -92,8 +93,8 @@ function watchKey(mediaType: MediaType, id: number) {
   return `${mediaType}-${id}`;
 }
 
-function publicWatchUrl(item: Pick<MovieItem, 'mediaType' | 'id'>) {
-  return `/${item.mediaType}/${item.id}#watch`;
+function publicWatchUrl(item: Pick<MovieItem, 'mediaType' | 'id' | 'title'>) {
+  return mediaDetailPath(item.mediaType, item.id, item.title, 'watch');
 }
 
 function badges(item: Pick<MovieItem, 'rating' | 'language' | 'isWatchReady'>, index: number) {
@@ -217,7 +218,7 @@ function applyWatch(item: MovieItem, links: Map<string, WatchLinkRecord>, index:
     ...item,
     title: link?.title || item.titleEn || item.title,
     titleEn: link?.title || item.titleEn,
-    watchUrl: normalizeDrivePreviewUrl(link?.watch_url) ? publicWatchUrl(item) : episodeSummary?.firstWatchUrl ? episodeWatchHref(item.mediaType, item.id) : undefined,
+    watchUrl: normalizeDrivePreviewUrl(link?.watch_url) ? publicWatchUrl(item) : episodeSummary?.firstWatchUrl ? episodeWatchHref(item.mediaType, item.id, undefined, item.title) : undefined,
     trailerUrl: normalizeDrivePreviewUrl(link?.trailer_url) || item.trailerUrl,
     episodeCount: episodeSummary?.episodeCount,
     isWatchReady: true,

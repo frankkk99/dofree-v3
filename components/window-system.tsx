@@ -446,7 +446,7 @@ export function DetailWindow({ item, recommendations, onClose, onSelect: _onSele
     async function loadEpisodes() {
       if (item.mediaType !== 'tv') return;
       try {
-        const response = await fetch(`/api/series-episodes?tmdbId=${item.id}`, { signal: controller.signal, cache: 'no-store' });
+        const response = await fetch(`/api/series-episodes?tmdbId=${item.id}&title=${encodeURIComponent(item.title)}`, { signal: controller.signal, cache: 'no-store' });
         if (!response.ok) return;
         const payload = (await response.json()) as { ok?: boolean; episodes?: PublicEpisode[] };
         if (!cancelled) setSeriesEpisodes(payload.episodes || []);

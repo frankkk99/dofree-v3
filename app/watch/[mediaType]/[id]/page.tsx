@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { DetailRecommendationCarousel } from '@/components/detail-recommendation-carousel';
 import { WatchOverviewClamp } from '@/components/watch-overview-clamp';
-import { buildOgImages, noindexRobots, safeDescription, siteName } from '@/lib/seo';
+import { buildOgImages, mediaDetailPath, mediaIdFromSlug, noindexRobots, safeDescription, siteName } from '@/lib/seo';
 import { episodeWatchHref, getPublishedSeriesEpisodes, groupSeriesEpisodes } from '@/lib/series-episodes';
 import { getDetailPayload, getWatchSourceUrl, type MediaType } from '@/lib/tmdb';
 import { createWatchSourceToken } from '@/lib/watch-source-token';
@@ -61,8 +61,9 @@ function protectedWatchUrl(sourceUrl: string | undefined, mediaType: MediaType, 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { mediaType, id } = await params;
   const parsedMediaType = parseMediaType(mediaType);
-  const detail = await getDetailPayload(parsedMediaType, id);
-  const canonical = `/${parsedMediaType}/${id}`;
+  const parsedId = mediaIdFromSlug(id);
+  const detail = await getDetailPayload(parsedMediaType, parsedId);
+  const canonical = mediaDetailPath(parsedMediaType, detail.item.id, detail.item.title, 'watch');
   const description = safeDescription(detail.item.overview || `หน้ารับชม ${detail.item.title} บน${siteName}`);
 
   return {
@@ -84,7 +85,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function WatchPage({ params, searchParams }: PageProps) {
   const { mediaType, id } = await params;
   const query = await searchParams;
-  const detail = await getDetailPayload(parseMediaType(mediaType), id);
+  const detail = await getDetailPayload(parseMediaType(mediaType), mediaIdFromSlug(id));
   const { item, trailerUrl, recommendations } = detail;
   const effectiveTrailerUrl = item.trailerUrl || trailerUrl;
   const seriesEpisodes = item.mediaType === 'tv' ? await getPublishedSeriesEpisodes(item.id) : [];
@@ -107,7 +108,7 @@ export default async function WatchPage({ params, searchParams }: PageProps) {
 
         <div className="relative z-10 mx-auto w-full max-w-[1280px] overflow-hidden">
           <div className="flex min-h-[58px] w-full min-w-0 items-center justify-between gap-3 md:min-h-[76px]">
-            <a href={`/${item.mediaType}/${item.id}`} className="inline-flex max-w-[62vw] shrink-0 truncate rounded-full border border-white/10 bg-black/35 px-4 py-2 text-xs font-black text-red-100/75 backdrop-blur-xl transition hover:border-[#e50914]/60 hover:text-white">
+            <a href={mediaDetailPath(item.mediaType, item.id, item.title)} className="inline-flex max-w-[62vw] shrink-0 truncate rounded-full border border-white/10 bg-black/35 px-4 py-2 text-xs font-black text-red-100/75 backdrop-blur-xl transition hover:border-[#e50914]/60 hover:text-white">
               กลับหน้ารายละเอียด
             </a>
             <a href="/" className="shrink-0 text-[24px] font-black tracking-[-0.08em] text-[#e50914] md:text-[34px]">
@@ -170,7 +171,7 @@ export default async function WatchPage({ params, searchParams }: PageProps) {
                               return (
                                 <a
                                   key={`${episode.season_number}-${episode.episode_number}`}
-                                  href={episodeWatchHref(item.mediaType, item.id, episode)}
+                                  href={episodeWatchHref(item.mediaType, item.id, episode, item.title)}
                                   className={`max-w-full rounded-xl px-3 py-2 text-xs font-black transition ${active ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.08] text-white/68 hover:bg-white/[0.14] hover:text-white'}`}
                                 >
                                   <span className="line-clamp-1">E{episode.episode_number}{episode.episode_title ? ` · ${episode.episode_title}` : ''}</span>

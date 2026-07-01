@@ -6,6 +6,7 @@ import { MediaPlaceholder } from '@/components/media-placeholder';
 import type { MovieItem } from '@/lib/tmdb';
 import { releaseMonthYear } from '@/lib/release-date';
 import { canUseNextImage } from '@/lib/image-optimizer';
+import { mediaDetailPath } from '@/lib/seo';
 
 type MovieCardProps = {
   item: MovieItem;
@@ -43,7 +44,7 @@ export function MovieCard({ item, priorityBadge, compact = false, grid = false, 
   const [detailAttempted, setDetailAttempted] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const badge = statusBadge(item, priorityBadge);
-  const href = `/${item.mediaType}/${item.id}`;
+  const href = mediaDetailPath(item.mediaType, item.id, item.title);
   const releaseLabel = releaseMonthYear(item as MovieItem & { releaseDate?: string });
   const badges = item.badges?.length ? item.badges : [badge, item.isWatchReady || item.watchUrl ? 'HD' : 'ข้อมูล'].filter(Boolean) as string[];
   const sizeClass = grid

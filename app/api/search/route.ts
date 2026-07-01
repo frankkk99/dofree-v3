@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { mediaDetailPath } from '@/lib/seo';
 import { supabaseRest } from '@/lib/supabase-rest';
 import type { MediaType, MovieItem } from '@/lib/tmdb';
 
@@ -102,7 +103,7 @@ function rowToMovie(row: CatalogRow, links: Map<string, WatchLinkRecord>): Movie
     language: row.language || undefined,
     status: watchUrl ? 'published' : rating >= 8 ? 'review' : 'draft',
     isWatchReady: Boolean(watchUrl),
-    watchUrl: watchUrl ? `/${row.media_type}/${row.tmdb_id}#watch` : undefined,
+    watchUrl: watchUrl ? mediaDetailPath(row.media_type, row.tmdb_id, title, 'watch') : undefined,
     trailerUrl,
     label: watchUrl ? 'พร้อมดู' : rating >= 8 ? '8+' : '6.5+',
   };

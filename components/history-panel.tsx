@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { MovieItem } from '@/lib/tmdb';
 import { getStoredSession } from '@/lib/supabase-auth-browser';
+import { mediaDetailPath } from '@/lib/seo';
 
 type WatchHistoryRecord = {
   id: string;
@@ -19,7 +20,7 @@ const fallbackImage = 'https://images.unsplash.com/photo-1536440136628-849c177e7
 
 function detailHref(item: WatchHistoryRecord, section = '') {
   const mediaType = item.media_type === 'tv' ? 'tv' : 'movie';
-  return `/${mediaType}/${item.media_id}${section}`;
+  return mediaDetailPath(mediaType, item.media_id, item.title, section);
 }
 
 function toMovieItem(item: WatchHistoryRecord): MovieItem {

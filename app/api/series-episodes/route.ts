@@ -4,6 +4,7 @@ import { episodeWatchHref, getPublishedSeriesEpisodes } from '@/lib/series-episo
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const tmdbId = Number(searchParams.get('tmdbId'));
+  const title = searchParams.get('title') || undefined;
 
   if (!Number.isInteger(tmdbId) || tmdbId <= 0) {
     return NextResponse.json({ ok: false, error: 'Invalid series request' }, { status: 400 });
@@ -14,7 +15,7 @@ export async function GET(request: Request) {
     seasonNumber: episode.season_number,
     episodeNumber: episode.episode_number,
     title: episode.episode_title || null,
-    href: episodeWatchHref('tv', tmdbId, episode),
+    href: episodeWatchHref('tv', tmdbId, episode, title),
   }));
 
   return NextResponse.json({ ok: true, episodes });
