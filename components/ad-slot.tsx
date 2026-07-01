@@ -61,6 +61,11 @@ function adHeightClass(variant: AdSlotProps['variant'], definition?: AdSlotDefin
   return 'min-h-[86px] md:min-h-[112px]';
 }
 
+function slotPrice(slot: AdSlotConfig, definition: AdSlotDefinition, key: 'monthlyPrice' | 'weeklyPrice' | 'dailyPrice') {
+  const value = slot[key];
+  return typeof value === 'string' && value.trim() ? value.trim() : definition[key];
+}
+
 export function AdSlot({ code, className = '', variant = 'banner', onVisibilityChange }: AdSlotProps) {
   const [config, setConfig] = useState<PublicAdsConfig | null>(null);
 
@@ -103,6 +108,7 @@ export function AdSlot({ code, className = '', variant = 'banner', onVisibilityC
 
   const href = slot.mode === 'ad' && slot.targetUrl ? slot.targetUrl : config?.contactUrl || '/membership';
   const isRealAd = slot.mode === 'ad' && Boolean(slot.imageUrl);
+  const monthlyPrice = slotPrice(slot, definition, 'monthlyPrice');
   const content = (
     <div className={`group relative overflow-hidden rounded-[18px] border border-white/10 bg-[#12090b] text-white shadow-[0_18px_55px_rgba(0,0,0,0.34)] ${adHeightClass(variant, definition)}`}>
       {isRealAd ? <img src={slot.imageUrl} alt={slot.campaign || slot.advertiser || definition.position} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]" /> : null}
@@ -111,7 +117,7 @@ export function AdSlot({ code, className = '', variant = 'banner', onVisibilityC
         <p className="text-[9px] font-black uppercase tracking-[0.28em] text-[#f4c46b]">พื้นที่โฆษณา</p>
         <p className="mt-1 text-lg font-black tracking-[-0.03em] md:text-2xl">{isRealAd ? slot.campaign || slot.advertiser || definition.position : code}</p>
         <p className="mt-1 text-[11px] font-bold leading-4 text-white/72 md:text-xs">{isRealAd ? definition.position : `${definition.position} · ${definition.size}`}</p>
-        {!isRealAd ? <p className="mt-2 text-[10px] font-black text-red-100/70 md:text-xs">{definition.monthlyPrice} บาท / เดือน</p> : null}
+        {!isRealAd ? <p className="mt-2 text-[10px] font-black text-red-100/70 md:text-xs">{monthlyPrice} บาท / เดือน</p> : null}
       </div>
     </div>
   );
