@@ -233,6 +233,27 @@ function unique(items: MovieItem[]) {
   return [...map.values()];
 }
 
+function shuffleSeed() {
+  return Math.floor(Date.now() / (1000 * 60 * 5));
+}
+
+function seededScore(item: MovieItem, seed: number, index: number) {
+  const source = `${seed}:${item.mediaType}:${item.id}:${index}`;
+  let hash = 2166136261;
+  for (let i = 0; i < source.length; i += 1) {
+    hash ^= source.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function shuffleItems(items: MovieItem[], seed = shuffleSeed()) {
+  return [...items]
+    .map((item, index) => ({ item, score: seededScore(item, seed, index) }))
+    .sort((a, b) => a.score - b.score)
+    .map(({ item }) => item);
+}
+
 function recentWindow() {
   const now = new Date();
   const start = new Date(now);
@@ -291,11 +312,21 @@ async function rowsForWatchReady(limit: number, offset = 0) {
     .filter((row): row is CatalogRow => Boolean(row));
 }
 
+async function randomCatalogItems(limit: number, offset = 0) {
+  const rows = await supabaseRest<CatalogRow[]>(
+    'tmdb_catalog?select=tmdb_id,media_type,title,title_en,overview,poster_url,backdrop_url,rating,vote_count,popularity,release_year,release_date,genres,language,runtime,source_bucket,sort_score&is_active=eq.true&poster_url=not.is.null&order=sort_score.desc.nullslast,rating.desc&limit=240',
+    { mode: 'service', next: { revalidate: PUBLIC_CATALOG_REVALIDATE } },
+  ).catch(() => []);
+  const items = await hydrateRows(rows, 0);
+  return shuffleItems(items.filter((item) => item.posterUrl && item.rating >= minRating)).slice(offset, offset + limit);
+}
+
 export async function getCatalogSectionItems(slug: string, limit = HOME_SECTION_LOAD_LIMIT, offset = 0) {
   const maxLimit = slug === 'coming-soon' ? TMDB_RELEASE_SECTION_LIMIT : 24;
   const safeLimit = Math.min(Math.max(Number(limit) || HOME_SECTION_LOAD_LIMIT, 1), maxLimit);
   const safeOffset = Math.max(Number(offset) || 0, 0);
   if (slug === 'coming-soon') return getFreshComingSoonItems(safeLimit, safeOffset);
+  if (slug === 'random-picks') return randomCatalogItems(safeLimit, safeOffset);
   const rows = slug === 'watch-ready'
     ? await rowsForWatchReady(safeLimit, safeOffset)
     : await rowsForBucket(sectionDefs.find((section) => section.slug === slug)?.slug || 'top-rated', safeLimit, safeOffset);
@@ -380,11 +411,18 @@ export async function getCatalogHomePayload(): Promise<HomePayload> {
     description: 'คัดจากรายการที่พร้อมรับชม',
     items: readyItems.length ? readyItems : sections[0].items,
   };
+  const randomSection: MovieSection = {
+    slug: 'random-picks',
+    eyebrow: 'Random',
+    title: 'สุ่มแนะนำรอบนี้',
+    description: 'สลับรายการจาก catalog ทุกครั้งที่หน้าแรกรีเฟรช',
+    items: shuffleItems(allItems.filter((item) => item.posterUrl && item.rating >= minRating)).slice(0, HOME_SECTION_LIMIT),
+  };
 
   return {
     source: 'tmdb',
     hero: heroItems[0] || allItems[0],
     heroItems: heroItems.length ? heroItems : allItems.slice(0, 5),
-    sections: [watchReadySection, ...hydratedSections],
+    sections: [watchReadySection, randomSection, ...hydratedSections],
   };
 }
