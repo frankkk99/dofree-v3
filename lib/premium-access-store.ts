@@ -8,9 +8,9 @@ import { hasSupabaseRestConfig, supabaseRest } from '@/lib/supabase-rest';
 
 type SiteSettingRow = {
   key: string;
+  label?: string | null;
   value: unknown;
   updated_at?: string | null;
-  updated_by?: string | null;
 };
 
 function isMissingSettingsTable(error: unknown) {
@@ -23,7 +23,6 @@ function configFromRow(row?: SiteSettingRow | null) {
   return normalizePremiumFreeAccessConfig({
     ...(row.value && typeof row.value === 'object' ? row.value : {}),
     updated_at: row.updated_at || null,
-    updated_by: row.updated_by || null,
   });
 }
 
@@ -32,7 +31,7 @@ export async function readPremiumFreeAccessConfig() {
 
   try {
     const rows = await supabaseRest<SiteSettingRow[]>(
-      `site_settings?key=eq.${encodeURIComponent(premiumFreeAccessSettingKey)}&select=key,value,updated_at,updated_by&limit=1`,
+      `site_settings?key=eq.${encodeURIComponent(premiumFreeAccessSettingKey)}&select=key,label,value,updated_at&limit=1`,
       { mode: 'service', cache: 'no-store' },
     );
     return configFromRow(rows?.[0]);
@@ -42,7 +41,7 @@ export async function readPremiumFreeAccessConfig() {
   }
 }
 
-export async function writePremiumFreeAccessConfig(config: PremiumFreeAccessConfig, updatedBy?: string | null) {
+export async function writePremiumFreeAccessConfig(config: PremiumFreeAccessConfig, _updatedBy?: string | null) {
   const normalized = normalizePremiumFreeAccessConfig(config);
   const rows = await supabaseRest<SiteSettingRow[]>(
     'site_settings?on_conflict=key',
@@ -52,17 +51,16 @@ export async function writePremiumFreeAccessConfig(config: PremiumFreeAccessConf
       prefer: 'resolution=merge-duplicates,return=representation',
       body: [{
         key: premiumFreeAccessSettingKey,
+        label: 'Premium Free Access Config',
         value: {
           enabled: normalized.enabled,
           label: normalized.label,
           features: normalized.features,
         },
         updated_at: new Date().toISOString(),
-        updated_by: updatedBy || null,
       }],
     },
   );
 
   return configFromRow(rows?.[0]);
 }
-
