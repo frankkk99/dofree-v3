@@ -53,6 +53,7 @@ function toEmbedUrl(value?: string) {
 
 export function InlineWatchPlayer({ tmdbId, mediaType, title, fallbackImage, sourceUrl, episodes = [] }: InlineWatchPlayerProps) {
   const rootRef = useRef<HTMLElement | null>(null);
+  const loadTimerRef = useRef<number | null>(null);
   const [shouldLoad, setShouldLoad] = useState(false);
   const [selectedKey, setSelectedKey] = useState(episodes[0]?.key || 'main');
   const hasEpisodes = mediaType === 'tv' && episodes.length > 1;
@@ -61,6 +62,38 @@ export function InlineWatchPlayer({ tmdbId, mediaType, title, fallbackImage, sou
   const embedUrl = useMemo(() => toEmbedUrl(activeSourceUrl), [activeSourceUrl]);
   const hasVideo = Boolean(activeSourceUrl);
 
+  function requestPlayerLoad(delay = 160) {
+    if (!hasVideo) return;
+    if (loadTimerRef.current) window.clearTimeout(loadTimerRef.current);
+    loadTimerRef.current = window.setTimeout(() => setShouldLoad(true), delay);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (loadTimerRef.current) window.clearTimeout(loadTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (window.location.hash === '#watch') requestPlayerLoad(260);
+
+    function onHashChange() {
+      if (window.location.hash === '#watch') requestPlayerLoad(180);
+    }
+
+    function onLoadPlayer() {
+      requestPlayerLoad(120);
+    }
+
+    window.addEventListener('hashchange', onHashChange);
+    window.addEventListener('dofree-load-player', onLoadPlayer);
+    return () => {
+      window.removeEventListener('hashchange', onHashChange);
+      window.removeEventListener('dofree-load-player', onLoadPlayer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasVideo, activeSourceUrl]);
+
   useEffect(() => {
     const node = rootRef.current;
     if (!node || shouldLoad) return;
@@ -68,16 +101,17 @@ export function InlineWatchPlayer({ tmdbId, mediaType, title, fallbackImage, sou
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry?.isIntersecting) {
-          setShouldLoad(true);
+          requestPlayerLoad(120);
           observer.disconnect();
         }
       },
-      { rootMargin: '400px' },
+      { rootMargin: '120px' },
     );
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, [shouldLoad]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shouldLoad, hasVideo, activeSourceUrl]);
 
   return (
     <section ref={rootRef} id="watch" className="scroll-mt-24 px-4 sm:px-5">
@@ -105,15 +139,15 @@ export function InlineWatchPlayer({ tmdbId, mediaType, title, fallbackImage, sou
               WATCH READY
             </p>
             <h2 className="mt-2 max-w-full break-words text-2xl font-black leading-tight tracking-[-0.05em] text-white sm:text-3xl md:text-4xl">
-              {hasVideo ? 'กำลังเตรียมวิดีโอรับชม...' : 'ยังไม่พร้อมรับชม'}
+              {hasVideo ? 'พร้อมเริ่มเล่นวิดีโอ' : 'ยังไม่พร้อมรับชม'}
             </h2>
             <p className="mt-2 max-w-xl text-sm font-semibold leading-6 text-white/75">
-              {hasVideo ? 'เลื่อนใกล้โซนรับชมแล้ว ระบบจะโหลด player ให้โดยอัตโนมัติ' : 'กำลังอัปเดตลิงก์รับชมสำหรับเรื่องนี้'}
+              {hasVideo ? 'กดรับชมจากด้านบนหรือกดปุ่มนี้ ระบบจะเปิด player ในหน้านี้ทันที' : 'กำลังอัปเดตลิงก์รับชมสำหรับเรื่องนี้'}
             </p>
             <div className="mt-5 flex max-w-full flex-wrap gap-3">
               {hasVideo ? (
-                <button type="button" className="rounded-2xl bg-[#e50914] px-5 py-3 text-sm font-black text-white shadow-glow sm:px-6 sm:py-4">
-                  ▶ เตรียมรับชม
+                <button type="button" onClick={() => requestPlayerLoad(0)} className="rounded-2xl bg-[#e50914] px-5 py-3 text-sm font-black text-white shadow-glow sm:px-6 sm:py-4">
+                  ▶ เริ่มรับชม
                 </button>
               ) : null}
               <DetailReportButton tmdbId={tmdbId} mediaType={mediaType} title={title} className="rounded-2xl bg-black/45 px-5 py-3 text-sm font-black text-white shadow-[0_12px_34px_rgba(0,0,0,0.32)] backdrop-blur-xl transition hover:bg-white/[0.08] sm:px-6 sm:py-4">
@@ -154,6 +188,7 @@ export function InlineWatchPlayer({ tmdbId, mediaType, title, fallbackImage, sou
                 onClick={() => {
                   setSelectedKey(episode.key);
                   setShouldLoad(false);
+                  window.setTimeout(() => requestPlayerLoad(180), 40);
                 }}
                 className={`min-h-[42px] min-w-max rounded-2xl px-4 text-xs font-black transition ${active ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.08] text-white/68 hover:bg-white/[0.14] hover:text-white'}`}
               >
