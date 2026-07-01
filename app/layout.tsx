@@ -4,6 +4,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import { MobileStickyAd } from '@/components/ad-slot';
 import { AnalyticsTracker } from '@/components/analytics-tracker';
 import { BunnyEmbedFix } from '@/components/bunny-embed-fix';
+import { RouteTransitionLoader } from '@/components/route-transition-loader';
 import { baseOpenGraph, defaultKeywords, englishSiteName, indexRobots, siteDescription, siteName, siteUrl } from '@/lib/seo';
 import './globals.css';
 
@@ -50,6 +51,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="th-TH" className={`${inter.variable} ${notoSansThai.variable}`}>
       <body>
         {children}
+        <RouteTransitionLoader />
         <MobileStickyAd />
         <AnalyticsTracker />
         <BunnyEmbedFix />
