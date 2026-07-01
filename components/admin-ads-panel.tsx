@@ -17,12 +17,17 @@ const modes: { value: AdSlotMode; label: string }[] = [
 ];
 
 const buttonClass = 'rounded-2xl px-4 py-3 text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-45';
+const adsConfigUpdatedEvent = 'dofree-ads-config-updated';
 
 function formatUpdatedAt(value?: string | null) {
   if (!value) return 'ยังไม่เคยบันทึก';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+function broadcastAdsConfig(config: AdsConfig) {
+  window.dispatchEvent(new CustomEvent(adsConfigUpdatedEvent, { detail: config }));
 }
 
 export function AdminAdsPanel() {
@@ -43,12 +48,13 @@ export function AdminAdsPanel() {
   }, [deviceFilter, query]);
 
   const activeCount = useMemo(() => Object.values(config.slots).filter((slot) => slot.enabled && slot.mode !== 'off').length, [config.slots]);
+  const enabledWithoutActiveSlots = config.enabled && activeCount === 0;
 
   async function loadConfig() {
     setLoading(true);
     setMessage('');
     try {
-      const response = await fetch('/api/admin/ads', {
+      const response = await fetch(`/api/admin/ads?t=${Date.now()}`, {
         headers: adminSessionHeaders(),
         cache: 'no-store',
       });
@@ -66,15 +72,18 @@ export function AdminAdsPanel() {
     setSaving(true);
     setMessage('');
     try {
-      const response = await fetch('/api/admin/ads', {
+      const response = await fetch(`/api/admin/ads?t=${Date.now()}`, {
         method: 'PATCH',
         headers: adminSessionHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify(config),
+        cache: 'no-store',
       });
       const payload = await response.json().catch(() => null) as Payload | null;
       if (!response.ok || !payload?.ok) throw new Error(payload?.error || 'บันทึกข้อมูลโฆษณาไม่สำเร็จ');
-      setConfig(normalizeAdsConfig(payload.config));
-      setMessage('บันทึกการตั้งค่าโฆษณาแล้ว');
+      const nextConfig = normalizeAdsConfig(payload.config);
+      setConfig(nextConfig);
+      broadcastAdsConfig(nextConfig);
+      setMessage('บันทึกการตั้งค่าโฆษณาแล้ว รีเฟรชหน้าเว็บหลักเพื่อดูผลล่าสุด');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'บันทึกข้อมูลโฆษณาไม่สำเร็จ');
     } finally {
@@ -136,6 +145,12 @@ export function AdminAdsPanel() {
           </label>
         </div>
 
+        {enabledWithoutActiveSlots ? (
+          <div className="mt-4 rounded-2xl border border-[#f4c46b]/25 bg-[#f4c46b]/10 px-4 py-3 text-xs font-bold leading-5 text-[#f4c46b]">
+            เปิดระบบ Ads แล้ว แต่ยังไม่มีตำแหน่งโฆษณาที่เปิดใช้งาน ให้เลือก slot อย่างน้อย 1 จุด แล้วเปลี่ยนจาก “ปิด” เป็น “Placeholder” หรือ “โฆษณาจริง”
+          </div>
+        ) : null}
+
         <div className="mt-4 flex flex-col gap-2 md:flex-row">
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหา code, หน้า, ตำแหน่ง" className="min-h-11 flex-1 rounded-2xl border border-white/10 bg-black/35 px-4 text-sm font-bold text-white outline-none placeholder:text-white/34" />
           <select value={deviceFilter} onChange={(event) => setDeviceFilter(event.target.value)} className="min-h-11 rounded-2xl border border-white/10 bg-black px-4 text-xs font-black text-white">
@@ -155,7 +170,7 @@ export function AdminAdsPanel() {
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="rounded-full bg-[#e50914] px-2.5 py-1 text-[10px] font-black text-white">{definition.code}</span>
-                      <span className="rounded-full bg-white/[0.08] px-2.5 py-1 text-[10px] font-black text-white/58">{definition.device}</span>
+                      <span className="rounded-full bg-white/[0.08] px-2.5 py-1 text-[10px] font-black text-white/58">{definition.device === 'desktop' ? 'desktop เท่านั้น' : definition.device === 'mobile' ? 'mobile เท่านั้น' : 'ทุกอุปกรณ์'}</span>
                       <span className="rounded-full bg-[#f4c46b]/16 px-2.5 py-1 text-[10px] font-black text-[#f4c46b]">{definition.tier}</span>
                     </div>
                     <h3 className="mt-2 text-base font-black text-white">{definition.position}</h3>
@@ -172,6 +187,7 @@ export function AdminAdsPanel() {
                         {modes.map((mode) => <option key={mode.value} value={mode.value}>{mode.label}</option>)}
                       </select>
                     </div>
+                    <button type="button" onClick={() => patchSlot(definition.code, { enabled: true, mode: 'placeholder' })} className="min-h-10 rounded-xl bg-[#e50914] px-3 text-xs font-black text-white transition hover:brightness-110">เปิดเป็น Placeholder ทันที</button>
                     <input value={slot.advertiser || ''} onChange={(event) => patchSlot(definition.code, { advertiser: event.target.value })} placeholder="ชื่อลูกค้า / Advertiser" className="min-h-10 rounded-xl border border-white/10 bg-white/[0.06] px-3 text-xs font-bold text-white outline-none placeholder:text-white/32" />
                     <input value={slot.campaign || ''} onChange={(event) => patchSlot(definition.code, { campaign: event.target.value })} placeholder="ชื่อแคมเปญ" className="min-h-10 rounded-xl border border-white/10 bg-white/[0.06] px-3 text-xs font-bold text-white outline-none placeholder:text-white/32" />
                     <input value={slot.imageUrl || ''} onChange={(event) => patchSlot(definition.code, { imageUrl: event.target.value })} placeholder="Artwork URL" className="min-h-10 rounded-xl border border-white/10 bg-white/[0.06] px-3 text-xs font-bold text-white outline-none placeholder:text-white/32" />
