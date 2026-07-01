@@ -132,6 +132,7 @@ export function AdSlot({ code, className = '', variant = 'banner', onVisibilityC
 
 export function MobileStickyAd() {
   const pathname = usePathname();
+  const shouldHide = pathname?.startsWith('/search');
   const [closed, setClosed] = useState(false);
   const [adVisible, setAdVisible] = useState(false);
 
@@ -139,24 +140,42 @@ export function MobileStickyAd() {
     setClosed(sessionStorage.getItem('dofree_ad_sticky_closed') === '1');
   }, []);
 
-  if (pathname?.startsWith('/search') || closed) return null;
+  useEffect(() => {
+    const visible = Boolean(adVisible && !closed && !shouldHide);
+    document.body.classList.toggle('dofree-mobile-sticky-visible', visible);
+    return () => document.body.classList.remove('dofree-mobile-sticky-visible');
+  }, [adVisible, closed, shouldHide]);
+
+  if (shouldHide || closed) return null;
 
   return (
-    <div className={`fixed inset-x-3 bottom-3 z-[90] md:hidden ${adVisible ? '' : 'hidden'}`}>
-      {adVisible ? (
-        <button
-          type="button"
-          aria-label="ปิดโฆษณา"
-          onClick={() => {
-            sessionStorage.setItem('dofree_ad_sticky_closed', '1');
-            setClosed(true);
-          }}
-          className="absolute -right-1 -top-2 z-10 grid h-7 w-7 place-items-center rounded-full bg-black text-sm font-black text-white shadow-lg"
-        >
-          ×
-        </button>
-      ) : null}
-      <AdSlot code="AD-MB-H02" variant="sticky" onVisibilityChange={setAdVisible} />
-    </div>
+    <>
+      <style jsx global>{`
+        @media (max-width: 767px) {
+          body.dofree-mobile-sticky-visible main {
+            padding-bottom: calc(11rem + env(safe-area-inset-bottom)) !important;
+          }
+          body.dofree-mobile-sticky-visible .dofree-full-section-overlay {
+            padding-bottom: calc(11rem + env(safe-area-inset-bottom)) !important;
+          }
+        }
+      `}</style>
+      <div data-mobile-sticky-ad-visible={adVisible ? 'true' : 'false'} className={`fixed inset-x-3 bottom-3 z-[90] md:hidden ${adVisible ? '' : 'hidden'}`}>
+        {adVisible ? (
+          <button
+            type="button"
+            aria-label="ปิดโฆษณา"
+            onClick={() => {
+              sessionStorage.setItem('dofree_ad_sticky_closed', '1');
+              setClosed(true);
+            }}
+            className="absolute -right-1 -top-2 z-10 grid h-7 w-7 place-items-center rounded-full bg-black text-sm font-black text-white shadow-lg"
+          >
+            ×
+          </button>
+        ) : null}
+        <AdSlot code="AD-MB-H02" variant="sticky" onVisibilityChange={setAdVisible} />
+      </div>
+    </>
   );
 }
