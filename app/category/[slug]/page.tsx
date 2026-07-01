@@ -16,6 +16,7 @@ type CategoryPageProps = {
 };
 
 const categoryMetas: CategoryMeta[] = [
+  { slug: 'coming-soon', eyebrow: 'Coming Soon', title: 'เร็ว ๆ นี้', description: 'รวมภาพยนตร์และซีรีส์ที่กำลังจะเข้าฉายหรือกำลังจะอัปเดต เหมาะสำหรับติดตามรายการใหม่ล่วงหน้า' },
   { slug: 'random-picks', eyebrow: 'Random', title: 'สุ่มแนะนำรอบนี้', description: 'รวมรายการแนะนำแบบสุ่มจาก catalog เพื่อให้ผู้ชมค้นพบหนังและซีรีส์ใหม่ได้ง่ายขึ้น' },
   { slug: 'top-rated', eyebrow: 'คะแนนสูง', title: 'คะแนน 6.5+ น่าดู', description: 'รวมหนังและซีรีส์คะแนนดี คัดจาก catalog เรียงตามคะแนน ความนิยม และคุณภาพของข้อมูล' },
   { slug: 'popular', eyebrow: 'กำลังนิยม', title: 'ยอดนิยมคะแนนดี', description: 'รวมรายการยอดนิยมที่มีคะแนนผ่านเกณฑ์ เหมาะสำหรับผู้ชมที่อยากเลือกเรื่องที่คนสนใจมาก' },
