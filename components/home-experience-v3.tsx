@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { HomePayload, MovieItem, MovieSection } from '@/lib/tmdb';
 import { AdSlot } from '@/components/ad-slot';
 import { HomeHeroMedia } from '@/components/home-hero-media';
@@ -11,7 +11,7 @@ const RAIL_LOAD_STEP = 9;
 const RAIL_LOAD_THRESHOLD = 360;
 const RAIL_OBSERVER_MARGIN = '160px';
 const HERO_CANDIDATE_LIMIT = 32;
-const thaiMonthShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+const thaiMonthShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
 type SectionItemsResponse = {
   ok?: boolean;
@@ -201,14 +201,12 @@ function LazyMovieRail({ section, sectionIndex }: { section: MovieSection; secti
       {mounted ? (
         <div ref={railRef} className="movie-rail flex max-w-full gap-2.5 overflow-x-auto overflow-y-hidden scroll-smooth pb-3 sm:gap-3 md:gap-5 md:pb-4" style={{ WebkitOverflowScrolling: 'touch' }}>
           {items.map((item, index) => (
-            <MovieCard key={`${section.slug}-${item.mediaType}-${item.id}-${index}`} item={item} priority={sectionIndex === 0 && index < 3} priorityBadge={section.slug === 'coming-soon' ? releaseWindowBadge(item) : index % 4 === 0 ? 'ใหม่' : undefined} />
+            <Fragment key={`${section.slug}-${item.mediaType}-${item.id}-${index}`}>
+              <MovieCard item={item} priority={sectionIndex === 0 && index < 3} priorityBadge={section.slug === 'coming-soon' ? releaseWindowBadge(item) : index % 4 === 0 ? 'ใหม่' : undefined} />
+              {sectionIndex === 0 && index === 1 ? <AdSlot code="AD-MB-H03" variant="native" className="w-[116px] shrink-0 sm:w-[140px]" /> : null}
+              {sectionIndex === 0 && index === 5 ? <AdSlot code="AD-PC-H02" variant="native" className="w-[180px] shrink-0 xl:w-[196px]" /> : null}
+            </Fragment>
           ))}
-          {sectionIndex === 0 ? (
-            <>
-              <AdSlot code="AD-PC-H02" variant="native" className="w-[180px] shrink-0 xl:w-[196px]" />
-              <AdSlot code="AD-MB-H03" variant="native" className="w-[116px] shrink-0 sm:w-[140px]" />
-            </>
-          ) : null}
           {loadingMore ? Array.from({ length: Math.min(RAIL_LOAD_STEP, Math.max(1, RAIL_LOAD_STEP - items.length)) }).map((_, index) => (
             <div key={`loading-${section.slug}-${index}`} className="h-[176px] w-[116px] shrink-0 animate-pulse rounded-[8px] bg-white/[0.045] sm:h-[220px] sm:w-[140px] md:h-[280px] md:w-[180px] xl:h-[300px] xl:w-[196px]" aria-hidden="true" />
           )) : null}
