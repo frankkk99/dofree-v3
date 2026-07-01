@@ -1,43 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { HomePayload, MovieItem, MovieSection } from '@/lib/tmdb';
+import type { HomePayload } from '@/lib/tmdb';
 import { HomeExperienceV3 } from '@/components/home-experience-v3';
-import { MovieCard } from '@/components/movie-card';
 import { UserHelpModal } from '@/components/user-help-modal';
 import { canUsePremiumFeature } from '@/lib/premium-access-config';
 import { usePremiumAccessSnapshot } from '@/lib/premium-access-client';
 import { getStoredSession, signOut, type DofreeUser } from '@/lib/supabase-auth-browser';
-
-const FULL_SECTION_BATCH_SIZE = 24;
-
-type SectionItemsResponse = {
-  ok?: boolean;
-  items?: MovieItem[];
-  hasMore?: boolean;
-};
-
-function unique(items: MovieItem[]) {
-  const map = new Map<string, MovieItem>();
-  for (const item of items) map.set(`${item.mediaType}-${item.id}`, item);
-  return [...map.values()];
-}
-
-function sectionDisplayTitle(section: MovieSection, index: number) {
-  return index === 0 || section.slug === 'watch-ready' ? 'แนะนำสำหรับคุณ' : section.title;
-}
-
-function sectionFromTitle(title: string, sections: MovieSection[]) {
-  const normalized = title.trim();
-  if (!normalized) return null;
-  if (normalized.includes('แนะนำสำหรับคุณ')) return sections[0] || null;
-
-  return sections.find((section, index) => {
-    const displayTitle = sectionDisplayTitle(section, index);
-    return normalized === displayTitle || normalized.includes(displayTitle) || displayTitle.includes(normalized);
-  }) || null;
-}
 
 function railFromTarget(target: EventTarget | null) {
   if (!(target instanceof Element)) return null;
@@ -301,96 +271,6 @@ function HeaderAccountMenuPortal() {
   return <>{menuButton}{drawer}<UserHelpModal open={helpOpen} onClose={() => setHelpOpen(false)} /></>;
 }
 
-function ViewAllClickBridge({ sections, onOpen }: { sections: MovieSection[]; onOpen: (section: MovieSection) => void }) {
-  useEffect(() => {
-    function onClick(event: MouseEvent) {
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-      const link = target.closest('a');
-      if (!link || !link.textContent?.includes('ดูทั้งหมด')) return;
-      const wrapper = link.closest('.relative') || link.parentElement;
-      const title = wrapper?.querySelector('h2')?.textContent || '';
-      const section = sectionFromTitle(title, sections) || sections[0];
-      if (!section) return;
-      event.preventDefault();
-      event.stopPropagation();
-      onOpen(section);
-    }
-    document.addEventListener('click', onClick, true);
-    return () => document.removeEventListener('click', onClick, true);
-  }, [onOpen, sections]);
-  return null;
-}
-
-function FullSectionOverlay({ section, onClose }: { section: MovieSection; onClose: () => void }) {
-  const [items, setItems] = useState<MovieItem[]>(() => unique(section.items));
-  const [hasMore, setHasMore] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
-  const overlayRef = useRef<HTMLDivElement | null>(null);
-  const loadingGuardRef = useRef(false);
-
-  const loadMore = useCallback(async () => {
-    if (loadingGuardRef.current || loadingMore || !hasMore) return;
-    loadingGuardRef.current = true;
-    setLoadingMore(true);
-
-    try {
-      const response = await fetch(`/api/catalog/section?slug=${encodeURIComponent(section.slug)}&limit=${FULL_SECTION_BATCH_SIZE}&offset=${items.length}`, { cache: 'no-store' });
-      const data = await response.json() as SectionItemsResponse;
-      const nextItems = Array.isArray(data.items) ? data.items : [];
-      setItems((current) => unique([...current, ...nextItems]));
-      setHasMore(Boolean(data.hasMore) && nextItems.length > 0);
-    } catch {
-      setHasMore(false);
-    } finally {
-      loadingGuardRef.current = false;
-      setLoadingMore(false);
-    }
-  }, [hasMore, items.length, loadingMore, section.slug]);
-
-  useEffect(() => {
-    setItems(unique(section.items));
-    setHasMore(true);
-    setLoadingMore(false);
-    loadingGuardRef.current = false;
-  }, [section]);
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
-  function onOverlayScroll() {
-    const overlay = overlayRef.current;
-    if (!overlay || !hasMore || loadingMore || loadingGuardRef.current) return;
-    const remaining = overlay.scrollHeight - overlay.clientHeight - overlay.scrollTop;
-    if (remaining < 360) void loadMore();
-  }
-
-  return (
-    <div ref={overlayRef} onScroll={onOverlayScroll} className="fixed inset-0 z-[80] overflow-y-auto bg-[#030303]/96 p-4 text-white backdrop-blur-xl md:p-7">
-      <div className="mx-auto max-w-[1920px]">
-        <div className="sticky top-0 z-10 mb-5 flex items-end justify-between gap-3 border-b border-white/10 bg-[#030303]/88 py-4 backdrop-blur-xl">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#e50914]/80">{section.eyebrow || 'Category'}</p>
-            <h2 className="mt-1 text-[28px] font-black tracking-[-0.05em] md:text-[48px]">{section.title}</h2>
-            <p className="mt-1 text-xs font-bold text-white/45">โหลดแล้ว {items.length} เรื่อง{hasMore ? ' · กำลังโหลดเพิ่มเมื่อเลื่อน' : ' · ครบหมวดแล้ว'}</p>
-          </div>
-          <button type="button" onClick={onClose} className="rounded-full bg-white/[0.1] px-4 py-2 text-xs font-black text-white/80 hover:bg-[#e50914]">ปิด</button>
-        </div>
-        <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-5 md:grid-cols-6 md:gap-4 lg:grid-cols-7 xl:grid-cols-8">
-          {items.map((item, index) => <MovieCard key={`full-${section.slug}-${item.mediaType}-${item.id}-${index}`} item={item} grid priority={index < 12} priorityBadge={section.title === 'ทั้งหมด' ? undefined : section.title} />)}
-        </div>
-        <div ref={loadMoreRef} className="py-8 text-center">
-          {hasMore ? <button type="button" onClick={() => void loadMore()} disabled={loadingMore} className="rounded-full bg-white/[0.09] px-5 py-3 text-xs font-black text-white/60 hover:bg-white/[0.14] hover:text-white">{loadingMore ? 'กำลังโหลดเพิ่ม...' : 'โหลดเพิ่ม'}</button> : <span className="text-xs font-black text-white/35">แสดงครบหมวดแล้ว</span>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function AuthSuccessToast() {
   const [visible, setVisible] = useState(false);
 
@@ -416,15 +296,12 @@ function AuthSuccessToast() {
 }
 
 export function HomeRealtimeWrapper({ home }: { home: HomePayload }) {
-  const [openSection, setOpenSection] = useState<MovieSection | null>(null);
   return (
     <>
       <HomeExperienceV3 home={home} />
       <HeaderAccountMenuPortal />
       <AuthSuccessToast />
       <DesktopRailScrollFix />
-      <ViewAllClickBridge sections={home.sections} onOpen={setOpenSection} />
-      {openSection ? <FullSectionOverlay section={openSection} onClose={() => setOpenSection(null)} /> : null}
     </>
   );
 }
