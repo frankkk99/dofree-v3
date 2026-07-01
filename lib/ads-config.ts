@@ -24,6 +24,9 @@ export type AdSlotConfig = {
   targetUrl?: string;
   startsAt?: string;
   endsAt?: string;
+  monthlyPrice?: string;
+  weeklyPrice?: string;
+  dailyPrice?: string;
 };
 
 export type AdsConfig = {
@@ -62,12 +65,23 @@ export const adSlotDefinitions: AdSlotDefinition[] = [
   { code: 'AD-MB-P02', page: 'Player Mobile', position: 'หลังเปลี่ยน Server', format: 'Interstitial สั้น', size: 'Responsive', device: 'mobile', monthlyPrice: '18,000', weeklyPrice: '6,000', dailyPrice: '1,200', tier: 'High Impact' },
 ];
 
+function cleanPrice(value: unknown, fallback: string) {
+  return typeof value === 'string' && value.trim() ? value.trim() : fallback;
+}
+
 export function createDefaultAdsConfig(): AdsConfig {
   return {
     enabled: false,
     showPlaceholders: false,
     contactUrl: '/membership',
-    slots: Object.fromEntries(adSlotDefinitions.map((slot) => [slot.code, { code: slot.code, enabled: false, mode: 'off' as const }])),
+    slots: Object.fromEntries(adSlotDefinitions.map((slot) => [slot.code, {
+      code: slot.code,
+      enabled: false,
+      mode: 'off' as const,
+      monthlyPrice: slot.monthlyPrice,
+      weeklyPrice: slot.weeklyPrice,
+      dailyPrice: slot.dailyPrice,
+    }])),
   };
 }
 
@@ -95,6 +109,9 @@ export function normalizeAdsConfig(value: unknown): AdsConfig {
         targetUrl: raw.targetUrl || '',
         startsAt: raw.startsAt || '',
         endsAt: raw.endsAt || '',
+        monthlyPrice: cleanPrice(raw.monthlyPrice, definition.monthlyPrice),
+        weeklyPrice: cleanPrice(raw.weeklyPrice, definition.weeklyPrice),
+        dailyPrice: cleanPrice(raw.dailyPrice, definition.dailyPrice),
       }];
     })),
   };
