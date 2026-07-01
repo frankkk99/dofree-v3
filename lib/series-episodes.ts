@@ -1,4 +1,5 @@
 import { supabaseRest } from './supabase-rest';
+import { mediaDetailPath } from './seo';
 import type { MediaType } from './tmdb';
 
 export type SeriesEpisodeStatus = 'draft' | 'review' | 'published' | 'broken' | 'hidden';
@@ -60,9 +61,9 @@ function activeEpisodeFilter(tmdbIds: number[]) {
   return `admin_series_episodes?tmdb_id=in.(${ids.join(',')})&is_active=eq.true&status=eq.published&watch_url=not.is.null&select=id,tmdb_id,media_type,season_number,episode_number,episode_title,watch_url,trailer_url,provider,notes,status,is_active,created_at,updated_at&order=season_number.asc,episode_number.asc`;
 }
 
-export function episodeWatchHref(mediaType: MediaType, tmdbId: number, episode?: Pick<SeriesEpisode, 'season_number' | 'episode_number'>) {
-  if (mediaType !== 'tv' || !episode) return `/${mediaType}/${tmdbId}#watch`;
-  return `/tv/${tmdbId}#watch`;
+export function episodeWatchHref(mediaType: MediaType, tmdbId: number, episode?: Pick<SeriesEpisode, 'season_number' | 'episode_number'>, title?: string | null) {
+  if (mediaType !== 'tv' || !episode) return mediaDetailPath(mediaType, tmdbId, title, 'watch');
+  return mediaDetailPath('tv', tmdbId, title, 'watch');
 }
 
 export function groupSeriesEpisodes(episodes: SeriesEpisode[]): SeriesSeason[] {

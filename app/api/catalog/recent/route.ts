@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { mediaDetailPath } from '@/lib/seo';
 import { supabaseRest } from '@/lib/supabase-rest';
 import type { MediaType, MovieItem } from '@/lib/tmdb';
 
@@ -44,8 +45,8 @@ function key(mediaType: MediaType, id: number) {
   return `${mediaType}-${id}`;
 }
 
-function publicWatchUrl(mediaType: MediaType, id: number) {
-  return `/${mediaType}/${id}#watch`;
+function publicWatchUrl(mediaType: MediaType, id: number, title?: string | null) {
+  return mediaDetailPath(mediaType, id, title, 'watch');
 }
 
 function rowIds(rows: Pick<CatalogRow, 'tmdb_id'>[]) {
@@ -90,7 +91,7 @@ function rowToItem(row: CatalogRow, link: LinkRow | undefined, today: string): M
     language: row.language || undefined,
     status: hasWatchUrl ? 'published' : 'review',
     isWatchReady: hasWatchUrl,
-    watchUrl: hasWatchUrl ? publicWatchUrl(row.media_type, row.tmdb_id) : undefined,
+    watchUrl: hasWatchUrl ? publicWatchUrl(row.media_type, row.tmdb_id, link?.title_th || row.title || row.title_en) : undefined,
     trailerUrl: normalizeDrivePreviewUrl(link?.trailer_url),
     label: isUpcoming ? 'กำลังจะเข้า' : 'เข้าใหม่',
     badges: badges(isUpcoming, hasWatchUrl, rating),

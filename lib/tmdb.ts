@@ -1,3 +1,5 @@
+import { mediaDetailPath } from './seo';
+
 export type MediaType = 'movie' | 'tv';
 export type MovieStatus = 'draft' | 'review' | 'published' | 'broken' | 'hidden';
 
@@ -217,8 +219,8 @@ function watchLinkKey(mediaType: MediaType, id: number) {
   return `${mediaType}-${id}`;
 }
 
-function publicWatchUrl(item: Pick<MovieItem, 'mediaType' | 'id'>) {
-  return `/${item.mediaType}/${item.id}#watch`;
+function publicWatchUrl(item: Pick<MovieItem, 'mediaType' | 'id' | 'title'>) {
+  return mediaDetailPath(item.mediaType, item.id, item.title, 'watch');
 }
 
 function normalizeDrivePreviewUrl(value?: string | null) {

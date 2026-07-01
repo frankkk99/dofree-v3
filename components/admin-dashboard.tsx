@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { mediaDetailPath } from '@/lib/seo';
 import { getStoredSession } from '@/lib/supabase-auth-browser';
 
 type Metrics = {
@@ -300,7 +301,7 @@ export function AdminDashboard() {
                 <h2 className="mt-1 text-lg font-black tracking-[-0.03em]">หนัง/ซีรีส์ที่คนสนใจ</h2>
                 <div className="mt-4 grid gap-2">
                   {data.analytics?.topContent?.length ? data.analytics.topContent.map((item) => (
-                    <a key={`${item.mediaType}-${item.mediaId}`} href={item.mediaType && item.mediaId ? `/${item.mediaType}/${item.mediaId}` : '#'} className="flex items-center justify-between gap-3 rounded-2xl bg-white/[0.055] px-4 py-3 transition hover:bg-white/[0.09]">
+                    <a key={`${item.mediaType}-${item.mediaId}`} href={item.mediaType && item.mediaId ? mediaDetailPath(item.mediaType, item.mediaId, item.label) : '#'} className="flex items-center justify-between gap-3 rounded-2xl bg-white/[0.055] px-4 py-3 transition hover:bg-white/[0.09]">
                       <div className="min-w-0">
                         <p className="truncate text-sm font-black text-white/80">{item.label}</p>
                         <p className="mt-0.5 text-[10px] font-bold uppercase text-white/32">{item.mediaType || 'content'} {item.mediaId || ''}</p>

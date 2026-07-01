@@ -40,18 +40,25 @@ type ActorPayload = {
 const emptyPayload: ActorPayload = { works: [], collaborators: [] };
 const closeContentOverlaysEvent = 'dofree-close-content-overlays';
 
-function findActorName(target: EventTarget | null) {
-  if (!(target instanceof Element)) return '';
-  if (target.closest('[data-actor-profile-window="true"]')) return '';
+function findActorRef(target: EventTarget | null): ActorRef | null {
+  if (!(target instanceof Element)) return null;
+  if (target.closest('[data-actor-profile-window="true"]')) return null;
+
+  const actorCard = target.closest('[data-actor-card="true"]');
+  if (actorCard) {
+    const id = Number(actorCard.getAttribute('data-actor-id') || '');
+    const name = actorCard.getAttribute('data-actor-name') || actorCard.querySelector('h4')?.textContent?.trim() || '';
+    if (name || (Number.isFinite(id) && id > 0)) return { id: Number.isFinite(id) && id > 0 ? id : undefined, name };
+  }
 
   let element: Element | null = target;
   for (let i = 0; i < 8 && element; i += 1) {
     const heading = element.querySelector('h4');
     const hasActorShape = element.className?.toString().includes('aspect-[2/3]') || element.getAttribute('data-actor-card') === 'true';
-    if (heading?.textContent && hasActorShape) return heading.textContent.trim();
+    if (heading?.textContent && hasActorShape) return { name: heading.textContent.trim() };
     element = element.parentElement;
   }
-  return '';
+  return null;
 }
 
 function metaLine(person?: ActorPerson) {
@@ -105,11 +112,11 @@ export function ActorProfileBridge() {
 
   useEffect(() => {
     function onClick(event: MouseEvent) {
-      const name = findActorName(event.target);
-      if (!name) return;
+      const actor = findActorRef(event.target);
+      if (!actor) return;
       event.preventDefault();
       event.stopPropagation();
-      openActor({ name }, true);
+      openActor(actor, true);
     }
 
     document.addEventListener('click', onClick, true);

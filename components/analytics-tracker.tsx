@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { mediaIdFromSlug } from '@/lib/seo';
 
 type AnalyticsEvent = {
   eventName: string;
@@ -70,13 +71,15 @@ function postAnalytics(payload: AnalyticsEvent) {
 
 function parseMediaPath(pathname: string) {
   const [mediaType, id] = pathname.split('/').filter(Boolean);
-  if ((mediaType === 'movie' || mediaType === 'tv') && Number(id)) {
-    return { mediaType, mediaId: Number(id) } as const;
+  const mediaId = Number(mediaIdFromSlug(id || ''));
+  if ((mediaType === 'movie' || mediaType === 'tv') && mediaId) {
+    return { mediaType, mediaId } as const;
   }
   if (mediaType === 'watch') {
     const [, watchMediaType, watchId] = pathname.split('/').filter(Boolean);
-    if ((watchMediaType === 'movie' || watchMediaType === 'tv') && Number(watchId)) {
-      return { mediaType: watchMediaType, mediaId: Number(watchId) } as const;
+    const watchMediaId = Number(mediaIdFromSlug(watchId || ''));
+    if ((watchMediaType === 'movie' || watchMediaType === 'tv') && watchMediaId) {
+      return { mediaType: watchMediaType, mediaId: watchMediaId } as const;
     }
   }
   return null;

@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import type { FormEvent } from 'react';
+import { canManageAccessControl } from '@/lib/admin-access-control';
 import { getStoredSession } from '@/lib/supabase-auth-browser';
 
 type Membership = {
@@ -33,6 +35,12 @@ type UsersPayload = {
   error?: string;
 };
 
+type CreateAdminPayload = {
+  ok?: boolean;
+  user?: AdminUser;
+  error?: string;
+};
+
 function shortId(id: string) {
   return id.slice(0, 8);
 }
@@ -62,6 +70,9 @@ export function AdminUsersPanel() {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [canCreateAdmin, setCanCreateAdmin] = useState(false);
+  const [createForm, setCreateForm] = useState({ email: '', password: '', displayName: '' });
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
@@ -86,6 +97,7 @@ export function AdminUsersPanel() {
       const session = getStoredSession();
       const token = session?.access_token;
       if (!token) throw new Error('ต้องเข้าสู่ระบบด้วยบัญชีแอดมินก่อน');
+      setCanCreateAdmin(canManageAccessControl({ role: session.profile?.role || session.user?.role, profile: session.profile }));
 
       const response = await fetch('/api/admin/users', {
         headers: { Authorization: `Bearer ${token}` },
@@ -131,6 +143,39 @@ export function AdminUsersPanel() {
     }
   }
 
+  async function createAdminUser(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setCreating(true);
+    setError('');
+    setMessage('');
+
+    try {
+      const session = getStoredSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('ต้องเข้าสู่ระบบด้วยบัญชีแอดมินก่อน');
+
+      const response = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(createForm),
+      });
+      const payload = (await response.json()) as CreateAdminPayload;
+      if (!response.ok || !payload.ok || !payload.user) throw new Error(payload.error || 'Create admin failed');
+
+      setUsers((current) => [payload.user as AdminUser, ...current.filter((user) => user.id !== payload.user?.id)]);
+      setStats((current) => current ? { ...current, total: current.total + 1, admins: current.admins + 1 } : current);
+      setCreateForm({ email: '', password: '', displayName: '' });
+      setMessage(`Created admin ${payload.user.display_name || shortId(payload.user.id)}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Create admin failed');
+    } finally {
+      setCreating(false);
+    }
+  }
+
   useEffect(() => {
     void loadUsers();
   }, []);
@@ -156,6 +201,48 @@ export function AdminUsersPanel() {
             <span className="rounded-full bg-black/35 px-3 py-1.5">Viewer {stats.viewers}</span>
             <span className="rounded-full bg-[#f4c46b]/18 px-3 py-1.5 text-[#f4c46b]">Premium {stats.activePremium}</span>
           </div>
+        ) : null}
+
+        {canCreateAdmin ? (
+          <form onSubmit={createAdminUser} className="mt-4 rounded-2xl border border-white/8 bg-black/35 p-3">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+              <label className="flex-1 text-[11px] font-black uppercase tracking-[0.14em] text-white/40">
+                Email
+                <input
+                  type="email"
+                  value={createForm.email}
+                  onChange={(event) => setCreateForm((current) => ({ ...current, email: event.target.value }))}
+                  required
+                  className="mt-2 h-11 w-full rounded-xl border border-white/10 bg-black/45 px-3 text-sm font-bold text-white outline-none placeholder:text-white/25 focus:border-[#e50914]"
+                  placeholder="admin@example.com"
+                />
+              </label>
+              <label className="flex-1 text-[11px] font-black uppercase tracking-[0.14em] text-white/40">
+                Display name
+                <input
+                  value={createForm.displayName}
+                  onChange={(event) => setCreateForm((current) => ({ ...current, displayName: event.target.value }))}
+                  className="mt-2 h-11 w-full rounded-xl border border-white/10 bg-black/45 px-3 text-sm font-bold text-white outline-none placeholder:text-white/25 focus:border-[#e50914]"
+                  placeholder="Admin name"
+                />
+              </label>
+              <label className="flex-1 text-[11px] font-black uppercase tracking-[0.14em] text-white/40">
+                Password
+                <input
+                  type="password"
+                  value={createForm.password}
+                  onChange={(event) => setCreateForm((current) => ({ ...current, password: event.target.value }))}
+                  required
+                  minLength={6}
+                  className="mt-2 h-11 w-full rounded-xl border border-white/10 bg-black/45 px-3 text-sm font-bold text-white outline-none placeholder:text-white/25 focus:border-[#e50914]"
+                  placeholder="At least 6 characters"
+                />
+              </label>
+              <button type="submit" disabled={creating} className="h-11 rounded-xl bg-[#e50914] px-4 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-45">
+                {creating ? 'Creating...' : 'Create admin'}
+              </button>
+            </div>
+          </form>
         ) : null}
 
         <div className="mt-4 rounded-2xl border border-white/8 bg-black/35 p-3">

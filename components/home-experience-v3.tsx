@@ -5,6 +5,7 @@ import type { HomePayload, MovieItem, MovieSection } from '@/lib/tmdb';
 import { AdSlot } from '@/components/ad-slot';
 import { HomeHeroMedia } from '@/components/home-hero-media';
 import { MovieCard } from '@/components/movie-card';
+import { mediaDetailPath } from '@/lib/seo';
 
 const RAIL_LOAD_STEP = 9;
 const RAIL_LOAD_THRESHOLD = 360;
@@ -271,7 +272,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
             <h1 className="hero-title max-w-[92vw] text-[42px] font-black leading-[0.88] tracking-[-0.085em] text-white md:whitespace-nowrap md:text-[92px] lg:text-[112px] xl:text-[120px]">{shortTitle(hero)}</h1>
             <h2 className="mt-3 max-w-[92vw] text-[16px] font-black tracking-[-0.04em] text-white md:mt-6 md:text-[28px]">{heroEnglishReleaseLine(hero)}</h2>
             <p className="mt-2 line-clamp-3 max-w-[92vw] text-[12px] leading-5 text-white/56 md:mt-3 md:max-w-[620px] md:text-[18px] md:leading-7">{hero.overview}</p>
-            <div className="mt-5 flex gap-2.5 md:mt-8 md:gap-5"><a href={`/${hero.mediaType}/${hero.id}#watch`} className="inline-flex h-[42px] items-center gap-2 rounded-lg bg-[#e50914] px-5 text-[13px] font-black text-white shadow-glow md:h-[55px] md:px-9 md:text-[16px]">▶ รับชม</a><a href={`/${hero.mediaType}/${hero.id}`} className="inline-flex h-[42px] items-center gap-2 rounded-lg border border-white/10 bg-white/[0.12] px-5 text-[13px] font-black text-white/86 md:h-[55px] md:px-8 md:text-[16px]">ⓘ รายละเอียด</a></div>
+            <div className="mt-5 flex gap-2.5 md:mt-8 md:gap-5"><a href={mediaDetailPath(hero.mediaType, hero.id, hero.title, 'watch')} className="inline-flex h-[42px] items-center gap-2 rounded-lg bg-[#e50914] px-5 text-[13px] font-black text-white shadow-glow md:h-[55px] md:px-9 md:text-[16px]">▶ รับชม</a><a href={mediaDetailPath(hero.mediaType, hero.id, hero.title)} className="inline-flex h-[42px] items-center gap-2 rounded-lg border border-white/10 bg-white/[0.12] px-5 text-[13px] font-black text-white/86 md:h-[55px] md:px-8 md:text-[16px]">ⓘ รายละเอียด</a></div>
           </div>
         </div>
       </section>
