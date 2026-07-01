@@ -104,6 +104,7 @@ export function RouteTransitionLoader() {
       if (!(target instanceof Element)) return;
       const anchor = target.closest('a[href]') as HTMLAnchorElement | null;
       if (!anchor) return;
+      if (anchor.closest('[data-no-route-loader="true"]')) return;
       if (anchor.target && anchor.target !== '_self') return;
       if (anchor.hasAttribute('download')) return;
 
