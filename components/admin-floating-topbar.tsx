@@ -6,13 +6,14 @@ import { AdminHelpModal } from '@/components/admin-help-modal';
 import { canManageAccessControl, getAdminRoleLabel } from '@/lib/admin-access-control';
 import { getStoredSession, type DofreeSession } from '@/lib/supabase-auth-browser';
 
-export type AdminModuleId = 'dashboard' | 'content' | 'homepage' | 'notifications' | 'premium' | 'audit';
+export type AdminModuleId = 'dashboard' | 'content' | 'homepage' | 'notifications' | 'ads' | 'premium' | 'audit';
 
 const modules = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'content', label: 'Content' },
   { id: 'homepage', label: 'Homepage' },
   { id: 'notifications', label: 'Notifications' },
+  { id: 'ads', label: 'Ads' },
   { id: 'premium', label: 'Premium' },
   { id: 'audit', label: 'Audit' },
 ] satisfies { id: AdminModuleId; label: string }[];

@@ -1,4 +1,5 @@
 import { DetailReportButton } from '@/components/detail-report-button';
+import { AdSlot } from '@/components/ad-slot';
 import { InlineWatchPlayer } from '@/components/inline-watch-player';
 import { getPublishedSeriesEpisodes } from '@/lib/series-episodes';
 import { getWatchSourceUrl, type MediaType } from '@/lib/tmdb';
@@ -52,5 +53,13 @@ export async function DetailInlineWatchSection({ tmdbId, mediaType, title, fallb
     return <ComingSoonWatchSection tmdbId={tmdbId} mediaType={mediaType} title={title} fallbackImage={fallbackImage} />;
   }
 
-  return <InlineWatchPlayer tmdbId={tmdbId} mediaType={mediaType} title={title} fallbackImage={fallbackImage} sourceUrl={sourceUrl} episodes={episodes} />;
+  return (
+    <>
+      <InlineWatchPlayer tmdbId={tmdbId} mediaType={mediaType} title={title} fallbackImage={fallbackImage} sourceUrl={sourceUrl} episodes={episodes} />
+      <div className="mt-5 px-4 sm:px-5">
+        <AdSlot code="AD-PC-P01" className="mx-auto max-w-4xl" />
+        <AdSlot code="AD-MB-P01" className="mx-auto max-w-sm" />
+      </div>
+    </>
+  );
 }

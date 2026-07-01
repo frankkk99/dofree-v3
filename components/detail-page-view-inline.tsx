@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { AdSlot } from '@/components/ad-slot';
 import { DetailInlineWatchSection } from '@/components/detail-inline-watch-section';
 import { DetailPosterImage } from '@/components/detail-poster-image';
 import { DetailRecommendationCarousel } from '@/components/detail-recommendation-carousel';
@@ -191,6 +192,11 @@ export function DetailPageViewInline({ detail }: { detail: DetailPayload }) {
         </nav>
 
         <section className="flex flex-col gap-6 p-3 md:p-4">
+          <div>
+            <AdSlot code="AD-PC-D01" className="mx-auto max-w-4xl" />
+            <AdSlot code="AD-MB-D01" className="mx-auto max-w-sm" />
+          </div>
+
           <SectionSurface id="recommend">
             <div className="mb-4 flex items-center justify-between gap-4">
               <div><p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]/75">Recommended</p><h2 className="mt-1 text-xl font-black tracking-[-0.04em] md:text-2xl">แนะนำสำหรับคุณ</h2></div>
@@ -198,6 +204,11 @@ export function DetailPageViewInline({ detail }: { detail: DetailPayload }) {
             </div>
             <DetailRecommendationCarousel current={item} items={recommendations} />
           </SectionSurface>
+
+          <div>
+            <AdSlot code="AD-PC-D05" className="mx-auto max-w-4xl" />
+            <AdSlot code="AD-MB-D02" className="mx-auto max-w-sm" />
+          </div>
 
           <SectionSurface id="cast">
             <div className="flex items-center justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]/75">Cast</p><h2 className="mt-1 text-xl font-black tracking-[-0.04em] md:text-2xl">นักแสดงหลัก</h2></div><span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-black text-white/38 backdrop-blur-xl">นักแสดง</span></div>
@@ -210,6 +221,10 @@ export function DetailPageViewInline({ detail }: { detail: DetailPayload }) {
           </SectionSurface>
 
           <SectionSurface id="summary" className="bg-yellow-300/[0.055]"><p className="text-[10px] font-black uppercase tracking-[0.26em] text-yellow-100/62">Overview</p><h2 className="mt-1 text-xl font-black tracking-[-0.04em] md:text-2xl">เรื่องย่อ</h2><div className="mt-3 rounded-2xl bg-black/28 p-3 text-xs leading-6 text-yellow-50/75 md:text-sm md:leading-7">{overview}</div></SectionSurface>
+          <div>
+            <AdSlot code="AD-PC-D03" className="mx-auto max-w-3xl" />
+            <AdSlot code="AD-MB-D03" className="mx-auto max-w-sm" />
+          </div>
         </section>
 
         <div className="pb-5 md:pb-6">
