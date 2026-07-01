@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { AdSlot } from '@/components/ad-slot';
+import { ActorProfileBridge } from '@/components/actor-profile-bridge';
 import { DetailInlineWatchSection } from '@/components/detail-inline-watch-section';
 import { DetailPosterImage } from '@/components/detail-poster-image';
 import { DetailRecommendationCarousel } from '@/components/detail-recommendation-carousel';
@@ -144,6 +145,7 @@ export function DetailPageViewInline({ detail }: { detail: DetailPayload }) {
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#030303] px-2 py-4 text-white md:px-4 md:py-7">
+      <ActorProfileBridge />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
 
@@ -212,7 +214,7 @@ export function DetailPageViewInline({ detail }: { detail: DetailPayload }) {
 
           <SectionSurface id="cast">
             <div className="flex items-center justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.26em] text-[#e50914]/75">Cast</p><h2 className="mt-1 text-xl font-black tracking-[-0.04em] md:text-2xl">นักแสดงหลัก</h2></div><span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-black text-white/38 backdrop-blur-xl">นักแสดง</span></div>
-            {cast.length ? <div className="mt-4 grid grid-cols-3 gap-2 md:grid-cols-4 md:gap-3">{cast.slice(0, 12).map((person, index) => <button key={`${person.id || person.name}-${index}`} type="button" data-actor-card="true" className="group relative aspect-[2/3] overflow-hidden rounded-[12px] bg-white/[0.055] text-left shadow-[0_16px_54px_rgba(0,0,0,0.55)] backdrop-blur-xl transition hover:scale-[1.015] md:rounded-[16px]">{person.profileUrl ? <img src={person.profileUrl} alt={person.name} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" /> : <div className="absolute inset-0 grid place-items-center bg-[radial-gradient(circle_at_50%_24%,#8a111b,#111_62%)] text-4xl font-black text-white/78 md:text-5xl">{personInitial(person.name)}</div>}<div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.04)_0%,rgba(0,0,0,0.06)_44%,rgba(0,0,0,0.92)_100%)]" /><div className="absolute inset-x-0 bottom-0 p-2 md:p-3"><h4 className="line-clamp-2 text-[10px] font-black leading-tight text-white drop-shadow md:text-sm">{person.name}</h4><p className="mt-1 line-clamp-2 text-[8px] font-bold leading-3 text-white/52 md:text-[10px] md:leading-4">{person.character || 'นักแสดง'}</p></div></button>)}</div> : <div className="mt-4 rounded-2xl bg-black/28 p-4 text-center text-xs font-bold text-white/45 backdrop-blur-xl md:text-sm">ยังไม่มีข้อมูลนักแสดงสำหรับเรื่องนี้</div>}
+            {cast.length ? <div className="mt-4 grid grid-cols-3 gap-2 md:grid-cols-4 md:gap-3">{cast.slice(0, 12).map((person, index) => <button key={`${person.id || person.name}-${index}`} type="button" data-actor-card="true" data-actor-id={person.id} data-actor-name={person.name} className="group relative aspect-[2/3] overflow-hidden rounded-[12px] bg-white/[0.055] text-left shadow-[0_16px_54px_rgba(0,0,0,0.55)] backdrop-blur-xl transition hover:scale-[1.015] md:rounded-[16px]">{person.profileUrl ? <img src={person.profileUrl} alt={person.name} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" /> : <div className="absolute inset-0 grid place-items-center bg-[radial-gradient(circle_at_50%_24%,#8a111b,#111_62%)] text-4xl font-black text-white/78 md:text-5xl">{personInitial(person.name)}</div>}<div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.04)_0%,rgba(0,0,0,0.06)_44%,rgba(0,0,0,0.92)_100%)]" /><div className="absolute inset-x-0 bottom-0 p-2 md:p-3"><h4 className="line-clamp-2 text-[10px] font-black leading-tight text-white drop-shadow md:text-sm">{person.name}</h4><p className="mt-1 line-clamp-2 text-[8px] font-bold leading-3 text-white/52 md:text-[10px] md:leading-4">{person.character || 'นักแสดง'}</p></div></button>)}</div> : <div className="mt-4 rounded-2xl bg-black/28 p-4 text-center text-xs font-bold text-white/45 backdrop-blur-xl md:text-sm">ยังไม่มีข้อมูลนักแสดงสำหรับเรื่องนี้</div>}
           </SectionSurface>
 
           <SectionSurface id="detail">

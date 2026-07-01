@@ -232,7 +232,7 @@ function fallbackCast(item: MovieItem): CastPerson[] {
 
 function ActorCard({ person }: { person: CastPerson }) {
   return (
-    <div className="relative aspect-[2/3] overflow-hidden rounded-[12px] bg-white/[0.055] shadow-[0_16px_54px_rgba(0,0,0,0.55)] backdrop-blur-xl md:rounded-[16px]">
+    <div data-actor-card="true" data-actor-id={person.id} data-actor-name={person.name} className="relative aspect-[2/3] overflow-hidden rounded-[12px] bg-white/[0.055] shadow-[0_16px_54px_rgba(0,0,0,0.55)] backdrop-blur-xl md:rounded-[16px]">
       {person.profileUrl ? <img src={person.profileUrl} alt={person.name} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" /> : <div className="absolute inset-0 grid place-items-center bg-[radial-gradient(circle_at_50%_24%,#8a111b,#111_62%)] text-4xl font-black text-white/78 md:text-5xl">{person.initial || person.name.slice(0, 1)}</div>}
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.04)_0%,rgba(0,0,0,0.06)_44%,rgba(0,0,0,0.92)_100%)]" />
       <div className="absolute inset-x-0 bottom-0 p-2 md:p-3">
