@@ -71,7 +71,7 @@ export function RouteTransitionLoader() {
     setProgress(100);
 
     const elapsed = Date.now() - startedAtRef.current;
-    const delay = Math.max(160, 380 - elapsed);
+    const delay = Math.max(130, 320 - elapsed);
     hideTimerRef.current = window.setTimeout(() => {
       setVisible(false);
       setProgress(0);
@@ -102,7 +102,6 @@ export function RouteTransitionLoader() {
       if (!anchor) return;
       if (anchor.closest('[data-no-route-loader="true"]')) return;
       if (anchor.target && anchor.target !== '_self') return;
-      if (anchor.hasAttribute('download')) return;
       const rawHref = anchor.getAttribute('href') || '';
       if (rawHref.startsWith('#')) return;
 
@@ -149,11 +148,9 @@ export function RouteTransitionLoader() {
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-0 z-[1200] pointer-events-none bg-black/22 backdrop-blur-[7px]">
-      <div className="fixed left-1/2 top-1/2 w-[min(280px,72vw)] -translate-x-1/2 -translate-y-1/2">
-        <div className="h-1.5 overflow-hidden rounded-full bg-white/14 shadow-[0_16px_50px_rgba(0,0,0,0.38)]">
-          <div className="h-full rounded-full bg-[#e50914] shadow-[0_0_18px_rgba(229,9,20,0.56)] transition-[width] duration-200 ease-out" style={{ width: `${progress}%` }} />
-        </div>
+    <div className="pointer-events-none fixed inset-0 z-[1200]">
+      <div className="fixed left-1/2 top-1/2 h-[3px] w-[min(220px,54vw)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full bg-white/12">
+        <div className="h-full rounded-full bg-[#e50914] transition-[width] duration-200 ease-out" style={{ width: `${progress}%` }} />
       </div>
     </div>
   );
