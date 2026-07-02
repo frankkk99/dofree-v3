@@ -66,7 +66,6 @@ function StatusBadge({ children, active = false }: { children: ReactNode; active
 
 function TrailerPreview({ title, trailerUrl, fallbackImage }: { title: string; trailerUrl?: string; fallbackImage: string }) {
   const embedUrl = youtubeEmbedUrl(trailerUrl);
-  const youtubeSearchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(`${title} official trailer`)}`;
 
   return (
     <section id="trailer" className="scroll-mt-20 px-4 sm:px-5">
@@ -91,9 +90,9 @@ function TrailerPreview({ title, trailerUrl, fallbackImage }: { title: string; t
             <div className="absolute inset-0 bg-black/68" />
             <div className="relative z-10 grid h-full place-items-center px-6 text-center">
               <div>
-                <a href={youtubeSearchUrl} target="_blank" rel="noreferrer" className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-white/[0.12] text-xl font-black text-white/72 backdrop-blur-xl transition hover:bg-[#e50914] hover:text-white">▶</a>
-                <p className="mt-3 text-xs font-black text-white/72 md:text-sm">ดูตัวอย่างหนังบน YouTube</p>
-                <p className="mt-1 text-[10px] font-bold text-white/40 md:text-xs">ระบบจะแสดงตัวอย่างฝังในหน้าอัตโนมัติเมื่อพบลิงก์ที่รองรับ</p>
+                <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-white/[0.10] text-xl font-black text-white/45 backdrop-blur-xl">▶</div>
+                <p className="mt-3 text-xs font-black text-white/72 md:text-sm">ยังไม่มีตัวอย่างที่เล่นในเว็บ</p>
+                <p className="mt-1 text-[10px] font-bold text-white/40 md:text-xs">เรื่องนี้ยังไม่มีลิงก์ trailer แบบฝังในเว็บ ระบบจึงไม่พาออกไป YouTube</p>
               </div>
             </div>
           </>
