@@ -45,7 +45,7 @@ export function RouteTransitionLoader() {
     progressTimerRef.current = null;
   }
 
-  function startLoading(startAt = 8) {
+  function startLoading(startAt = 0) {
     clearTimers();
     activeRef.current = true;
     startedAtRef.current = Date.now();
@@ -55,11 +55,11 @@ export function RouteTransitionLoader() {
 
     progressTimerRef.current = window.setInterval(() => {
       setProgress((current) => {
-        if (current >= 94) return current;
-        const step = current < 35 ? 9 : current < 68 ? 5 : current < 86 ? 2 : 1;
+        if (current >= 96) return current;
+        const step = current < 28 ? 7 : current < 64 ? 4 : current < 84 ? 2 : 1;
         return clampProgress(current + step);
       });
-    }, 170);
+    }, 150);
 
     maxTimerRef.current = window.setTimeout(() => {
       finishLoading();
@@ -76,13 +76,13 @@ export function RouteTransitionLoader() {
     setProgress(100);
 
     const elapsed = Date.now() - startedAtRef.current;
-    const delay = Math.max(150, 340 - elapsed);
+    const delay = Math.max(180, 380 - elapsed);
     hideTimerRef.current = window.setTimeout(() => {
       setShown(false);
       unmountTimerRef.current = window.setTimeout(() => {
         setMounted(false);
         setProgress(0);
-      }, 300);
+      }, 320);
     }, delay);
   }
 
@@ -117,7 +117,7 @@ export function RouteTransitionLoader() {
       try {
         const url = new URL(anchor.href, window.location.href);
         if (shouldIgnoreUrl(url)) return;
-        startLoading(6);
+        startLoading(0);
       } catch {}
     }
 
@@ -128,7 +128,7 @@ export function RouteTransitionLoader() {
         return;
       }
       lastRouteRef.current = nextRoute;
-      startLoading(10);
+      startLoading(0);
     }
 
     function handleHashChange() {
@@ -157,9 +157,11 @@ export function RouteTransitionLoader() {
   if (!mounted) return null;
 
   return (
-    <div className={`pointer-events-none fixed inset-0 z-[1200] bg-black/32 backdrop-blur-[16px] transition-opacity duration-300 ease-out ${shown ? 'opacity-100' : 'opacity-0'}`}>
-      <div className="fixed left-1/2 top-1/2 h-[3px] w-[min(220px,54vw)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full bg-white/14 shadow-[0_16px_56px_rgba(0,0,0,0.38)]">
-        <div className="h-full rounded-full bg-[#e50914] transition-[width] duration-200 ease-out" style={{ width: `${progress}%` }} />
+    <div className={`pointer-events-none fixed inset-0 z-[1200] bg-black/38 backdrop-blur-[18px] transition-opacity duration-300 ease-out ${shown ? 'opacity-100' : 'opacity-0'}`}>
+      <div className="fixed left-1/2 top-1/2 min-w-[156px] -translate-x-1/2 -translate-y-1/2 rounded-[26px] border border-[#e50914]/45 bg-black/62 px-6 py-4 text-center shadow-[0_24px_90px_rgba(0,0,0,0.66),inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-2xl">
+        <p className="text-sm font-black lowercase tracking-[0.08em] text-[#e50914] drop-shadow-[0_0_18px_rgba(229,9,20,0.52)] md:text-base">
+          loading…{progress}%
+        </p>
       </div>
     </div>
   );
