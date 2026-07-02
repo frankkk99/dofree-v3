@@ -184,6 +184,7 @@ export default function ClipsFeedPage() {
         <div className="pointer-events-auto flex items-center justify-between gap-3">
           <a href="/clips" className="grid h-10 w-10 place-items-center rounded-full bg-black/44 text-lg font-black ring-1 ring-white/10 backdrop-blur-xl">←</a>
           <button type="button" onClick={() => setSearchOpen(true)} className="min-w-0 flex-1 rounded-full bg-black/42 px-4 py-2 text-left text-xs font-black text-white/58 ring-1 ring-white/10 backdrop-blur-xl">⌕ ค้นหาคลิป / หนัง</button>
+          <a href="/clips/favorites" className="rounded-full bg-black/42 px-3 py-2 text-[10px] font-black text-white/58 ring-1 ring-white/10 backdrop-blur-xl">โปรด</a>
           <a href="/" className="rounded-full bg-black/42 px-3 py-2 text-[10px] font-black text-white/58 ring-1 ring-white/10 backdrop-blur-xl">หน้าแรก</a>
         </div>
       </div>
@@ -247,9 +248,10 @@ export default function ClipsFeedPage() {
                       <span className="rounded-full bg-[#e50914]/20 px-2.5 py-1 text-[10px] font-black text-red-100 ring-1 ring-[#e50914]/25">{clipTypeLabels[clip.clip_type]}</span>
                       <span className="rounded-full bg-white/[0.10] px-2.5 py-1 text-[10px] font-black text-white/68 ring-1 ring-white/10">{languageLabels[clip.language]}</span>
                       {clip.spoiler_level !== 'none' ? <span className="rounded-full bg-amber-300/14 px-2.5 py-1 text-[10px] font-black text-amber-100 ring-1 ring-amber-200/20">{spoilerLabels[clip.spoiler_level]}</span> : null}
+                      {!href ? <span className="rounded-full bg-white/[0.08] px-2.5 py-1 text-[10px] font-black text-white/54 ring-1 ring-white/10">ยังไม่ผูกเรื่อง</span> : null}
                     </div>
                     <h1 className="line-clamp-2 text-xl font-black leading-tight tracking-[-0.05em] text-white md:text-2xl">{clip.title}</h1>
-                    <p className="mt-1 line-clamp-1 text-sm font-bold text-white/66">{clip.media_title || 'คลิปแนะนำ'}</p>
+                    <p className="mt-1 line-clamp-1 text-sm font-bold text-white/66">{clip.media_title || 'ยังไม่ผูกหนัง'}</p>
                     <p className="mt-1 line-clamp-1 text-xs font-semibold text-white/38">{clip.genres?.join(' · ') || 'ปัดขึ้นเพื่อดูคลิปถัดไป'}</p>
                   </div>
                 </div>
@@ -257,7 +259,7 @@ export default function ClipsFeedPage() {
                 <div className="absolute bottom-28 right-3 z-20 grid gap-3 md:right-4">
                   <button type="button" onClick={() => toggleFavorite(clip)} className="grid h-12 w-12 place-items-center rounded-full bg-black/46 text-lg font-black text-white ring-1 ring-white/12 backdrop-blur-xl">{favorites[clip.id] ? '♥' : '♡'}</button>
                   <button type="button" onClick={() => void shareClip(clip)} className="grid h-12 w-12 place-items-center rounded-full bg-black/46 text-[10px] font-black text-white ring-1 ring-white/12 backdrop-blur-xl">แชร์</button>
-                  {href ? <a href={href} className="grid h-12 w-12 place-items-center rounded-full bg-[#e50914] text-[10px] font-black leading-tight text-white shadow-[0_16px_44px_rgba(229,9,20,0.32)]">ดูเรื่อง</a> : null}
+                  {href ? <a href={href} className="grid h-12 w-12 place-items-center rounded-full bg-[#e50914] text-[10px] font-black leading-tight text-white shadow-[0_16px_44px_rgba(229,9,20,0.32)]">ดูเรื่อง</a> : <button type="button" onClick={() => setMessage('คลิปนี้ยังไม่ได้ผูกกับหน้าหนัง')} className="grid h-12 w-12 place-items-center rounded-full bg-white/[0.10] text-[10px] font-black leading-tight text-white/62 ring-1 ring-white/12 backdrop-blur-xl">ไม่ผูก</button>}
                 </div>
               </div>
             </section>
