@@ -1,0 +1,6 @@
+Trigger production deployment after fixing the actual rendered dashboard file.
+
+Expected visible changes:
+- Command Center title changes from Dashboard วีสอง to Dashboard V2
+- Long URL/path rows are truncated
+- Dashboard no longer creates horizontal overflow from Top Pages or long content labels
