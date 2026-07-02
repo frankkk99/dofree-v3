@@ -31,6 +31,28 @@ type ClipPatchInput = Partial<MediaClipInput> & {
   id?: string;
 };
 
+type ClipPayload = {
+  title: string;
+  description: string | null;
+  youtube_url: string;
+  youtube_video_id: string;
+  embed_url: string;
+  thumbnail_url: string;
+  clip_type: MediaClipType;
+  spoiler_level: MediaClipSpoilerLevel;
+  language: MediaClipLanguage;
+  media_type: MediaType | null;
+  tmdb_id: number | null;
+  media_title: string | null;
+  media_slug: string | null;
+  poster_url: string | null;
+  genres: string[];
+  status: MediaClipStatus;
+  show_home: boolean;
+  show_clips: boolean;
+  sort_order: number;
+};
+
 function jsonError(message: string, status = 400) {
   return NextResponse.json({ ok: false, error: message }, { status });
 }
@@ -113,9 +135,9 @@ function genreList(value: unknown) {
   return value.map((item) => textValue(item)).filter(Boolean).slice(0, 12);
 }
 
-function clipPayload(input: MediaClipInput | ClipPatchInput, existing?: MediaClipRow) {
+function clipPayload(input: MediaClipInput | ClipPatchInput, existing?: MediaClipRow): ClipPayload {
   const title = textValue(input.title ?? existing?.title);
-  if (!title) throw new Error('Title is required');
+  if (!title) throw new Error('ต้องใส่ชื่อคลิป');
 
   const youtubeUrl = textValue(input.youtubeUrl ?? existing?.youtube_url);
   const parsed = input.youtubeUrl || !existing ? parseYouTubeUrl(youtubeUrl) : {
@@ -124,9 +146,12 @@ function clipPayload(input: MediaClipInput | ClipPatchInput, existing?: MediaCli
     thumbnailUrl: existing.thumbnail_url || `https://img.youtube.com/vi/${existing.youtube_video_id}/hqdefault.jpg`,
     originalUrl: existing.youtube_url,
   };
-  if (!parsed) throw new Error('Invalid YouTube URL');
+  if (!parsed) throw new Error('YouTube URL ไม่ถูกต้อง');
 
   const mediaType = enumValue(input.mediaType ?? existing?.media_type, ['movie', 'tv'] satisfies MediaType[]);
+  const status = enumValue(input.status ?? existing?.status, mediaClipStatuses, existing?.status || 'draft') as MediaClipStatus;
+  const showHome = booleanValue(input.showHome ?? existing?.show_home, existing?.show_home || false);
+  const showClips = booleanValue(input.showClips ?? existing?.show_clips, existing?.show_clips ?? true);
 
   return {
     title,
@@ -144,11 +169,36 @@ function clipPayload(input: MediaClipInput | ClipPatchInput, existing?: MediaCli
     media_slug: optionalText(input.mediaSlug ?? existing?.media_slug),
     poster_url: optionalText(input.posterUrl ?? existing?.poster_url),
     genres: Array.isArray(input.genres) ? genreList(input.genres) : existing?.genres || [],
-    status: enumValue(input.status ?? existing?.status, mediaClipStatuses, existing?.status || 'draft') as MediaClipStatus,
-    show_home: booleanValue(input.showHome ?? existing?.show_home, existing?.show_home || false),
-    show_clips: booleanValue(input.showClips ?? existing?.show_clips, existing?.show_clips ?? true),
+    status,
+    show_home: showHome,
+    show_clips: showClips,
     sort_order: numberValue(input.sortOrder ?? existing?.sort_order) ?? 0,
   };
+}
+
+function validateBusinessRules(payload: ClipPayload) {
+  if (payload.status === 'published') {
+    if (!payload.title || !payload.youtube_video_id || !payload.embed_url) throw new Error('คลิป Published ต้องมีชื่อและ YouTube URL ครบ');
+    if (!payload.show_clips) throw new Error('คลิป Published ต้องเปิดแสดงหน้า Clips');
+  }
+
+  if (payload.show_home) {
+    if (payload.status !== 'published') throw new Error('คลิปที่ขึ้นหน้าแรกต้องเป็น Published ก่อน');
+    if (!payload.show_clips) throw new Error('คลิปที่ขึ้นหน้าแรกต้องเปิดแสดงหน้า Clips ด้วย');
+  }
+
+  if ((payload.media_type && !payload.tmdb_id) || (!payload.media_type && payload.tmdb_id)) {
+    throw new Error('ถ้าผูกหนัง ต้องมีทั้ง Media Type และ TMDB ID');
+  }
+}
+
+async function assertUniqueYouTube(videoId: string, currentId?: string) {
+  const rows = await supabaseRest<Pick<MediaClipRow, 'id' | 'title'>[]>(
+    `media_clips?youtube_video_id=eq.${encodeURIComponent(videoId)}&select=id,title&limit=5`,
+    { mode: 'service', cache: 'no-store' },
+  );
+  const duplicate = (rows || []).find((clip) => clip.id !== currentId);
+  if (duplicate) throw new Error(`YouTube นี้ถูกใช้แล้วในคลิป “${duplicate.title}”`);
 }
 
 async function readClip(id: string) {
@@ -190,6 +240,9 @@ export async function POST(request: Request) {
 
     const input = (await request.json()) as MediaClipInput;
     const payload = clipPayload(input);
+    validateBusinessRules(payload);
+    await assertUniqueYouTube(payload.youtube_video_id);
+
     const created = await supabaseRest<MediaClipRow[]>(
       'media_clips',
       {
@@ -221,6 +274,9 @@ export async function PATCH(request: Request) {
     if (!existing) return jsonError('Clip not found', 404);
 
     const payload = clipPayload(input, existing);
+    validateBusinessRules(payload);
+    await assertUniqueYouTube(payload.youtube_video_id, id);
+
     const updated = await supabaseRest<MediaClipRow[]>(
       `media_clips?id=eq.${encodeURIComponent(id)}`,
       {
