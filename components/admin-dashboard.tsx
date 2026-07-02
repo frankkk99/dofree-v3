@@ -1,7 +1,7 @@
 'use client';
 
-import { AdminDashboardV2 } from '@/components/admin-dashboard-v2';
+import { AdminDashboardCommandV2 } from '@/components/admin-dashboard-command-v2';
 
 export function AdminDashboard() {
-  return <AdminDashboardV2 />;
+  return <AdminDashboardCommandV2 />;
 }
