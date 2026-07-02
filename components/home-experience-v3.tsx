@@ -155,6 +155,7 @@ function LazyMovieRail({ section, sectionIndex }: { section: MovieSection; secti
   const [items, setItems] = useState(section.items.slice(0, RAIL_LOAD_STEP));
   const [hasMore, setHasMore] = useState(section.items.length >= RAIL_LOAD_STEP);
   const [loadingMore, setLoadingMore] = useState(false);
+  const autoCarousel = Boolean(section.autoplay);
 
   useEffect(() => {
     setItems(section.items.slice(0, RAIL_LOAD_STEP));
@@ -212,10 +213,56 @@ function LazyMovieRail({ section, sectionIndex }: { section: MovieSection; secti
     return () => rail.removeEventListener('scroll', onScroll);
   }, [maybeLoadMore, mounted]);
 
+  useEffect(() => {
+    const rail = railRef.current;
+    if (!mounted || !autoCarousel || !rail || typeof window === 'undefined') return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    let frame = 0;
+    let lastTime = 0;
+    let paused = false;
+    const speed = 0.018;
+
+    const pause = () => { paused = true; };
+    const resume = () => { paused = false; };
+    const tick = (time: number) => {
+      if (!lastTime) lastTime = time;
+      const delta = time - lastTime;
+      lastTime = time;
+
+      if (!paused && rail.scrollWidth > rail.clientWidth) {
+        rail.scrollLeft += delta * speed;
+        if (rail.scrollLeft >= rail.scrollWidth - rail.clientWidth - 2) rail.scrollLeft = 0;
+        maybeLoadMore();
+      }
+      frame = window.requestAnimationFrame(tick);
+    };
+
+    rail.addEventListener('mouseenter', pause);
+    rail.addEventListener('mouseleave', resume);
+    rail.addEventListener('pointerdown', pause);
+    rail.addEventListener('pointerup', resume);
+    rail.addEventListener('pointercancel', resume);
+    rail.addEventListener('touchstart', pause, { passive: true });
+    rail.addEventListener('touchend', resume, { passive: true });
+    frame = window.requestAnimationFrame(tick);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      rail.removeEventListener('mouseenter', pause);
+      rail.removeEventListener('mouseleave', resume);
+      rail.removeEventListener('pointerdown', pause);
+      rail.removeEventListener('pointerup', resume);
+      rail.removeEventListener('pointercancel', resume);
+      rail.removeEventListener('touchstart', pause);
+      rail.removeEventListener('touchend', resume);
+    };
+  }, [autoCarousel, maybeLoadMore, mounted]);
+
   return (
     <div ref={ref} style={{ contentVisibility: 'auto', containIntrinsicSize: '340px 1000px' }}>
       {mounted ? (
-        <div ref={railRef} className="movie-rail flex max-w-full gap-2.5 overflow-x-auto overflow-y-hidden scroll-smooth pb-3 sm:gap-3 md:gap-5 md:pb-4" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div ref={railRef} className="movie-rail flex max-w-full gap-2.5 overflow-x-auto overflow-y-hidden scroll-smooth pb-3 sm:gap-3 md:gap-5 md:pb-4" data-auto-carousel={autoCarousel ? 'true' : undefined} style={{ WebkitOverflowScrolling: 'touch' }}>
           {items.map((item, index) => (
             <Fragment key={`${section.slug}-${item.mediaType}-${item.id}-${index}`}>
               <MovieCard item={item} priority={sectionIndex === 0 && index < 3} priorityBadge={section.slug === 'coming-soon' ? releaseWindowBadge(item) : index % 4 === 0 ? 'ใหม่' : undefined} />
