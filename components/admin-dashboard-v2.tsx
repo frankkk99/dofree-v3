@@ -21,8 +21,11 @@ function Stat({ label, value, hint, className = '' }: { label: string; value: un
 function Bar({ label, value, total, color = 'bg-[#e50914]' }: { label: string; value: number; total: number; color?: string }) {
   return <div><div className="mb-1 flex justify-between text-xs font-black text-white/58"><span>{label}</span><span>{percent(value, total)}%</span></div><div className="h-2 overflow-hidden rounded-full bg-white/[0.08]"><div className={`h-full rounded-full ${color}`} style={{ width: width(value, total) }} /></div></div>;
 }
+function Empty({ text }: { text: string }) {
+  return <div className="rounded-2xl bg-white/[0.04] p-4 text-sm font-bold text-white/42">{text}</div>;
+}
 function List({ rows, empty, total }: { rows?: Row[]; empty: string; total?: number }) {
-  return <div className="grid gap-2">{rows?.length ? rows.map((r) => <div key={r.label || r.code} className="rounded-2xl bg-white/[0.055] px-4 py-3"><div className="flex items-center justify-between gap-3"><p className="min-w-0 truncate text-sm font-black text-white/78">{r.label || r.code}</p><p className="text-lg font-black text-[#f4c46b]">{fmt(r.value ?? r.views)}</p></div>{total ? <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.08]"><div className="h-full rounded-full bg-[#f4c46b]" style={{ width: width(r.value || 0, total) }} /></div> : null}</div>) : <div className="rounded-2xl bg-white/[0.04] p-4 text-sm font-bold text-white/42">{empty}</div>}</div>;
+  return <div className="grid gap-2">{rows?.length ? rows.map((r) => <div key={r.label || r.code} className="rounded-2xl bg-white/[0.055] px-4 py-3"><div className="flex items-center justify-between gap-3"><p className="min-w-0 truncate text-sm font-black text-white/78">{r.label || r.code}</p><p className="text-lg font-black text-[#f4c46b]">{fmt(r.value ?? r.views)}</p></div>{total ? <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.08]"><div className="h-full rounded-full bg-[#f4c46b]" style={{ width: width(r.value || 0, total) }} /></div> : null}</div>) : <Empty text={empty} />}</div>;
 }
 
 export function AdminDashboardV2() {
