@@ -23,20 +23,24 @@ function shouldIgnoreUrl(url: URL) {
 
 export function RouteTransitionLoader() {
   const pathname = usePathname();
-  const [visible, setVisible] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [shown, setShown] = useState(false);
   const [progress, setProgress] = useState(0);
   const activeRef = useRef(false);
   const startedAtRef = useRef(0);
   const hideTimerRef = useRef<number | null>(null);
+  const unmountTimerRef = useRef<number | null>(null);
   const maxTimerRef = useRef<number | null>(null);
   const progressTimerRef = useRef<number | null>(null);
   const lastRouteRef = useRef('');
 
   function clearTimers() {
     if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
+    if (unmountTimerRef.current) window.clearTimeout(unmountTimerRef.current);
     if (maxTimerRef.current) window.clearTimeout(maxTimerRef.current);
     if (progressTimerRef.current) window.clearInterval(progressTimerRef.current);
     hideTimerRef.current = null;
+    unmountTimerRef.current = null;
     maxTimerRef.current = null;
     progressTimerRef.current = null;
   }
@@ -45,8 +49,9 @@ export function RouteTransitionLoader() {
     clearTimers();
     activeRef.current = true;
     startedAtRef.current = Date.now();
-    setVisible(true);
+    setMounted(true);
     setProgress(startAt);
+    window.requestAnimationFrame(() => setShown(true));
 
     progressTimerRef.current = window.setInterval(() => {
       setProgress((current) => {
@@ -71,17 +76,21 @@ export function RouteTransitionLoader() {
     setProgress(100);
 
     const elapsed = Date.now() - startedAtRef.current;
-    const delay = Math.max(130, 320 - elapsed);
+    const delay = Math.max(150, 340 - elapsed);
     hideTimerRef.current = window.setTimeout(() => {
-      setVisible(false);
-      setProgress(0);
+      setShown(false);
+      unmountTimerRef.current = window.setTimeout(() => {
+        setMounted(false);
+        setProgress(0);
+      }, 300);
     }, delay);
   }
 
   function hardStopLoading() {
     clearTimers();
     activeRef.current = false;
-    setVisible(false);
+    setShown(false);
+    setMounted(false);
     setProgress(0);
   }
 
@@ -145,11 +154,11 @@ export function RouteTransitionLoader() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (!visible) return null;
+  if (!mounted) return null;
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-[1200]">
-      <div className="fixed left-1/2 top-1/2 h-[3px] w-[min(220px,54vw)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full bg-white/12">
+    <div className={`pointer-events-none fixed inset-0 z-[1200] bg-black/32 backdrop-blur-[16px] transition-opacity duration-300 ease-out ${shown ? 'opacity-100' : 'opacity-0'}`}>
+      <div className="fixed left-1/2 top-1/2 h-[3px] w-[min(220px,54vw)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full bg-white/14 shadow-[0_16px_56px_rgba(0,0,0,0.38)]">
         <div className="h-full rounded-full bg-[#e50914] transition-[width] duration-200 ease-out" style={{ width: `${progress}%` }} />
       </div>
     </div>
