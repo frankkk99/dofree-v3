@@ -3,6 +3,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { HomePayload, MovieItem, MovieSection } from '@/lib/tmdb';
 import { AdSlot } from '@/components/ad-slot';
+import { ClipsComingSoonSection } from '@/components/clips-coming-soon-section';
 import { HomeHeroMedia } from '@/components/home-hero-media';
 import { MovieCard } from '@/components/movie-card';
 import { mediaDetailPath } from '@/lib/seo';
@@ -316,6 +317,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
 
       <section id="sections" className="mx-auto max-w-[1920px] scroll-mt-[120px] bg-black px-4 py-7 md:px-7 md:py-10">
         <div className="space-y-8 md:space-y-12">
+          <ClipsComingSoonSection />
           {liveRandomizedSections.map((section, sectionIndex) => (
             <div id={section.slug} key={section.slug} className="relative scroll-mt-[96px]" style={{ contentVisibility: sectionIndex > 1 ? 'auto' : 'visible', containIntrinsicSize: '360px 1000px' }}>
               <div className="mb-3 flex items-center justify-between md:mb-6"><div>{section.eyebrow ? <p className="text-[9px] font-black uppercase tracking-[0.26em] text-[#e50914]/80">{section.eyebrow}</p> : null}<h2 className="text-[20px] font-black tracking-[-0.04em] md:text-[30px]">{section.title}</h2></div><a href={sectionHref(section)} className="text-[12px] font-black text-white/50 hover:text-white md:text-[16px]">ทั้งหมด ›</a></div>
