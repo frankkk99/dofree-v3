@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { type CatalogSectionDef, catalogSectionDefs, getCatalogSectionMeta } from '@/lib/catalog-home';
 import { mediaDetailPath } from '@/lib/seo';
 import { supabaseRest } from '@/lib/supabase-rest';
 import type { MediaType, MovieItem } from '@/lib/tmdb';
@@ -14,6 +15,8 @@ const CACHE_HEADERS = {
 const fallbackImage = 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1400&q=80';
 const knownSlugPattern = /^[a-z0-9-]+$/;
 const maxSearchFetchLimit = 360;
+const catalogFields = 'tmdb_id,media_type,title,title_en,overview,poster_url,backdrop_url,rating,vote_count,popularity,release_year,release_date,genres,language,runtime,source_bucket,sort_score,is_active';
+
 const countryLanguage: Record<string, string[]> = {
   th: ['th'],
   kr: ['ko'],
@@ -28,6 +31,26 @@ const countryLanguage: Record<string, string[]> = {
 };
 
 const bucketKeywords: Record<string, string[]> = {
+  popular: ['popular', 'ยอดนิยม', 'มาแรง', 'นิยม'],
+  'top-rated': ['top rated', 'คะแนนสูง', 'คะแนนดี', 'rating', 'rated'],
+  trending: ['trending', 'กระแส', 'กำลังมาแรง'],
+  'new-release': ['now playing', 'หนังใหม่', 'กำลังฉาย', 'เข้าใหม่', 'ล่าสุด'],
+  'coming-soon': ['upcoming', 'coming soon', 'เร็ว ๆ นี้', 'ใกล้เข้าฉาย', 'กำลังจะมา'],
+  series: ['series', 'tv', 'ซีรีส์', 'ละคร'],
+  netflix: ['netflix', 'เน็ตฟลิกซ์', 'เน็ตฟลิก'],
+  disney: ['disney', 'disney+', 'ดิสนีย์', 'family hits'],
+  hbo: ['hbo', 'max', 'hbo max'],
+  prime: ['prime', 'prime video', 'amazon prime'],
+  apple: ['apple tv', 'apple tv+', 'apple'],
+  marvel: ['marvel', 'มาร์เวล', 'super hero', 'ซูเปอร์ฮีโร่'],
+  dc: ['dc', 'ดีซี', 'batman', 'superman'],
+  thai: ['thai', 'ไทย', 'หนังไทย', 'ซีรีส์ไทย'],
+  korea: ['korea', 'korean', 'เกาหลี', 'หนังเกาหลี', 'ซีรีส์เกาหลี', 'k-drama'],
+  anime: ['anime', 'อนิเมะ', 'อนิเมะญี่ปุ่น'],
+  japan: ['japan', 'japanese', 'ญี่ปุ่น', 'หนังญี่ปุ่น'],
+  china: ['china', 'chinese', 'จีน', 'หนังจีน', 'ซีรีส์จีน'],
+  indian: ['india', 'indian', 'hindi', 'อินเดีย', 'บอลลีวูด'],
+  spanish: ['spanish', 'spain', 'สเปน', 'ภาษาสเปน'],
   horror: ['horror', 'ghost', 'haunted', 'demon', 'evil', 'spirit', 'supernatural', 'zombie', 'สยอง', 'ผี', 'หลอน', 'วิญญาณ', 'ปีศาจ', 'ซอมบี้', 'น่ากลัว'],
   comedy: ['comedy', 'funny', 'laugh', 'sitcom', 'ตลก', 'คอมเมดี้', 'ฮา', 'ขำ', 'เบาสมอง', 'ไม่เครียด'],
   action: ['action', 'fight', 'fighting', 'martial', 'mission', 'spy', 'agent', 'gun', 'weapon', 'แอ็กชัน', 'แอคชั่น', 'บู๊', 'ต่อสู้', 'ยิงกัน', 'สายลับ', 'ภารกิจ', 'นักฆ่า'],
@@ -40,6 +63,7 @@ const bucketKeywords: Record<string, string[]> = {
   fantasy: ['fantasy', 'magic', 'dragon', 'kingdom', 'wizard', 'myth', 'แฟนตาซี', 'เวทมนตร์', 'มังกร', 'อาณาจักร', 'ย้อนยุค'],
   adventure: ['adventure', 'journey', 'explore', 'ผจญภัย', 'เดินทาง', 'สำรวจ'],
   animation: ['animation', 'anime', 'cartoon', 'animated', 'แอนิเมชัน', 'อนิเมะ', 'การ์ตูน'],
+  family: ['family', 'kids', 'children', 'ครอบครัว', 'เด็ก'],
   documentary: ['documentary', 'docu', 'true story', 'สารคดี', 'เรื่องจริง'],
 };
 
@@ -50,6 +74,7 @@ const languageAliases: Array<{ language: string; words: string[] }> = [
   { language: 'zh', words: ['จีน', 'china', 'chinese', 'หนังจีน', 'ซีรีส์จีน', 'จีนย้อนยุค'] },
   { language: 'en', words: ['ฝรั่ง', 'อเมริกา', 'อังกฤษ', 'english', 'hollywood', 'ฮอลลีวูด'] },
   { language: 'hi', words: ['อินเดีย', 'บอลลีวูด', 'india', 'hindi'] },
+  { language: 'es', words: ['สเปน', 'spanish', 'ภาษาสเปน'] },
 ];
 
 type CatalogRow = {
@@ -82,23 +107,8 @@ type WatchLinkRecord = {
   trailer_url?: string | null;
 };
 
-type SearchMovieItem = MovieItem & {
-  sourceBucket?: string;
-  searchAliases?: string[];
-  popularity?: number;
-  sortScore?: number;
-};
-
-type SmartIntent = {
-  buckets: string[];
-  languages: string[];
-  mediaType?: MediaType;
-  minRating?: number;
-  readyOnly?: boolean;
-  preferRecent?: boolean;
-  relaxed?: boolean;
-  directTerms: string[];
-};
+type SearchMovieItem = MovieItem & { sourceBucket?: string; searchAliases?: string[]; popularity?: number; sortScore?: number };
+type SmartIntent = { buckets: string[]; languages: string[]; mediaType?: MediaType; minRating?: number; readyOnly?: boolean; preferRecent?: boolean; relaxed?: boolean; directTerms: string[] };
 
 function uniqueItems(items: MovieItem[]) {
   const map = new Map<string, MovieItem>();
@@ -143,9 +153,20 @@ function badges(item: Pick<MovieItem, 'rating' | 'language' | 'isWatchReady'>) {
   return list.slice(0, 3);
 }
 
+function sectionKeywords(section: CatalogSectionDef) {
+  return [section.slug, section.eyebrow, section.title, section.description, ...(section.sourceBuckets || []), ...(section.languages || []), ...(section.genreKeywords || [])];
+}
+
 function aliasesForRow(row: CatalogRow) {
   const text = normalizeText([row.title, row.title_en, row.overview, row.source_bucket, row.language, ...(row.genres || [])].filter(Boolean).join(' '));
   const aliases: string[] = [];
+
+  for (const section of catalogSectionDefs) {
+    const sourceMatch = section.sourceBuckets?.includes(String(row.source_bucket || ''));
+    const languageMatch = section.languages?.includes(String(row.language || '').toLowerCase());
+    const genreMatch = section.genreKeywords?.some((keyword) => text.includes(normalizeText(keyword)));
+    if (sourceMatch || languageMatch || genreMatch) aliases.push(...sectionKeywords(section));
+  }
 
   for (const [bucket, words] of Object.entries(bucketKeywords)) {
     if (row.source_bucket === bucket || includesAny(text, [bucket, ...words])) aliases.push(bucket, ...words);
@@ -160,7 +181,7 @@ function aliasesForRow(row: CatalogRow) {
   if (Number(row.rating || 0) >= 6.5) aliases.push('คะแนนดี', 'คะแนนสูง', 'น่าดู', '6.5+');
   if (Number(row.rating || 0) >= 8) aliases.push('8+', 'ยอดนิยม');
 
-  return [...new Set(aliases)];
+  return [...new Set(aliases.map(String).filter(Boolean))];
 }
 
 function rowToMovie(row: CatalogRow, links: Map<string, WatchLinkRecord>): SearchMovieItem {
@@ -192,26 +213,12 @@ function rowToMovie(row: CatalogRow, links: Map<string, WatchLinkRecord>): Searc
     popularity: Number(row.popularity || 0),
     sortScore: Number(row.sort_score || 0),
   };
-
   return { ...base, badges: badges(base) };
 }
 
 function itemText(item: MovieItem) {
   const searchItem = item as SearchMovieItem;
-  return normalizeText([
-    item.title,
-    item.titleEn,
-    item.overview,
-    item.year,
-    item.language,
-    item.mediaType,
-    item.status,
-    item.label,
-    searchItem.sourceBucket,
-    ...(item.genres || []),
-    ...(item.badges || []),
-    ...(searchItem.searchAliases || []),
-  ].filter(Boolean).join(' '));
+  return normalizeText([item.title, item.titleEn, item.overview, item.year, item.language, item.mediaType, item.status, item.label, searchItem.sourceBucket, ...(item.genres || []), ...(item.badges || []), ...(searchItem.searchAliases || [])].filter(Boolean).join(' '));
 }
 
 function detectIntent(query: string): SmartIntent {
@@ -224,13 +231,17 @@ function detectIntent(query: string): SmartIntent {
   let preferRecent = false;
   let relaxed = false;
 
-  for (const [bucket, words] of Object.entries(bucketKeywords)) {
-    if (includesAny(text, words)) buckets.add(bucket);
+  for (const section of catalogSectionDefs) {
+    if (includesAny(text, sectionKeywords(section))) {
+      for (const bucket of section.sourceBuckets || []) buckets.add(bucket);
+      for (const language of section.languages || []) languages.add(language);
+      if (section.mediaType) mediaType = mediaType || section.mediaType;
+      if (section.minRating) minRating = minRating || section.minRating;
+    }
   }
 
-  for (const { language, words } of languageAliases) {
-    if (includesAny(text, words)) languages.add(language);
-  }
+  for (const [bucket, words] of Object.entries(bucketKeywords)) if (includesAny(text, words)) buckets.add(bucket);
+  for (const { language, words } of languageAliases) if (includesAny(text, words)) languages.add(language);
 
   if (/(ซีรีส์|series|tv|ละคร)/i.test(text)) mediaType = 'tv';
   if (/(หนัง|ภาพยนตร์|movie|film)/i.test(text)) mediaType = 'movie';
@@ -240,73 +251,30 @@ function detectIntent(query: string): SmartIntent {
   if (/(ไม่เครียด|ดูสบาย|เบาสมอง|คืนนี้|แนะนำ|ไม่โหดมาก)/i.test(text)) relaxed = true;
 
   if (/(คล้าย|เหมือน|similar|john wick|จอห์นวิค|จอนวิค)/i.test(text)) {
-    buckets.add('action');
-    buckets.add('thriller');
-    buckets.add('crime');
-    mediaType = mediaType || 'movie';
-    minRating = minRating || 6.5;
+    buckets.add('action'); buckets.add('thriller'); buckets.add('crime'); mediaType = mediaType || 'movie'; minRating = minRating || 6.5;
   }
+  if (/(ย้อนยุค|พีเรียด|period|ancient|historical)/i.test(text)) { buckets.add('drama'); buckets.add('fantasy'); }
+  if (/(เอาชีวิตรอด|survival|หนีตาย|ติดเกาะ|โลกแตก)/i.test(text)) { buckets.add('thriller'); buckets.add('adventure'); buckets.add('sci-fi'); }
+  if (relaxed && !buckets.size) { buckets.add('comedy'); buckets.add('romance'); buckets.add('animation'); minRating = minRating || 6.5; }
 
-  if (/(ย้อนยุค|พีเรียด|period|ancient|historical)/i.test(text)) {
-    buckets.add('drama');
-    buckets.add('fantasy');
-  }
+  const genericWords = ['หนัง', 'ภาพยนตร์', 'ซีรีส์', 'series', 'movie', 'film', 'ขอ', 'อยากดู', 'ช่วยหา', 'แนะนำ', 'คะแนนดี', 'คะแนนสูง', 'น่าดู', 'ปีใหม่', 'ใหม่', 'ล่าสุด', 'คล้าย', 'เหมือน', 'ไม่เครียด', 'คืนนี้', 'พร้อมดู', 'ดูได้', ...Object.values(bucketKeywords).flat(), ...languageAliases.flatMap((item) => item.words), ...catalogSectionDefs.flatMap(sectionKeywords)].map(normalizeText);
+  const directTerms = text.replace(/[*,()]/g, ' ').split(/\s+/).map((term) => term.trim()).filter((term) => term.length >= 2 && !genericWords.includes(term)).slice(0, 4);
 
-  if (/(เอาชีวิตรอด|survival|หนีตาย|ติดเกาะ|โลกแตก)/i.test(text)) {
-    buckets.add('thriller');
-    buckets.add('adventure');
-    buckets.add('sci-fi');
-  }
-
-  if (relaxed && !buckets.size) {
-    buckets.add('comedy');
-    buckets.add('romance');
-    buckets.add('animation');
-    minRating = minRating || 6.5;
-  }
-
-  const genericWords = [
-    'หนัง', 'ภาพยนตร์', 'ซีรีส์', 'series', 'movie', 'film', 'ขอ', 'อยากดู', 'ช่วยหา', 'แนะนำ', 'คะแนนดี', 'คะแนนสูง', 'น่าดู', 'ปีใหม่', 'ใหม่', 'ล่าสุด', 'คล้าย', 'เหมือน', 'ไม่เครียด', 'คืนนี้', 'พร้อมดู', 'ดูได้',
-    ...Object.values(bucketKeywords).flat(),
-    ...languageAliases.flatMap((item) => item.words),
-  ].map(normalizeText);
-
-  const directTerms = text
-    .replace(/[*,()]/g, ' ')
-    .split(/\s+/)
-    .map((term) => term.trim())
-    .filter((term) => term.length >= 2 && !genericWords.includes(term))
-    .slice(0, 4);
-
-  return {
-    buckets: [...buckets],
-    languages: [...languages],
-    mediaType,
-    minRating,
-    readyOnly,
-    preferRecent,
-    relaxed,
-    directTerms,
-  };
+  return { buckets: [...buckets], languages: [...languages], mediaType, minRating, readyOnly, preferRecent, relaxed, directTerms };
 }
 
 function matchesIntent(item: MovieItem, intent: SmartIntent, hasRawQuery: boolean) {
   const text = itemText(item);
   const searchItem = item as SearchMovieItem;
-
   if (!hasRawQuery) return true;
   if (intent.mediaType && item.mediaType !== intent.mediaType) return false;
   if (intent.languages.length && !intent.languages.includes(String(item.language || '').toLowerCase())) return false;
   if (intent.readyOnly && !(item.isWatchReady || item.watchUrl || item.status === 'published')) return false;
   if (intent.minRating && item.rating < intent.minRating) return false;
   if (intent.buckets.length) {
-    const bucketMatch = intent.buckets.some((bucket) => {
-      const words = bucketKeywords[bucket] || [bucket];
-      return searchItem.sourceBucket === bucket || includesAny(text, [bucket, ...words]);
-    });
+    const bucketMatch = intent.buckets.some((bucket) => searchItem.sourceBucket === bucket || includesAny(text, [bucket, ...(bucketKeywords[bucket] || [])]));
     if (!bucketMatch) return false;
   }
-
   if (intent.buckets.length || intent.languages.length || intent.mediaType || intent.minRating || intent.readyOnly || intent.relaxed) return true;
   if (!intent.directTerms.length) return true;
   return intent.directTerms.every((term) => text.includes(term));
@@ -319,7 +287,6 @@ function relevanceScore(item: MovieItem, intent: SmartIntent, rawQuery: string) 
   const titleEn = normalizeText(item.titleEn || '');
   const raw = normalizeText(rawQuery);
   let score = Number(searchItem.sortScore || 0) / 1000 + item.rating * 8 + Number(searchItem.popularity || 0) / 200;
-
   if (raw && title.includes(raw)) score += 180;
   if (raw && titleEn.includes(raw)) score += 150;
   for (const term of intent.directTerms) {
@@ -327,15 +294,11 @@ function relevanceScore(item: MovieItem, intent: SmartIntent, rawQuery: string) 
     else if (titleEn.includes(term)) score += 70;
     else if (text.includes(term)) score += 24;
   }
-
   for (const bucket of intent.buckets) {
-    const words = bucketKeywords[bucket] || [bucket];
     if (searchItem.sourceBucket === bucket) score += 80;
-    if (includesAny(text, [bucket, ...words])) score += 36;
+    if (includesAny(text, [bucket, ...(bucketKeywords[bucket] || [])])) score += 36;
   }
-  for (const language of intent.languages) {
-    if (String(item.language || '').toLowerCase() === language) score += 58;
-  }
+  for (const language of intent.languages) if (String(item.language || '').toLowerCase() === language) score += 58;
   if (intent.mediaType && item.mediaType === intent.mediaType) score += 32;
   if (intent.readyOnly && item.isWatchReady) score += 40;
   if (intent.preferRecent) score += Math.max(0, Number(item.year || 0) - 2018) * 4;
@@ -358,11 +321,6 @@ function matchesYear(item: MovieItem, yearFilter: string) {
   return true;
 }
 
-function matchesLanguage(item: MovieItem, language: string) {
-  if (!language) return true;
-  return String(item.language || '').toLowerCase() === language;
-}
-
 function matchesCountry(item: MovieItem, country: string) {
   if (!country) return true;
   const accepted = countryLanguage[country] || [country];
@@ -377,13 +335,6 @@ function matchesQuality(item: MovieItem, quality: string) {
   return true;
 }
 
-function matchesRating(item: MovieItem, ratingFilter: string) {
-  if (!ratingFilter) return true;
-  const minRating = Number(ratingFilter);
-  if (!Number.isFinite(minRating)) return true;
-  return item.rating >= minRating;
-}
-
 function applyFilters(items: MovieItem[], filters: URLSearchParams, intent: SmartIntent, rawQuery: string) {
   const mediaType = filters.get('type') || '';
   const country = filters.get('country') || '';
@@ -393,20 +344,20 @@ function applyFilters(items: MovieItem[], filters: URLSearchParams, intent: Smar
   const rating = filters.get('rating') || '';
   const sort = filters.get('sort') || 'rating-desc';
   const hasRawQuery = Boolean(rawQuery.trim());
+  const minRating = rating ? Number(rating) : 0;
 
   const filtered = items.filter((item) => {
     if (!matchesIntent(item, intent, hasRawQuery)) return false;
     if (mediaType && item.mediaType !== mediaType) return false;
     if (!matchesCountry(item, country)) return false;
-    if (!matchesLanguage(item, language)) return false;
+    if (language && String(item.language || '').toLowerCase() !== language) return false;
     if (!matchesQuality(item, quality)) return false;
     if (!matchesYear(item, year)) return false;
-    if (!matchesRating(item, rating)) return false;
+    if (minRating && item.rating < minRating) return false;
     return true;
   });
 
   if (hasRawQuery) return filtered.sort((a, b) => relevanceScore(b, intent, rawQuery) - relevanceScore(a, intent, rawQuery));
-
   return filtered.sort((a, b) => {
     if (sort === 'rating-asc') return a.rating - b.rating || itemYear(b) - itemYear(a);
     if (sort === 'year-desc') return itemYear(b) - itemYear(a) || b.rating - a.rating;
@@ -428,20 +379,65 @@ function searchTextTermFilter(terms: string[]) {
   return `&or=(${terms.map((term) => `search_text.ilike.${encodeURIComponent(`*${term}*`)}`).join(',')})`;
 }
 
-function catalogSelect() {
-  return 'select=tmdb_id,media_type,title,title_en,overview,poster_url,backdrop_url,rating,vote_count,popularity,release_year,release_date,genres,language,runtime,source_bucket,sort_score,is_active&is_active=eq.true';
+function baseCatalogQuery() {
+  return `select=${catalogFields}&is_active=eq.true`;
 }
 
-async function fetchCatalogRows(extraFilter: string, limit: number, fallbackFilter?: string) {
+function orderForSection(section?: CatalogSectionDef | null) {
+  if (section?.sort === 'rating') return 'rating.desc.nullslast,vote_count.desc.nullslast,sort_score.desc.nullslast';
+  if (section?.sort === 'recent') return 'release_date.desc.nullslast,sort_score.desc.nullslast';
+  if (section?.sort === 'popular') return 'popularity.desc.nullslast,sort_score.desc.nullslast';
+  return 'sort_score.desc.nullslast,rating.desc';
+}
+
+async function fetchCatalogRows(extraFilter: string, limit: number, fallbackFilter?: string, order = orderForSection()) {
   try {
     return await supabaseRest<CatalogRow[]>(
-      `tmdb_catalog?${catalogSelect()}${extraFilter}&order=sort_score.desc.nullslast,rating.desc&limit=${limit}`,
+      `tmdb_catalog?${baseCatalogQuery()}${extraFilter}&order=${order}&limit=${limit}`,
       { mode: 'service', next: { revalidate: 120 } },
     );
   } catch {
-    if (fallbackFilter && fallbackFilter !== extraFilter) return fetchCatalogRows(fallbackFilter, limit);
+    if (fallbackFilter && fallbackFilter !== extraFilter) return fetchCatalogRows(fallbackFilter, limit, undefined, order);
     return [];
   }
+}
+
+function inList(values: string[]) {
+  return values.map((value) => encodeURIComponent(value)).join(',');
+}
+
+function rowMatchesSection(row: CatalogRow, section: CatalogSectionDef) {
+  if (section.mediaType && row.media_type !== section.mediaType) return false;
+  if (Number(row.rating || 0) < (section.minRating ?? 0)) return false;
+  const sourceBucket = String(row.source_bucket || '').toLowerCase();
+  const language = String(row.language || '').toLowerCase();
+  const text = normalizeText([row.title, row.title_en, row.overview, sourceBucket, language, ...(row.genres || [])].filter(Boolean).join(' '));
+  const sourceMatch = !section.sourceBuckets?.length || section.sourceBuckets.some((bucket) => sourceBucket === bucket.toLowerCase());
+  const languageMatch = !section.languages?.length || section.languages.some((value) => language === value.toLowerCase());
+  const genreMatch = !section.genreKeywords?.length || section.genreKeywords.some((keyword) => text.includes(normalizeText(keyword)));
+  if (section.sourceBuckets?.length && (section.languages?.length || section.genreKeywords?.length)) return sourceMatch || languageMatch || genreMatch;
+  return sourceMatch && languageMatch && genreMatch;
+}
+
+async function rowsForSection(section: CatalogSectionDef, fetchLimit: number) {
+  const filters = [`&rating=gte.${section.minRating ?? 0}`];
+  if (section.mediaType) filters.push(`&media_type=eq.${section.mediaType}`);
+  if (section.sourceBuckets?.length === 1) filters.push(`&source_bucket=eq.${encodeURIComponent(section.sourceBuckets[0])}`);
+  if (section.sourceBuckets && section.sourceBuckets.length > 1) filters.push(`&source_bucket=in.(${inList(section.sourceBuckets)})`);
+  if (section.languages?.length === 1 && !section.sourceBuckets?.length) filters.push(`&language=eq.${encodeURIComponent(section.languages[0])}`);
+  if (section.languages && section.languages.length > 1 && !section.sourceBuckets?.length) filters.push(`&language=in.(${inList(section.languages)})`);
+
+  const direct = await fetchCatalogRows(filters.join(''), fetchLimit, undefined, orderForSection(section));
+  let rows = uniqueRows(direct).filter((row) => rowMatchesSection(row, section));
+
+  if (rows.length < Math.min(fetchLimit, 96) && (section.genreKeywords?.length || section.languages?.length)) {
+    const broadFilters = [`&rating=gte.${section.minRating ?? 0}`];
+    if (section.mediaType) broadFilters.push(`&media_type=eq.${section.mediaType}`);
+    const fallback = await fetchCatalogRows(broadFilters.join(''), fetchLimit, undefined, orderForSection(section));
+    rows = uniqueRows([...rows, ...fallback.filter((row) => rowMatchesSection(row, section))]);
+  }
+
+  return rows;
 }
 
 async function fetchWatchReadyRows(fetchLimit: number) {
@@ -457,12 +453,10 @@ async function fetchWatchReadyRows(fetchLimit: number) {
 async function fetchWatchLinks(rows: CatalogRow[]) {
   const ids = [...new Set(rows.map((row) => Number(row.tmdb_id)).filter(Boolean))];
   if (!ids.length) return new Map<string, WatchLinkRecord>();
-
   const linkRows = await supabaseRest<WatchLinkRecord[]>(
     `admin_movie_links?is_active=eq.true&tmdb_id=in.(${ids.join(',')})&select=tmdb_id,media_type,title,title_th,watch_url,trailer_url`,
     { mode: 'service', next: { revalidate: 60 } },
   ).catch(() => []);
-
   const map = new Map<string, WatchLinkRecord>();
   for (const link of linkRows || []) {
     if (!link.tmdb_id || !link.media_type) continue;
@@ -474,39 +468,22 @@ async function fetchWatchLinks(rows: CatalogRow[]) {
 async function rowsForSearch(query: string, category: string, limit: number, offset: number, intent: SmartIntent) {
   const isKnownCategory = category && knownSlugPattern.test(category);
   const fetchLimit = Math.min(Math.max((offset + limit) * 8, 96), maxSearchFetchLimit);
-
   if (category === 'watch-ready') return fetchWatchReadyRows(fetchLimit);
 
-  if (isKnownCategory) {
-    const bucketFilter = category !== 'watch-ready' ? `&source_bucket=eq.${encodeURIComponent(category)}` : '';
-    return fetchCatalogRows(bucketFilter, fetchLimit);
-  }
+  const section = category ? getCatalogSectionMeta(category) : null;
+  if (section) return rowsForSection(section, fetchLimit);
+
+  if (isKnownCategory) return fetchCatalogRows(`&source_bucket=eq.${encodeURIComponent(category)}`, fetchLimit);
 
   const rowGroups: CatalogRow[][] = [];
-
-  for (const bucket of intent.buckets.slice(0, 4)) {
-    rowGroups.push(await fetchCatalogRows(`&source_bucket=eq.${encodeURIComponent(bucket)}`, fetchLimit));
-  }
-
-  for (const language of intent.languages.slice(0, 3)) {
-    rowGroups.push(await fetchCatalogRows(`&language=eq.${encodeURIComponent(language)}`, fetchLimit));
-  }
-
-  if (intent.mediaType) {
-    rowGroups.push(await fetchCatalogRows(`&media_type=eq.${intent.mediaType}`, Math.min(fetchLimit, 240)));
-  }
-
-  if (intent.directTerms.length) {
-    rowGroups.push(await fetchCatalogRows(searchTextTermFilter(intent.directTerms), fetchLimit, legacyTermFilter(intent.directTerms)));
-  }
-
-  if (!rowGroups.length) {
-    rowGroups.push(await fetchCatalogRows('', fetchLimit));
-  }
+  for (const bucket of intent.buckets.slice(0, 4)) rowGroups.push(await fetchCatalogRows(`&source_bucket=eq.${encodeURIComponent(bucket)}`, fetchLimit));
+  for (const language of intent.languages.slice(0, 3)) rowGroups.push(await fetchCatalogRows(`&language=eq.${encodeURIComponent(language)}`, fetchLimit));
+  if (intent.mediaType) rowGroups.push(await fetchCatalogRows(`&media_type=eq.${intent.mediaType}`, Math.min(fetchLimit, 240)));
+  if (intent.directTerms.length) rowGroups.push(await fetchCatalogRows(searchTextTermFilter(intent.directTerms), fetchLimit, legacyTermFilter(intent.directTerms)));
+  if (!rowGroups.length) rowGroups.push(await fetchCatalogRows('', fetchLimit));
 
   const merged = uniqueRows(rowGroups.flat());
   if (merged.length >= offset + limit || !query.trim()) return merged;
-
   const broad = await fetchCatalogRows('', fetchLimit);
   return uniqueRows([...merged, ...broad]);
 }
@@ -518,13 +495,11 @@ export async function GET(request: Request) {
   const limit = Math.max(1, Math.min(Number(searchParams.get('limit') || 24), 48));
   const offset = Math.max(0, Math.min(Number(searchParams.get('offset') || 0), 600));
   const intent = detectIntent(query);
-
   const rows = await rowsForSearch(query, category, limit, offset, intent);
   const links = await fetchWatchLinks(rows);
   const baseItems = rows.map((row) => rowToMovie(row, links));
   const filteredItems = applyFilters(uniqueItems(baseItems), searchParams, intent, query);
   const items = filteredItems.slice(offset, offset + limit);
   const hasMore = filteredItems.length > offset + items.length;
-
   return NextResponse.json({ ok: true, items, total: filteredItems.length, hasMore, offset }, { headers: CACHE_HEADERS });
 }
