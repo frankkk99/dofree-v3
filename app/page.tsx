@@ -4,7 +4,7 @@ import { FloatingGlassSearch } from '@/components/floating-glass-search';
 import { HomeRealtimeWrapper } from '@/components/home-realtime-wrapper';
 import { NotificationBellPortal } from '@/components/notification-bell-portal';
 import { applyAdminHomeConfig } from '@/lib/admin-home-config';
-import { getCatalogHomePayload } from '@/lib/catalog-home';
+import { getManagedCatalogHomePayload } from '@/lib/catalog-managed-sections';
 import { absoluteUrl, englishSiteName, siteDescription, siteName, siteUrl } from '@/lib/seo';
 import { decorateHomeWithFreshTmdbReleases } from '@/lib/tmdb-release-window';
 
@@ -31,7 +31,7 @@ const websiteJsonLd = {
 };
 
 export default async function HomePage() {
-  const home = await decorateHomeWithFreshTmdbReleases(await applyAdminHomeConfig(await getCatalogHomePayload()));
+  const home = await decorateHomeWithFreshTmdbReleases(await applyAdminHomeConfig(await getManagedCatalogHomePayload()));
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
