@@ -293,36 +293,36 @@ export function SearchPageClient({ initialQuery = '', initialFilters }: SearchPa
 
   return (
     <main className="min-h-screen bg-[#030303] text-white">
-      <section className="relative border-b border-white/10 bg-[radial-gradient(circle_at_20%_0%,rgba(229,9,20,0.18),transparent_16rem),linear-gradient(180deg,#080101,#030303)] px-3 pb-4 pt-[calc(env(safe-area-inset-top)+12px)] md:px-6 md:py-16">
+      <section className="relative border-b border-white/10 bg-[radial-gradient(circle_at_20%_0%,rgba(229,9,20,0.14),transparent_13rem),linear-gradient(180deg,#080101,#030303)] px-3 pb-3 pt-[calc(env(safe-area-inset-top)+10px)] md:px-6 md:py-9">
         <div className="mx-auto max-w-[1440px]">
           <div className="flex items-center justify-between gap-3">
             <a href="/" className="rounded-full bg-white/[0.06] px-3 py-2 text-xs font-black text-red-100/80 hover:bg-white/[0.10] hover:text-white md:text-sm">← หน้าแรก</a>
-            <a href="/" aria-label="ปิดหน้าค้นหา" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/[0.08] text-xl font-black text-white/78 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-[#e50914] hover:text-white md:h-12 md:w-12 md:text-2xl">×</a>
+            <a href="/" aria-label="ปิดหน้าค้นหา" className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/[0.08] text-lg font-black text-white/78 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-[#e50914] hover:text-white md:h-11 md:w-11 md:text-2xl">×</a>
           </div>
 
-          <div className="mt-3 flex items-end justify-between gap-4 md:mt-8">
+          <div className="mt-2 flex items-end justify-between gap-4 md:mt-5">
             <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#e50914]">Smart Search</p>
-              <h1 className="mt-1 text-[34px] font-black leading-none tracking-[-0.08em] md:text-7xl">ค้นหาแบบไม่ต้องจำชื่อเรื่อง</h1>
+              <p className="text-[9px] font-black uppercase tracking-[0.24em] text-[#e50914] md:text-[10px]">Smart Search</p>
+              <h1 className="mt-1 text-[26px] font-black leading-none tracking-[-0.075em] md:text-5xl">ค้นหาแบบไม่ต้องจำชื่อเรื่อง</h1>
             </div>
           </div>
 
-          <div className="mt-4 rounded-[24px] border border-white/10 bg-black/48 p-2.5 shadow-[0_18px_70px_rgba(0,0,0,0.46),inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-2xl md:mt-8 md:rounded-[28px] md:p-4">
+          <div className="mt-3 rounded-[22px] border border-white/10 bg-black/48 p-2 shadow-[0_14px_52px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-2xl md:mt-5 md:rounded-[26px] md:p-3">
             <form onSubmit={(event) => { event.preventDefault(); void runSearch(query, filters, false, 0); }}>
               <div className="grid gap-2 md:grid-cols-[minmax(280px,1fr)_auto]">
-                <div className="flex h-12 items-center gap-2 rounded-[18px] bg-white/[0.08] px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] md:h-13">
+                <div className="flex h-11 items-center gap-2 rounded-[16px] bg-white/[0.08] px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] md:h-12">
                   <span className="text-lg text-white/58">⌕</span>
                   <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="เช่น หนังผีเกาหลีคะแนนดี หรือ หนังดูคืนนี้ไม่เครียด" className="min-w-0 flex-1 bg-transparent text-sm font-bold text-white outline-none placeholder:text-white/36 md:text-base" />
                   {query ? <button type="button" onClick={() => setQuery('')} className="grid h-8 w-8 place-items-center rounded-full bg-white/[0.10] text-sm text-white/75">×</button> : null}
                 </div>
-                <button type="submit" className="h-11 rounded-[16px] bg-[#e50914] px-6 text-xs font-black text-white shadow-[0_18px_52px_rgba(229,9,20,0.38)] md:h-12 md:min-w-[130px]">ค้นหา</button>
+                <button type="submit" className="h-10 rounded-[15px] bg-[#e50914] px-6 text-xs font-black text-white shadow-[0_18px_52px_rgba(229,9,20,0.38)] md:h-12 md:min-w-[130px]">ค้นหา</button>
               </div>
 
               <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-[auto_auto] md:justify-start">
-                <button type="button" onClick={() => setFiltersOpen((value) => !value)} className="h-10 rounded-[14px] bg-white/[0.075] px-4 text-[11px] font-black text-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-white/[0.12] md:h-11 md:min-w-[132px]">
+                <button type="button" onClick={() => setFiltersOpen((value) => !value)} className="h-9 rounded-[14px] bg-white/[0.075] px-4 text-[11px] font-black text-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-white/[0.12] md:h-10 md:min-w-[132px]">
                   ตัวกรองทั้งหมด {activeFilterCount ? `(${activeFilterCount})` : ''} {filtersOpen ? '⌃' : '⌄'}
                 </button>
-                <button type="button" onClick={clearSearch} className="h-10 rounded-[14px] bg-white/[0.055] px-4 text-[11px] font-black text-white/58 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-white/[0.10] hover:text-white md:h-11 md:min-w-[92px]">ล้าง</button>
+                <button type="button" onClick={clearSearch} className="h-9 rounded-[14px] bg-white/[0.055] px-4 text-[11px] font-black text-white/58 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-white/[0.10] hover:text-white md:h-10 md:min-w-[92px]">ล้าง</button>
               </div>
 
               {filtersOpen ? (
@@ -345,19 +345,19 @@ export function SearchPageClient({ initialQuery = '', initialFilters }: SearchPa
               ) : null}
             </form>
 
-            <div className="mt-3 rounded-[20px] bg-white/[0.045] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+            <div className="mt-2 rounded-[18px] bg-white/[0.045] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] md:p-3">
               <div className="flex items-center justify-between gap-3">
                 <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#e50914]/80">ลองค้นหาแบบนี้</p>
                 <a href="/how-to-use" className="text-[10px] font-black text-white/42 hover:text-white">เว็บนี้ทำอะไรได้บ้าง ›</a>
               </div>
               <div className="mt-2 flex gap-2 overflow-x-auto pb-1 md:flex-wrap md:overflow-visible">
                 {smartSearchExamples.map((example) => (
-                  <button key={example} type="button" onClick={() => runExampleSearch(example)} className="shrink-0 rounded-full bg-white/[0.08] px-3 py-2 text-[10px] font-black text-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:bg-[#e50914] hover:text-white md:text-xs">
+                  <button key={example} type="button" onClick={() => runExampleSearch(example)} className="shrink-0 rounded-full bg-white/[0.08] px-3 py-1.5 text-[10px] font-black text-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:bg-[#e50914] hover:text-white md:text-xs">
                     {example}
                   </button>
                 ))}
               </div>
-              <p className="mt-2 rounded-full bg-white/[0.035] px-3 py-2 text-[10px] font-bold leading-4 text-white/42">
+              <p className="mt-2 hidden rounded-full bg-white/[0.035] px-3 py-2 text-[10px] font-bold leading-4 text-white/42 sm:block">
                 ตัวช่วยค้นหาอัจฉริยะกำลังอยู่ระหว่างพัฒนา ทดลองใช้ได้แล้วตอนนี้ และผลลัพธ์จะค่อย ๆ แม่นขึ้นตามฐานข้อมูล
               </p>
             </div>
