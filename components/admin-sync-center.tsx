@@ -196,6 +196,19 @@ function shortcutClass() {
   return 'min-w-max rounded-full border border-white/10 bg-white/[0.075] px-3.5 py-2 text-[11px] font-black text-white/70 transition hover:border-[#e50914]/50 hover:bg-[#e50914]/16 hover:text-white md:px-4 md:text-xs';
 }
 
+function optionGroupClass(tone: 'safe' | 'custom' | 'advanced' = 'custom') {
+  const toneClass = tone === 'safe'
+    ? 'border-emerald-400/20 bg-emerald-400/[0.045]'
+    : tone === 'advanced'
+      ? 'border-amber-300/24 bg-amber-300/[0.055]'
+      : 'border-white/12 bg-white/[0.045]';
+  return `rounded-[24px] border p-4 ${toneClass}`;
+}
+
+function checkClass(isDanger = false) {
+  return `flex min-h-[46px] items-center gap-3 rounded-[18px] border px-3 py-2 text-xs font-black ${isDanger ? 'border-amber-300/24 bg-amber-300/[0.08] text-amber-50' : 'border-white/12 bg-white/[0.045] text-white/78'}`;
+}
+
 function formatNumber(value: number) {
   return new Intl.NumberFormat('th-TH').format(value || 0);
 }
@@ -500,7 +513,7 @@ export function AdminSyncCenter() {
                 <div>
                   <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#ff3b45]">ตั้งค่า Sync Options</p>
                   <h2 className="mt-1 text-2xl font-black tracking-[-0.04em] text-white">{selectedProfile?.label || 'Sync Profile'}</h2>
-                  <p className="mt-1 text-xs font-semibold text-white/58">ค่าเริ่มต้นปลอดภัย: เก็บลิงก์เดิม / เก็บข้อมูลผู้ใช้ / เก็บ Analytics / Dry run</p>
+                  <p className="mt-1 text-xs font-semibold text-white/58">แบ่งเป็นโหมดง่าย / ปรับแต่ง / ขั้นสูง เพื่อให้แอดมินกดถูกและลดความเสี่ยง</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button type="button" onClick={() => void previewSync()} disabled={working} className={buttonClass('dark')}>พรีวิว Sync</button>
@@ -508,41 +521,66 @@ export function AdminSyncCenter() {
                 </div>
               </div>
 
-              <div className="mt-5 grid gap-3 md:grid-cols-4">
-                <label className="space-y-2"><span className="text-xs font-black text-white/68">ประเภทสื่อ (media type)</span><select value={filters.mediaType} onChange={(event) => setFilter('mediaType', event.target.value as SyncMediaType)} className={inputClass()}><option value="both">movie + tv</option><option value="movie">movie</option><option value="tv">tv</option></select></label>
-                <label className="space-y-2"><span className="text-xs font-black text-white/68">ปีเริ่มต้น (year from)</span><input value={filters.yearFrom} onChange={(event) => setFilter('yearFrom', event.target.value)} inputMode="numeric" placeholder="ว่างได้" className={inputClass()} /></label>
-                <label className="space-y-2"><span className="text-xs font-black text-white/68">ปีสิ้นสุด (year to)</span><input value={filters.yearTo} onChange={(event) => setFilter('yearTo', event.target.value)} inputMode="numeric" placeholder="ว่างได้" className={inputClass()} /></label>
-                <label className="space-y-2"><span className="text-xs font-black text-white/68">คะแนนขั้นต่ำ (vote average)</span><input value={filters.voteAverageMin} onChange={(event) => setFilter('voteAverageMin', event.target.value)} inputMode="decimal" className={inputClass()} /></label>
-                <label className="space-y-2"><span className="text-xs font-black text-white/68">จำนวนโหวตขั้นต่ำ (vote count)</span><input value={filters.voteCountMin} onChange={(event) => setFilter('voteCountMin', event.target.value)} inputMode="numeric" className={inputClass()} /></label>
-                <label className="space-y-2"><span className="text-xs font-black text-white/68">ภูมิภาค (Region)</span><input value={filters.region} onChange={(event) => setFilter('region', event.target.value)} className={inputClass()} /></label>
-                <label className="space-y-2"><span className="text-xs font-black text-white/68">จำนวนสูงสุด (max items)</span><input value={filters.maxItems} onChange={(event) => setFilter('maxItems', event.target.value)} inputMode="numeric" className={inputClass()} /></label>
-                <label className="space-y-2"><span className="text-xs font-black text-white/68">จำนวนต่อรอบ (batch size)</span><input value={filters.batchSize} onChange={(event) => setFilter('batchSize', event.target.value)} inputMode="numeric" className={inputClass()} /></label>
-                <label className="space-y-2"><span className="text-xs font-black text-white/68">ภาษา (Language)</span><input value={filters.language} onChange={(event) => setFilter('language', event.target.value)} placeholder="th, ko, ja" className={inputClass()} /></label>
-                <label className="space-y-2"><span className="text-xs font-black text-white/68">รหัสแนวหนัง (Genre ID)</span><input value={filters.genre} onChange={(event) => setFilter('genre', event.target.value)} placeholder="28, 35" className={inputClass()} /></label>
-                <label className="space-y-2"><span className="text-xs font-black text-white/68">รหัสผู้ให้บริการ (Provider ID)</span><input value={filters.provider} onChange={(event) => setFilter('provider', event.target.value)} placeholder="ว่าง = resolve จาก profile" className={inputClass()} /></label>
-                <label className="space-y-2"><span className="text-xs font-black text-white/68">รหัสค่ายหนัง (Company ID)</span><input value={filters.company} onChange={(event) => setFilter('company', event.target.value)} placeholder="ว่าง = resolve จาก profile" className={inputClass()} /></label>
-                <label className="space-y-2"><span className="text-xs font-black text-white/68">รหัสชุดหนัง (Collection ID)</span><input value={filters.collection} onChange={(event) => setFilter('collection', event.target.value)} placeholder="movie only" className={inputClass()} /></label>
-                <label className="space-y-2"><span className="text-xs font-black text-white/68">การเรียงข้อมูล (Sort)</span><select value={filters.sortBy} onChange={(event) => setFilter('sortBy', event.target.value)} className={inputClass()}><option value="popularity.desc">popularity.desc</option><option value="vote_average.desc">vote_average.desc</option><option value="primary_release_date.desc">primary_release_date.desc</option><option value="first_air_date.desc">first_air_date.desc</option></select></label>
-              </div>
+              <div className="mt-5 grid gap-4">
+                <div className={optionGroupClass('safe')}>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-100/80">1. โหมดง่าย Safe Mode</p>
+                      <h3 className="mt-1 text-lg font-black tracking-[-0.035em] text-white">Sync หนังใหม่แบบปลอดภัย</h3>
+                      <p className="mt-1 text-xs font-semibold leading-5 text-white/58">ใช้ชุดนี้เป็นค่าเริ่มต้น ปลอดภัยกับ watch links, รายการโปรด, history และ analytics</p>
+                    </div>
+                    <span className="rounded-full bg-emerald-400/14 px-3 py-1 text-[10px] font-black text-emerald-100">แนะนำ</span>
+                  </div>
+                  <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-5">
+                    <label className={checkClass()}><input type="checkbox" checked={safety.dryRun} onChange={(event) => setSafetyOption('dryRun', event.target.checked)} className="h-4 w-4 accent-[#e50914]" /><span>ทดลองก่อน ไม่เขียนข้อมูลจริง (Dry run)</span></label>
+                    <label className={checkClass()}><input type="checkbox" checked={safety.keepMovieLinks} onChange={(event) => setSafetyOption('keepMovieLinks', event.target.checked)} className="h-4 w-4 accent-[#e50914]" /><span>เก็บลิงก์ดูเดิมไว้ (Keep watch links)</span></label>
+                    <label className={checkClass()}><input type="checkbox" checked={safety.keepFavoritesHistory} onChange={(event) => setSafetyOption('keepFavoritesHistory', event.target.checked)} className="h-4 w-4 accent-[#e50914]" /><span>เก็บรายการโปรด/ประวัติดู</span></label>
+                    <label className={checkClass()}><input type="checkbox" checked={safety.keepAnalytics} onChange={(event) => setSafetyOption('keepAnalytics', event.target.checked)} className="h-4 w-4 accent-[#e50914]" /><span>เก็บข้อมูลสถิติเดิม</span></label>
+                    <label className={checkClass()}><input type="checkbox" checked={safety.syncNewTitlesOnly} onChange={(event) => setSafetyOption('syncNewTitlesOnly', event.target.checked)} className="h-4 w-4 accent-[#e50914]" /><span>ดึงเฉพาะเรื่องใหม่</span></label>
+                  </div>
+                </div>
 
-              <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-                {[
-                  ['dryRun', 'ทดลองก่อน ไม่เขียนข้อมูลจริง (Dry run)'],
-                  ['keepMovieLinks', 'เก็บลิงก์ดูเดิมไว้ (Keep watch links)'],
-                  ['keepFavoritesHistory', 'เก็บรายการโปรด/ประวัติดู (Keep favorites/history)'],
-                  ['keepAnalytics', 'เก็บข้อมูลสถิติเดิม (Keep analytics)'],
-                  ['archiveExistingCatalog', 'เก็บ catalog เดิมเป็น archive'],
-                  ['refreshMetadataOnly', 'อัปเดตเฉพาะ metadata'],
-                  ['syncMissingMetadataOnly', 'ดึงเฉพาะเรื่องที่ข้อมูลยังขาด'],
-                  ['syncNewTitlesOnly', 'ดึงเฉพาะเรื่องใหม่ (Sync new titles only)'],
-                  ['rebuildSections', 'สร้างหมวด/section ใหม่'],
-                  ['clearImportedRows', 'ล้างเฉพาะข้อมูลที่เคย import'],
-                ].map(([key, label]) => (
-                  <label key={key} className="flex min-h-[46px] items-center gap-3 rounded-[18px] border border-white/12 bg-white/[0.045] px-3 py-2 text-xs font-black text-white/78">
-                    <input type="checkbox" checked={Boolean(safety[key as keyof SafetyOptions])} onChange={(event) => setSafetyOption(key as keyof SafetyOptions, event.target.checked)} className="h-4 w-4 accent-[#e50914]" />
-                    <span>{label}</span>
-                  </label>
-                ))}
+                <div className={optionGroupClass('custom')}>
+                  <p className="text-[11px] font-black uppercase tracking-[0.22em] text-[#ff3b45]/80">2. โหมดปรับแต่ง Custom Filters</p>
+                  <h3 className="mt-1 text-lg font-black tracking-[-0.035em] text-white">เลือกปี / คะแนน / ภาษา / จำนวน</h3>
+                  <p className="mt-1 text-xs font-semibold leading-5 text-white/52">ใช้เมื่อต้องการจำกัดชุดข้อมูลให้แคบลง โดยไม่แตะค่าขั้นสูง</p>
+                  <div className="mt-4 grid gap-3 md:grid-cols-4">
+                    <label className="space-y-2"><span className="text-xs font-black text-white/68">ประเภทสื่อ (media type)</span><select value={filters.mediaType} onChange={(event) => setFilter('mediaType', event.target.value as SyncMediaType)} className={inputClass()}><option value="both">movie + tv</option><option value="movie">movie</option><option value="tv">tv</option></select></label>
+                    <label className="space-y-2"><span className="text-xs font-black text-white/68">ปีเริ่มต้น (year from)</span><input value={filters.yearFrom} onChange={(event) => setFilter('yearFrom', event.target.value)} inputMode="numeric" placeholder="ว่างได้" className={inputClass()} /></label>
+                    <label className="space-y-2"><span className="text-xs font-black text-white/68">ปีสิ้นสุด (year to)</span><input value={filters.yearTo} onChange={(event) => setFilter('yearTo', event.target.value)} inputMode="numeric" placeholder="ว่างได้" className={inputClass()} /></label>
+                    <label className="space-y-2"><span className="text-xs font-black text-white/68">คะแนนขั้นต่ำ (vote average)</span><input value={filters.voteAverageMin} onChange={(event) => setFilter('voteAverageMin', event.target.value)} inputMode="decimal" className={inputClass()} /></label>
+                    <label className="space-y-2"><span className="text-xs font-black text-white/68">จำนวนโหวตขั้นต่ำ (vote count)</span><input value={filters.voteCountMin} onChange={(event) => setFilter('voteCountMin', event.target.value)} inputMode="numeric" className={inputClass()} /></label>
+                    <label className="space-y-2"><span className="text-xs font-black text-white/68">ภูมิภาค (Region)</span><input value={filters.region} onChange={(event) => setFilter('region', event.target.value)} className={inputClass()} /></label>
+                    <label className="space-y-2"><span className="text-xs font-black text-white/68">จำนวนสูงสุด (max items)</span><input value={filters.maxItems} onChange={(event) => setFilter('maxItems', event.target.value)} inputMode="numeric" className={inputClass()} /></label>
+                    <label className="space-y-2"><span className="text-xs font-black text-white/68">จำนวนต่อรอบ (batch size)</span><input value={filters.batchSize} onChange={(event) => setFilter('batchSize', event.target.value)} inputMode="numeric" className={inputClass()} /></label>
+                    <label className="space-y-2"><span className="text-xs font-black text-white/68">ภาษา (Language)</span><input value={filters.language} onChange={(event) => setFilter('language', event.target.value)} placeholder="th, ko, ja" className={inputClass()} /></label>
+                    <label className="space-y-2 md:col-span-3"><span className="text-xs font-black text-white/68">การเรียงข้อมูล (Sort)</span><select value={filters.sortBy} onChange={(event) => setFilter('sortBy', event.target.value)} className={inputClass()}><option value="popularity.desc">popularity.desc</option><option value="vote_average.desc">vote_average.desc</option><option value="primary_release_date.desc">primary_release_date.desc</option><option value="first_air_date.desc">first_air_date.desc</option></select></label>
+                  </div>
+                </div>
+
+                <div className={optionGroupClass('advanced')}>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] font-black uppercase tracking-[0.22em] text-amber-100/85">3. โหมดขั้นสูง Advanced</p>
+                      <h3 className="mt-1 text-lg font-black tracking-[-0.035em] text-white">Provider / Company / Collection / ตัวเลือกเสี่ยง</h3>
+                      <p className="mt-1 text-xs font-semibold leading-5 text-white/56">ส่วนนี้ใช้เมื่อคุยกับ AI หรือรู้ค่า ID แล้วเท่านั้น ถ้าไม่แน่ใจให้ปล่อยว่างไว้</p>
+                    </div>
+                    <span className="rounded-full bg-amber-300/15 px-3 py-1 text-[10px] font-black text-amber-100">ขั้นสูง</span>
+                  </div>
+                  <div className="mt-4 grid gap-3 md:grid-cols-4">
+                    <label className="space-y-2"><span className="text-xs font-black text-white/68">รหัสแนวหนัง (Genre ID)</span><input value={filters.genre} onChange={(event) => setFilter('genre', event.target.value)} placeholder="28, 35" className={inputClass()} /></label>
+                    <label className="space-y-2"><span className="text-xs font-black text-white/68">รหัสผู้ให้บริการ (Provider ID)</span><input value={filters.provider} onChange={(event) => setFilter('provider', event.target.value)} placeholder="ว่าง = resolve จาก profile" className={inputClass()} /></label>
+                    <label className="space-y-2"><span className="text-xs font-black text-white/68">รหัสค่ายหนัง (Company ID)</span><input value={filters.company} onChange={(event) => setFilter('company', event.target.value)} placeholder="ว่าง = resolve จาก profile" className={inputClass()} /></label>
+                    <label className="space-y-2"><span className="text-xs font-black text-white/68">รหัสชุดหนัง (Collection ID)</span><input value={filters.collection} onChange={(event) => setFilter('collection', event.target.value)} placeholder="movie only" className={inputClass()} /></label>
+                  </div>
+                  <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-5">
+                    <label className={checkClass(true)}><input type="checkbox" checked={safety.archiveExistingCatalog} onChange={(event) => setSafetyOption('archiveExistingCatalog', event.target.checked)} className="h-4 w-4 accent-[#e50914]" /><span>เก็บ catalog เดิมเป็น archive</span></label>
+                    <label className={checkClass(true)}><input type="checkbox" checked={safety.refreshMetadataOnly} onChange={(event) => setSafetyOption('refreshMetadataOnly', event.target.checked)} className="h-4 w-4 accent-[#e50914]" /><span>อัปเดตเฉพาะ metadata</span></label>
+                    <label className={checkClass(true)}><input type="checkbox" checked={safety.syncMissingMetadataOnly} onChange={(event) => setSafetyOption('syncMissingMetadataOnly', event.target.checked)} className="h-4 w-4 accent-[#e50914]" /><span>ดึงเฉพาะเรื่องที่ข้อมูลยังขาด</span></label>
+                    <label className={checkClass(true)}><input type="checkbox" checked={safety.rebuildSections} onChange={(event) => setSafetyOption('rebuildSections', event.target.checked)} className="h-4 w-4 accent-[#e50914]" /><span>สร้างหมวด/section ใหม่</span></label>
+                    <label className={checkClass(true)}><input type="checkbox" checked={safety.clearImportedRows} onChange={(event) => setSafetyOption('clearImportedRows', event.target.checked)} className="h-4 w-4 accent-[#e50914]" /><span>ล้างเฉพาะข้อมูลที่เคย import</span></label>
+                  </div>
+                </div>
               </div>
 
               {preview ? (
