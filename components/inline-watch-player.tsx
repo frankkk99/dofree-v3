@@ -96,7 +96,8 @@ export function InlineWatchPlayer({ tmdbId, mediaType, title, fallbackImage, sou
 
   useEffect(() => {
     const node = rootRef.current;
-    if (!node || shouldLoad) return;
+    if (!node || shouldLoad || !hasVideo) return;
+    if (typeof IntersectionObserver === 'undefined') return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -105,7 +106,7 @@ export function InlineWatchPlayer({ tmdbId, mediaType, title, fallbackImage, sou
           observer.disconnect();
         }
       },
-      { rootMargin: '120px' },
+      { rootMargin: '0px' },
     );
 
     observer.observe(node);
@@ -129,6 +130,7 @@ export function InlineWatchPlayer({ tmdbId, mediaType, title, fallbackImage, sou
             src={embedUrl}
             title={`รับชม ${title}`}
             className="absolute inset-0 h-full w-full border-0 bg-black"
+            loading="lazy"
             allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
             referrerPolicy="no-referrer"
             allowFullScreen
@@ -142,7 +144,7 @@ export function InlineWatchPlayer({ tmdbId, mediaType, title, fallbackImage, sou
               {hasVideo ? 'พร้อมเริ่มเล่นวิดีโอ' : 'ยังไม่พร้อมรับชม'}
             </h2>
             <p className="mt-2 max-w-xl text-sm font-semibold leading-6 text-white/75">
-              {hasVideo ? 'กดรับชมจากด้านบนหรือกดปุ่มนี้ ระบบจะเปิด player ในหน้านี้ทันที' : 'กำลังอัปเดตลิงก์รับชมสำหรับเรื่องนี้'}
+              {hasVideo ? 'ระบบจะโหลด player เมื่อเลื่อนมาถึงส่วนนี้ หรือกดปุ่มเริ่มรับชม' : 'กำลังอัปเดตลิงก์รับชมสำหรับเรื่องนี้'}
             </p>
             <div className="mt-5 flex max-w-full flex-wrap gap-3">
               {hasVideo ? (
