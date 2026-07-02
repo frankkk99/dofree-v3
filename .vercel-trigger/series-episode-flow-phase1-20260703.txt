@@ -1,0 +1,8 @@
+Trigger production deployment for series episode flow phase 1.
+
+Expected changes:
+- Series playback uses published episode links as source of truth.
+- Series player shows episode picker even with one playable episode.
+- Detail page no longer treats every TV item as watch-ready automatically.
+- Series cards can show playable episode count when available.
+- Backend-managed home/category sections mark TV items ready only when published episodes exist.
