@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import { recordAdminAuditLog } from '@/lib/admin-audit';
 import { requireAdminAccess } from '@/lib/admin-auth';
+import { catalogSectionDefs } from '@/lib/catalog-home';
 import { supabaseRest } from '@/lib/supabase-rest';
 
 type CardRow = {
@@ -18,10 +19,28 @@ type CardRow = {
   updated_at?: string;
 };
 
+type CategoryRow = {
+  slug: string;
+  media_type?: string | null;
+  tmdb_params?: Record<string, unknown> | null;
+};
+
 const select = 'tmdb_id,media_type,title,title_en,poster_url,rating,release_year,source_bucket,sort_score,is_active,updated_at';
 
 function text(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+function arrayOfStrings(value: unknown) {
+  return Array.isArray(value) ? value.map((item) => String(item).trim()).filter(Boolean) : [];
+}
+
+function mediaTypeValue(value: unknown) {
+  return value === 'movie' || value === 'tv' ? value : undefined;
+}
+
+function inList(values: string[]) {
+  return values.map((value) => encodeURIComponent(value)).join(',');
 }
 
 function cardKey(card: Record<string, unknown>) {
@@ -37,12 +56,46 @@ async function auth(request: Request) {
   return { response: NextResponse.json({ ok: false, error: result.error }, { status: result.status }) };
 }
 
+async function categoryBySlug(slug?: string | null) {
+  const safeSlug = text(slug);
+  if (!safeSlug || safeSlug === 'all') return null;
+  const rows = await supabaseRest<CategoryRow[]>(
+    `admin_categories?select=slug,media_type,tmdb_params&slug=eq.${encodeURIComponent(safeSlug)}&limit=1`,
+    { mode: 'service' },
+  ).catch(() => []);
+  return rows?.[0] || null;
+}
+
+function categoryMapping(category: CategoryRow | null, fallbackSlug?: string | null) {
+  const slug = category?.slug || text(fallbackSlug) || '';
+  const defaults = catalogSectionDefs.find((section) => section.slug === slug);
+  const params = category?.tmdb_params || {};
+  const sourceBuckets = arrayOfStrings(params.sourceBuckets).length ? arrayOfStrings(params.sourceBuckets) : defaults?.sourceBuckets || (slug ? [slug] : []);
+  const languages = arrayOfStrings(params.languages).length ? arrayOfStrings(params.languages) : defaults?.languages || [];
+  const mediaType = mediaTypeValue(params.mediaType) || mediaTypeValue(category?.media_type) || defaults?.mediaType;
+  return { slug, sourceBuckets, languages, mediaType };
+}
+
+function filtersForCategory(mapping: ReturnType<typeof categoryMapping>) {
+  const filters: string[] = [];
+  if (mapping.mediaType) filters.push(`media_type=eq.${mapping.mediaType}`);
+  if (mapping.sourceBuckets.length === 1) filters.push(`source_bucket=eq.${encodeURIComponent(mapping.sourceBuckets[0])}`);
+  if (mapping.sourceBuckets.length > 1) filters.push(`source_bucket=in.(${inList(mapping.sourceBuckets)})`);
+  if (!mapping.sourceBuckets.length && mapping.languages.length === 1) filters.push(`language=eq.${encodeURIComponent(mapping.languages[0])}`);
+  if (!mapping.sourceBuckets.length && mapping.languages.length > 1) filters.push(`language=in.(${inList(mapping.languages)})`);
+  return filters;
+}
+
 async function patchOne(card: Record<string, unknown>) {
   const parsed = cardKey(card);
   if (!parsed) return null;
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (typeof card.is_active === 'boolean') patch.is_active = card.is_active;
-  if ('source_bucket' in card) patch.source_bucket = text(card.source_bucket) || null;
+  if ('source_bucket' in card) {
+    const category = await categoryBySlug(text(card.source_bucket));
+    const mapping = categoryMapping(category, text(card.source_bucket));
+    patch.source_bucket = mapping.sourceBuckets[0] || mapping.slug || null;
+  }
   if (card.sort_score !== undefined) patch.sort_score = Number(card.sort_score);
 
   const rows = await supabaseRest<CardRow[]>(`tmdb_catalog?tmdb_id=eq.${parsed.tmdbId}&media_type=eq.${encodeURIComponent(parsed.mediaType)}`, {
@@ -72,7 +125,11 @@ export async function GET(request: Request) {
   const active = params.get('active');
   const limit = Math.max(1, Math.min(Number(params.get('limit') || 80), 500));
   const filters = [`select=${select}`, 'order=sort_score.desc.nullslast', `limit=${limit}`];
-  if (bucket && bucket !== 'all') filters.push(`source_bucket=eq.${encodeURIComponent(bucket)}`);
+
+  if (bucket && bucket !== 'all') {
+    const category = await categoryBySlug(bucket);
+    filters.push(...filtersForCategory(categoryMapping(category, bucket)));
+  }
   if (active === 'true' || active === 'false') filters.push(`is_active=eq.${active}`);
   if (q) {
     const keyword = encodeURIComponent(q.replace(/[,*()]/g, ' '));
