@@ -157,9 +157,9 @@ export function RouteTransitionLoader() {
   if (!mounted) return null;
 
   return (
-    <div className={`pointer-events-none fixed inset-0 z-[1200] bg-black/38 backdrop-blur-[18px] transition-opacity duration-300 ease-out ${shown ? 'opacity-100' : 'opacity-0'}`}>
-      <div className="fixed left-1/2 top-1/2 min-w-[156px] -translate-x-1/2 -translate-y-1/2 rounded-[26px] border border-[#e50914]/45 bg-black/62 px-6 py-4 text-center shadow-[0_24px_90px_rgba(0,0,0,0.66),inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-2xl">
-        <p className="text-sm font-black lowercase tracking-[0.08em] text-[#e50914] drop-shadow-[0_0_18px_rgba(229,9,20,0.52)] md:text-base">
+    <div className={`pointer-events-none fixed inset-0 z-[1200] bg-black/48 backdrop-blur-[20px] transition-opacity duration-300 ease-out ${shown ? 'opacity-100' : 'opacity-0'}`}>
+      <div className="fixed left-1/2 top-1/2 min-w-[176px] -translate-x-1/2 -translate-y-1/2 rounded-[26px] border border-[#e50914]/50 bg-black/74 px-7 py-4 text-center shadow-[0_28px_100px_rgba(0,0,0,0.78),inset_0_1px_0_rgba(255,255,255,0.11)] ring-1 ring-white/[0.08] backdrop-blur-2xl">
+        <p className="text-sm font-black lowercase tracking-[0.10em] text-[#e50914] drop-shadow-[0_0_18px_rgba(229,9,20,0.58)] md:text-base">
           loading…{progress}%
         </p>
       </div>
