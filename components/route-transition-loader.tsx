@@ -31,18 +31,41 @@ export function RouteTransitionLoader() {
   const hideTimerRef = useRef<number | null>(null);
   const unmountTimerRef = useRef<number | null>(null);
   const maxTimerRef = useRef<number | null>(null);
-  const progressTimerRef = useRef<number | null>(null);
+  const progressFrameRef = useRef<number | null>(null);
   const lastRouteRef = useRef('');
+
+  function stopProgressLoop() {
+    if (progressFrameRef.current) window.cancelAnimationFrame(progressFrameRef.current);
+    progressFrameRef.current = null;
+  }
 
   function clearTimers() {
     if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
     if (unmountTimerRef.current) window.clearTimeout(unmountTimerRef.current);
     if (maxTimerRef.current) window.clearTimeout(maxTimerRef.current);
-    if (progressTimerRef.current) window.clearInterval(progressTimerRef.current);
+    stopProgressLoop();
     hideTimerRef.current = null;
     unmountTimerRef.current = null;
     maxTimerRef.current = null;
-    progressTimerRef.current = null;
+  }
+
+  function startProgressLoop() {
+    stopProgressLoop();
+
+    const tick = () => {
+      if (!activeRef.current) return;
+      const elapsed = Date.now() - startedAtRef.current;
+      const nextProgress = elapsed < 900
+        ? elapsed / 18
+        : elapsed < 2200
+          ? 50 + ((elapsed - 900) / 1300) * 32
+          : 82 + Math.min((elapsed - 2200) / 180, 14);
+
+      setProgress(clampProgress(Math.min(nextProgress, 96)));
+      progressFrameRef.current = window.requestAnimationFrame(tick);
+    };
+
+    progressFrameRef.current = window.requestAnimationFrame(tick);
   }
 
   function startLoading(startAt = 0) {
@@ -51,15 +74,13 @@ export function RouteTransitionLoader() {
     startedAtRef.current = Date.now();
     setMounted(true);
     setProgress(startAt);
-    window.requestAnimationFrame(() => setShown(true));
-
-    progressTimerRef.current = window.setInterval(() => {
-      setProgress((current) => {
-        if (current >= 96) return current;
-        const step = current < 24 ? 8 : current < 56 ? 5 : current < 78 ? 3 : 1;
-        return clampProgress(current + step);
-      });
-    }, 150);
+    window.requestAnimationFrame(() => {
+      setShown(true);
+      window.setTimeout(() => {
+        if (activeRef.current) setProgress((current) => Math.max(current, 1));
+      }, 50);
+      startProgressLoop();
+    });
 
     maxTimerRef.current = window.setTimeout(() => {
       finishLoading();
@@ -69,14 +90,13 @@ export function RouteTransitionLoader() {
   function finishLoading() {
     if (!activeRef.current) return;
     activeRef.current = false;
-    if (progressTimerRef.current) window.clearInterval(progressTimerRef.current);
+    stopProgressLoop();
     if (maxTimerRef.current) window.clearTimeout(maxTimerRef.current);
-    progressTimerRef.current = null;
     maxTimerRef.current = null;
     setProgress(100);
 
     const elapsed = Date.now() - startedAtRef.current;
-    const delay = Math.max(180, 380 - elapsed);
+    const delay = Math.max(260, 520 - elapsed);
     hideTimerRef.current = window.setTimeout(() => {
       setShown(false);
       unmountTimerRef.current = window.setTimeout(() => {
