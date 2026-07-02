@@ -56,7 +56,7 @@ export function InlineWatchPlayer({ tmdbId, mediaType, title, fallbackImage, sou
   const loadTimerRef = useRef<number | null>(null);
   const [shouldLoad, setShouldLoad] = useState(false);
   const [selectedKey, setSelectedKey] = useState(episodes[0]?.key || 'main');
-  const hasEpisodes = mediaType === 'tv' && episodes.length > 1;
+  const hasEpisodes = mediaType === 'tv' && episodes.length > 0;
   const selectedEpisode = episodes.find((episode) => episode.key === selectedKey) || episodes[0];
   const activeSourceUrl = selectedEpisode?.sourceUrl || sourceUrl;
   const embedUrl = useMemo(() => toEmbedUrl(activeSourceUrl), [activeSourceUrl]);
@@ -118,7 +118,7 @@ export function InlineWatchPlayer({ tmdbId, mediaType, title, fallbackImage, sou
     <section ref={rootRef} id="watch" className="scroll-mt-24 px-4 sm:px-5">
       <div className="mb-2 flex items-center justify-between gap-3">
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-red-100/68 md:text-xs">รับชม</p>
-        <span className="rounded-full bg-white/[0.08] px-2.5 py-1 text-[9px] font-black text-white/42 backdrop-blur-xl md:text-[10px]">WATCH READY</span>
+        <span className="rounded-full bg-white/[0.08] px-2.5 py-1 text-[9px] font-black text-white/42 backdrop-blur-xl md:text-[10px]">{hasEpisodes ? `${episodes.length} ตอน` : 'พร้อมดู'}</span>
       </div>
 
       <div className="relative aspect-video w-full max-w-full overflow-hidden rounded-[28px] border border-white/15 bg-black shadow-[0_24px_90px_rgba(0,0,0,0.72)] sm:rounded-[32px]">
@@ -138,13 +138,13 @@ export function InlineWatchPlayer({ tmdbId, mediaType, title, fallbackImage, sou
         ) : (
           <div className="relative z-10 flex h-full min-w-0 flex-col justify-end p-5 text-left sm:p-8">
             <p className="text-[10px] font-black uppercase tracking-[0.35em] text-white/70 sm:text-xs">
-              WATCH READY
+              รับชม
             </p>
             <h2 className="mt-2 max-w-full break-words text-2xl font-black leading-tight tracking-[-0.05em] text-white sm:text-3xl md:text-4xl">
-              {hasVideo ? 'พร้อมเริ่มเล่นวิดีโอ' : 'ยังไม่พร้อมรับชม'}
+              {hasVideo ? (selectedEpisode ? selectedEpisode.label : 'พร้อมเริ่มเล่นวิดีโอ') : 'ยังไม่พร้อมรับชม'}
             </h2>
             <p className="mt-2 max-w-xl text-sm font-semibold leading-6 text-white/75">
-              {hasVideo ? 'ระบบจะโหลด player เมื่อเลื่อนมาถึงส่วนนี้ หรือกดปุ่มเริ่มรับชม' : 'กำลังอัปเดตลิงก์รับชมสำหรับเรื่องนี้'}
+              {hasVideo ? 'กดเริ่มรับชม หรือเลือกตอนที่ต้องการด้านล่าง' : 'กำลังอัปเดตลิงก์รับชมสำหรับเรื่องนี้'}
             </p>
             <div className="mt-5 flex max-w-full flex-wrap gap-3">
               {hasVideo ? (
@@ -158,25 +158,6 @@ export function InlineWatchPlayer({ tmdbId, mediaType, title, fallbackImage, sou
             </div>
           </div>
         )}
-      </div>
-
-      <div className="movie-rail mt-3 flex max-w-full gap-2 overflow-x-auto pb-1">
-        {['TH', 'ENG', 'ORIGINAL'].map((label, index) => {
-          const active = hasVideo && index === 0;
-          return (
-            <button
-              key={label}
-              type="button"
-              disabled={!active}
-              className={`min-h-[42px] min-w-[76px] rounded-2xl px-4 text-xs font-black transition ${active ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.06] text-white/35'}`}
-            >
-              {label}
-            </button>
-          );
-        })}
-        <DetailReportButton tmdbId={tmdbId} mediaType={mediaType} title={title} className="min-h-[42px] min-w-max rounded-2xl bg-white/[0.08] px-4 text-xs font-black text-white/68 backdrop-blur-xl transition hover:bg-white/[0.14]">
-          แจ้งลิงก์เสีย
-        </DetailReportButton>
       </div>
 
       {hasEpisodes ? (
@@ -200,6 +181,25 @@ export function InlineWatchPlayer({ tmdbId, mediaType, title, fallbackImage, sou
           })}
         </div>
       ) : null}
+
+      <div className="movie-rail mt-3 flex max-w-full gap-2 overflow-x-auto pb-1">
+        {mediaType === 'movie' ? ['TH', 'ENG', 'ORIGINAL'].map((label, index) => {
+          const active = hasVideo && index === 0;
+          return (
+            <button
+              key={label}
+              type="button"
+              disabled={!active}
+              className={`min-h-[42px] min-w-[76px] rounded-2xl px-4 text-xs font-black transition ${active ? 'bg-[#e50914] text-white shadow-glow' : 'bg-white/[0.06] text-white/35'}`}
+            >
+              {label}
+            </button>
+          );
+        }) : null}
+        <DetailReportButton tmdbId={tmdbId} mediaType={mediaType} title={title} className="min-h-[42px] min-w-max rounded-2xl bg-white/[0.08] px-4 text-xs font-black text-white/68 backdrop-blur-xl transition hover:bg-white/[0.14]">
+          แจ้งลิงก์เสีย
+        </DetailReportButton>
+      </div>
     </section>
   );
 }
