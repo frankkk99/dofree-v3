@@ -53,6 +53,12 @@ type MissingCatalogSample = {
   release_year?: string | null;
 };
 
+const dashboardRoles = new Set(['owner', 'admin', 'super_admin']);
+
+function normalizeRole(value?: string | null) {
+  return String(value || 'viewer').trim().toLowerCase();
+}
+
 function supabaseUrl() {
   return process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, '');
 }
@@ -109,8 +115,8 @@ async function currentUser(token: string) {
 async function requireAdmin(token: string) {
   const user = await currentUser(token);
   const profiles = await supabaseRest<ProfileRecord[]>(`profiles?id=eq.${encodeURIComponent(user.id)}&select=id,role&limit=1`);
-  const role = profiles?.[0]?.role || 'viewer';
-  if (role !== 'admin' && role !== 'super_admin') throw new Error('Admin only');
+  const role = normalizeRole(profiles?.[0]?.role);
+  if (!dashboardRoles.has(role)) throw new Error('Admin only');
   return { user, role };
 }
 
@@ -253,8 +259,8 @@ export async function GET(request: Request) {
       events7d,
     ] = await Promise.all([
       countRows('tmdb_catalog?select=tmdb_id'),
-      countRows('admin_movie_links?watch_url=not.is.null&select=tmdb_id'),
-      countRows('admin_movie_links?status=eq.broken&select=tmdb_id'),
+      countRows('admin_movie_links?is_active=eq.true&watch_url=not.is.null&select=tmdb_id'),
+      countRows('admin_movie_links?is_active=eq.true&status=eq.broken&select=tmdb_id'),
       countRows('profiles?select=id'),
       countRows('favorites?select=id'),
       countRows('watch_history?select=id'),
@@ -266,7 +272,7 @@ export async function GET(request: Request) {
       countRows('admin_categories?select=id'),
       countRows('tmdb_catalog?poster_url=not.is.null&select=tmdb_id'),
       countRows('tmdb_catalog?backdrop_url=not.is.null&select=tmdb_id'),
-      countRows('admin_movie_links?trailer_url=not.is.null&select=tmdb_id'),
+      countRows('admin_movie_links?is_active=eq.true&trailer_url=not.is.null&select=tmdb_id'),
       getRows<AnalyticsEvent>(`analytics_events?select=event_name,page_path,media_type,media_id,title,search_query,visitor_id,user_id,device,created_at&created_at=gte.${encodeURIComponent(since7d)}&order=created_at.desc&limit=10000`),
     ]);
 
@@ -284,7 +290,7 @@ export async function GET(request: Request) {
       : 0;
 
     const [readyLinkRows, missingCandidates] = await Promise.all([
-      getRows<ReadyLinkRow>('admin_movie_links?watch_url=not.is.null&select=tmdb_id,media_type&limit=10000'),
+      getRows<ReadyLinkRow>('admin_movie_links?is_active=eq.true&watch_url=not.is.null&select=tmdb_id,media_type&limit=10000'),
       getRows<MissingCatalogSample>('tmdb_catalog?select=tmdb_id,media_type,title,poster_url,rating,release_year&order=rating.desc&limit=120'),
     ]);
     const missingSamples = missingCatalogSamples(missingCandidates, readyLinkRows);
