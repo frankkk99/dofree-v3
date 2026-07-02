@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import type { HomePayload, MovieItem, MovieSection } from '@/lib/tmdb';
 import { AdSlot } from '@/components/ad-slot';
 import { ClipsComingSoonSection } from '@/components/clips-coming-soon-section';
@@ -13,7 +13,7 @@ const RAIL_LOAD_THRESHOLD = 360;
 const RAIL_OBSERVER_MARGIN = '160px';
 const HERO_CANDIDATE_LIMIT = 32;
 const thaiMonthShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-const homeSmartExamples = ['หนังผีเกาหลีคะแนนดี', 'หนังไทยตลก', 'ซีรีส์จีนย้อนยุค', 'หนังคล้าย John Wick', 'หนังดูคืนนี้ไม่เครียด'];
+const smartSearchExamples = ['Marvel', 'DC', 'HBO', 'Netflix', 'หนังผีเกาหลี', 'พากย์ไทย', 'ซีรีส์จีน', 'แอ็กชัน', 'โรแมนติก', 'ซอมบี้', 'สืบสวน', 'ดูสบาย'];
 
 type SectionItemsResponse = {
   ok?: boolean;
@@ -223,33 +223,84 @@ function LazyMovieRail({ section, sectionIndex }: { section: MovieSection; secti
   );
 }
 
-function HomeSmartSearchBlock() {
+function searchUrl(query: string) {
+  const text = query.trim();
+  return text ? `/search?q=${encodeURIComponent(text)}` : '/search';
+}
+
+function SmartSearchModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [query, setQuery] = useState('');
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const focusTimer = window.setTimeout(() => inputRef.current?.focus(), 80);
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') onClose();
+    }
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open, onClose]);
+
+  function goSearch(value = query) {
+    window.location.href = searchUrl(value);
+  }
+
+  function submitSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    goSearch();
+  }
+
+  if (!open) return null;
+
   return (
-    <section className="mt-6 rounded-[26px] border border-white/10 bg-[radial-gradient(circle_at_20%_0%,rgba(229,9,20,0.16),transparent_18rem),rgba(255,255,255,0.04)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] md:mt-8 md:rounded-[30px] md:p-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="max-w-3xl">
-          <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#e50914]/80">Smart Search</p>
-          <h2 className="mt-1 text-2xl font-black tracking-[-0.05em] md:text-4xl">ค้นหาหนังแบบไม่ต้องจำชื่อเรื่อง</h2>
-          <p className="mt-2 text-sm font-semibold leading-6 text-white/52 md:text-base md:leading-7">พิมพ์ชื่อหนัง แนวหนัง ประเทศ ภาษา หรือความรู้สึกที่อยากดู ระบบจะช่วยคัดรายการที่ใกล้เคียงให้</p>
+    <div className="fixed inset-0 z-[1000] flex items-end bg-black/72 p-3 text-white backdrop-blur-xl md:items-center md:justify-center md:p-6" onMouseDown={onClose}>
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_10%,rgba(229,9,20,0.22),transparent_24rem),radial-gradient(circle_at_12%_92%,rgba(255,255,255,0.08),transparent_18rem)]" />
+      <section className="relative w-full max-w-2xl overflow-hidden rounded-[28px] border border-white/10 bg-[#0b0b0b]/94 p-4 shadow-[0_40px_160px_rgba(0,0,0,0.82),inset_0_1px_0_rgba(255,255,255,0.10)] md:rounded-[34px] md:p-6" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.30em] text-[#e50914]">Smart Search</p>
+            <h2 className="mt-2 text-3xl font-black tracking-[-0.07em] md:text-5xl">พิมพ์ผิดก็หาเจอ</h2>
+            <p className="mt-2 max-w-xl text-sm font-semibold leading-6 text-white/56 md:text-base md:leading-7">ค้นหาจากชื่อเรื่อง แนวหนัง ค่าย ประเทศ ภาษา หรืออารมณ์ที่อยากดู</p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="ปิด Smart Search" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/[0.08] text-xl font-black text-white/76 ring-1 ring-white/10 transition hover:bg-[#e50914] hover:text-white md:h-12 md:w-12">×</button>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <a href="/search" className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#e50914] px-10 text-xs font-black text-white shadow-glow sm:w-[220px] md:w-[260px]">เริ่มค้นหา</a>
-          <a href="/how-to-use" className="inline-flex h-12 items-center justify-center rounded-full bg-white/[0.09] px-5 text-xs font-black text-white/72 hover:bg-white/[0.14] hover:text-white">วิธีใช้งาน</a>
+
+        <form onSubmit={submitSearch} className="mt-5 rounded-[24px] bg-white/[0.055] p-2 ring-1 ring-white/10 md:mt-6 md:flex md:items-center md:gap-2">
+          <label className="flex h-12 items-center gap-3 rounded-[18px] bg-black/36 px-4 ring-1 ring-white/8 md:h-14 md:flex-1">
+            <span className="text-white/46">⌕</span>
+            <input ref={inputRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ลองพิมพ์: หนังผีเกาหลี, Marvel, พากย์ไทย" className="min-w-0 flex-1 bg-transparent text-sm font-bold text-white outline-none placeholder:text-white/34 md:text-base" />
+          </label>
+          <button type="submit" className="mt-2 h-12 w-full rounded-[18px] bg-[#e50914] text-sm font-black text-white shadow-[0_16px_44px_rgba(229,9,20,0.30)] md:mt-0 md:h-14 md:w-32">ค้นหา</button>
+        </form>
+
+        <div className="mt-5">
+          <p className="text-[11px] font-black uppercase tracking-[0.22em] text-white/34">ลองค้นหาเร็ว</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {smartSearchExamples.map((example) => (
+              <button key={example} type="button" onClick={() => goSearch(example)} className="rounded-full bg-white/[0.08] px-3 py-2 text-[11px] font-black text-white/70 ring-1 ring-white/10 transition hover:bg-[#e50914] hover:text-white md:px-4 md:text-xs">{example}</button>
+            ))}
+          </div>
         </div>
-      </div>
-      <div className="mt-4 flex gap-2 overflow-x-auto pb-1 md:flex-wrap md:overflow-visible">
-        {homeSmartExamples.map((example) => (
-          <a key={example} href={`/search?q=${encodeURIComponent(example)}`} className="shrink-0 rounded-full bg-white/[0.08] px-3 py-2 text-[10px] font-black text-white/70 hover:bg-[#e50914] hover:text-white md:text-xs">{example}</a>
-        ))}
-      </div>
-      <p className="mt-3 text-[10px] font-semibold leading-4 text-white/34">ตัวช่วยค้นหาอัจฉริยะกำลังอยู่ระหว่างพัฒนา ทดลองใช้ได้แล้ว และจะค่อย ๆ แม่นขึ้นตามฐานข้อมูลที่เพิ่มเข้ามา</p>
-    </section>
+
+        <p className="mt-5 text-xs font-semibold leading-5 text-white/36">ระบบจะลองจับคำใกล้เคียงให้ แม้พิมพ์ชื่อเรื่องไม่ตรงทั้งหมด</p>
+      </section>
+    </div>
   );
 }
 
 export function HomeExperienceV3({ home }: { home: HomePayload }) {
   const [shuffleSeed] = useState(() => dailySeed());
   const [liveSeed, setLiveSeed] = useState(shuffleSeed);
+  const [smartSearchOpen, setSmartSearchOpen] = useState(false);
   const liveRandomizedSections = useMemo(() => shuffleSections(home.sections, liveSeed), [home.sections, liveSeed]);
   const hasComingSoonSection = liveRandomizedSections.some((section) => section.slug === 'coming-soon');
   const heroItems = useMemo(() => {
@@ -281,11 +332,23 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#030303] text-white">
       <header className="fixed inset-x-0 top-0 z-50 border-b border-white/[0.07] bg-black/88 backdrop-blur-2xl">
-        <nav className="mx-auto flex h-[58px] max-w-[1920px] items-center px-4 md:h-[76px] md:px-7 xl:h-[88px]">
-          <a href="/" className="flex items-center gap-1.5 text-[22px] font-black tracking-[-0.06em] text-[#e50914] md:text-[31px] xl:text-[34px]"><span>ดูดีดี.online</span></a>
-          <div className="ml-auto flex items-center gap-3 md:gap-5"><div data-dofree-menu-host="true" className="grid h-9 w-9 place-items-center md:h-12 md:w-12" /></div>
+        <nav className="mx-auto flex h-[58px] max-w-[1920px] items-center gap-2 px-4 md:h-[76px] md:gap-5 md:px-7 xl:h-[88px]">
+          <a href="/" className="flex shrink-0 items-center gap-1.5 text-[21px] font-black tracking-[-0.06em] text-[#e50914] md:text-[31px] xl:text-[34px]"><span>ดูดีดี.online</span></a>
+          <div className="ml-auto hidden items-center gap-5 md:flex xl:gap-7">
+            <a href="/search?type=movie" className="text-sm font-black text-white/68 transition hover:text-white xl:text-base">หนัง</a>
+            <a href="/search?type=tv" className="text-sm font-black text-white/68 transition hover:text-white xl:text-base">ซีรีส์</a>
+            <a href="/clips" className="text-sm font-black text-white/68 transition hover:text-white xl:text-base">คลิปสั้น</a>
+          </div>
+          <button type="button" onClick={() => setSmartSearchOpen(true)} className="ml-auto inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-white/[0.09] px-3 text-[11px] font-black text-white/82 ring-1 ring-white/10 transition hover:bg-[#e50914] hover:text-white md:ml-0 md:h-11 md:px-4 md:text-xs xl:px-5">
+            <span className="max-[360px]:hidden">พิมพ์ผิดก็หาเจอ</span>
+            <span className="min-[361px]:hidden">ค้นหา</span>
+            <span>🔍</span>
+          </button>
+          <div className="flex items-center gap-3 md:gap-5"><div data-dofree-menu-host="true" className="grid h-9 w-9 place-items-center md:h-12 md:w-12" /></div>
         </nav>
       </header>
+
+      <SmartSearchModal open={smartSearchOpen} onClose={() => setSmartSearchOpen(false)} />
 
       <section className="relative min-h-[500px] border-b border-white/[0.08] pt-[58px] md:min-h-[585px] md:pt-[76px] xl:min-h-[610px] xl:pt-[88px]">
         <div className="absolute inset-0 overflow-hidden">
@@ -330,7 +393,6 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
               ) : null}
               <LazyMovieRail section={section} sectionIndex={sectionIndex} />
               {section.slug === 'coming-soon' ? <ClipsComingSoonSection /> : null}
-              {sectionIndex === 0 ? <HomeSmartSearchBlock /> : null}
             </div>
           ))}
         </div>
