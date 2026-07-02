@@ -74,9 +74,6 @@ export default function ClipsFeedPage() {
   const [allowedSpoilers, setAllowedSpoilers] = useState<Record<string, boolean>>({});
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  const activeClip = clips[activeIndex];
-  const activeDetailHref = activeClip ? detailHref(activeClip) : '';
-
   const apiUrl = useMemo(() => {
     const params = new URLSearchParams({ limit: '60' });
     if (query.trim()) params.set('q', query.trim());
@@ -127,10 +124,29 @@ export default function ClipsFeedPage() {
     setFavorites(state);
   }, [clips]);
 
+  useEffect(() => {
+    const clip = clips[activeIndex];
+    if (!clip || typeof window === 'undefined') return;
+    window.history.replaceState(null, '', `/clips/feed?clip=${encodeURIComponent(clip.id)}`);
+  }, [activeIndex, clips]);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+      const node = containerRef.current;
+      if (!node) return;
+      const direction = event.key === 'ArrowDown' ? 1 : -1;
+      const nextIndex = Math.max(0, Math.min(activeIndex + direction, clips.length - 1));
+      node.scrollTo({ top: nextIndex * node.clientHeight, behavior: 'smooth' });
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [activeIndex, clips.length]);
+
   function onScroll() {
     const node = containerRef.current;
     if (!node) return;
-    const nextIndex = Math.round(node.scrollTop / Math.max(window.innerHeight, 1));
+    const nextIndex = Math.round(node.scrollTop / Math.max(node.clientHeight, 1));
     if (nextIndex !== activeIndex && nextIndex >= 0 && nextIndex < clips.length) setActiveIndex(nextIndex);
   }
 
@@ -144,6 +160,7 @@ export default function ClipsFeedPage() {
     const next = !favorites[clip.id];
     window.localStorage.setItem(favoriteKey(clip.id), next ? '1' : '0');
     setFavorites((current) => ({ ...current, [clip.id]: next }));
+    setMessage(next ? 'เพิ่มในรายการโปรดแล้ว' : 'เอาออกจากรายการโปรดแล้ว');
   }
 
   async function shareClip(clip: MediaClipRow) {
@@ -184,6 +201,7 @@ export default function ClipsFeedPage() {
         </div>
       ) : null}
 
+      {message && clips.length ? <div className="fixed bottom-5 left-1/2 z-40 -translate-x-1/2 rounded-full bg-white/[0.12] px-4 py-2 text-xs font-black text-white/76 ring-1 ring-white/10 backdrop-blur-xl">{message}</div> : null}
       {loading ? <div className="grid h-screen place-items-center text-sm font-black text-white/46">กำลังโหลดคลิป...</div> : null}
       {!loading && message && !clips.length ? <div className="grid h-screen place-items-center px-6 text-center text-sm font-black text-white/54">{message}</div> : null}
       {!loading && !message && !clips.length ? <div className="grid h-screen place-items-center px-6 text-center text-sm font-black text-white/54">ยังไม่มีคลิปให้ดู</div> : null}
