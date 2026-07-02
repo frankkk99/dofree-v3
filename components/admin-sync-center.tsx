@@ -169,13 +169,13 @@ const statusTone: Record<string, string> = {
 };
 
 const syncNavItems = [
-  { href: '#sync-status', label: 'Status' },
-  { href: '#sync-profiles', label: 'Profiles' },
-  { href: '#sync-sources', label: 'Sources' },
-  { href: '#sync-options', label: 'Options' },
-  { href: '#sync-jobs', label: 'Jobs' },
-  { href: '#sync-logs', label: 'Logs' },
-  { href: '#sync-note', label: 'Note' },
+  { href: '#sync-status', label: 'สถานะ (Status)' },
+  { href: '#sync-profiles', label: 'ชุดข้อมูล (Profiles)' },
+  { href: '#sync-sources', label: 'แหล่งข้อมูล (Sources)' },
+  { href: '#sync-options', label: 'ตั้งค่า (Options)' },
+  { href: '#sync-jobs', label: 'งาน Sync (Jobs)' },
+  { href: '#sync-logs', label: 'บันทึก (Logs)' },
+  { href: '#sync-note', label: 'หมายเหตุ (Note)' },
 ];
 
 function cardClass(extra = '') {
@@ -348,7 +348,7 @@ export function AdminSyncCenter() {
 
   async function startSync() {
     if (!safety.dryRun) {
-      const confirmed = window.confirm('ยืนยันเริ่ม sync จริง? ระบบจะเขียน metadata ลง catalog แต่ยังคง watch links, favorites/history, memberships และ analytics ตามตัวเลือกที่เปิดไว้');
+      const confirmed = window.confirm('ยืนยันเริ่ม Sync จริง? ระบบจะเขียน metadata ลง catalog แต่ยังคง watch links, favorites/history, memberships และ analytics ตามตัวเลือกที่เปิดไว้');
       if (!confirmed) return;
     }
 
@@ -364,7 +364,7 @@ export function AdminSyncCenter() {
       setNotice(safety.dryRun ? 'Dry run batch เสร็จแล้ว ไม่เขียน catalog จริง' : 'Sync batch เสร็จแล้ว ถ้ายังไม่ครบให้กด Resume');
       await loadStatus();
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : 'Start sync ไม่สำเร็จ');
+      setError(nextError instanceof Error ? nextError.message : 'Start Sync ไม่สำเร็จ');
     } finally {
       setWorking(false);
     }
@@ -386,14 +386,14 @@ export function AdminSyncCenter() {
   }
 
   async function cancelJob(jobId: string) {
-    const confirmed = window.confirm('ยืนยันยกเลิก job นี้?');
+    const confirmed = window.confirm('ยืนยันยกเลิก Job นี้?');
     if (!confirmed) return;
     setWorking(true);
     setError('');
     setNotice('');
     try {
       await postAction('/api/admin/sync/cancel', { jobId });
-      setNotice('ยกเลิก job แล้ว');
+      setNotice('ยกเลิก Job แล้ว');
       await loadStatus();
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : 'Cancel ไม่สำเร็จ');
@@ -408,22 +408,22 @@ export function AdminSyncCenter() {
         <section id="sync-top" className="scroll-mt-28 rounded-[30px] border border-white/12 bg-[#151515] p-5 shadow-[0_26px_90px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.06)] md:p-7">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-[11px] font-black uppercase tracking-[0.28em] text-[#ff3b45]">Admin Sync Center</p>
-              <h1 className="mt-2 text-3xl font-black tracking-[-0.055em] text-white md:text-5xl">Catalog Sync Center</h1>
+              <p className="text-[11px] font-black uppercase tracking-[0.28em] text-[#ff3b45]">ศูนย์จัดการ Sync</p>
+              <h1 className="mt-2 text-3xl font-black tracking-[-0.055em] text-white md:text-5xl">จัดการ Sync Catalog</h1>
               <p className="mt-3 max-w-4xl text-sm font-semibold leading-6 text-white/72 md:text-base">
-                รีเฟรช catalog, preview, dry run, batch sync และ resume ได้ โดยไม่ลบข้อมูล user, favorites, history, memberships, analytics หรือ watch links
+                ใช้สำหรับรีเฟรช catalog, Preview, Dry run, Batch sync และ Resume โดยไม่ลบข้อมูล user, favorites, history, memberships, analytics หรือ watch links เดิม
               </p>
             </div>
             <div className="flex gap-2">
               <a href="/admin" className={buttonClass('dark')}>กลับแอดมิน</a>
-              <button type="button" onClick={() => void loadStatus()} disabled={loading || working} className={buttonClass('dark')}>Refresh</button>
+              <button type="button" onClick={() => void loadStatus()} disabled={loading || working} className={buttonClass('dark')}>รีเฟรช</button>
             </div>
           </div>
         </section>
 
         <nav className="sticky top-2 z-40 overflow-x-auto rounded-[24px] border border-white/12 bg-[#101010]/94 p-2 shadow-[0_18px_60px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-2xl">
           <div className="flex min-w-max items-center gap-2">
-            <a href="#sync-top" className="min-w-max rounded-full bg-[#e50914] px-3.5 py-2 text-[11px] font-black text-white shadow-[0_10px_26px_rgba(229,9,20,0.24)] md:px-4 md:text-xs">Top</a>
+            <a href="#sync-top" className="min-w-max rounded-full bg-[#e50914] px-3.5 py-2 text-[11px] font-black text-white shadow-[0_10px_26px_rgba(229,9,20,0.24)] md:px-4 md:text-xs">บนสุด</a>
             {syncNavItems.map((item) => <a key={item.href} href={item.href} className={shortcutClass()}>{item.label}</a>)}
           </div>
         </nav>
@@ -437,12 +437,12 @@ export function AdminSyncCenter() {
             <section id="sync-status" className={cardClass()}>
               <div className="flex flex-wrap items-end justify-between gap-3 border-b border-white/10 pb-4">
                 <div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#ff3b45]">Catalog Status</p>
-                  <h2 className="mt-1 text-2xl font-black tracking-[-0.04em] text-white">ข้อมูลจาก database จริง</h2>
+                  <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#ff3b45]">สถานะ Catalog</p>
+                  <h2 className="mt-1 text-2xl font-black tracking-[-0.04em] text-white">ข้อมูลจริงจาก database</h2>
                   <p className="mt-1 text-xs font-semibold text-white/58">อัปเดตล่าสุด: {safeDate(status.catalog.latestSyncedAt)}</p>
                 </div>
                 <span className="rounded-full bg-white/[0.09] px-3 py-1.5 text-[10px] font-black text-white/66 ring-1 ring-white/10">
-                  generated {safeDate(status.generatedAt)}
+                  สร้างข้อมูลเมื่อ {safeDate(status.generatedAt)}
                 </span>
               </div>
 
@@ -453,8 +453,8 @@ export function AdminSyncCenter() {
 
             <section className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
               <div id="sync-profiles" className={cardClass()}>
-                <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#ff3b45]">Sync Profiles</p>
-                <h2 className="mt-1 text-2xl font-black tracking-[-0.04em] text-white">เลือกชุดข้อมูล</h2>
+                <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#ff3b45]">ชุดข้อมูล Sync Profiles</p>
+                <h2 className="mt-1 text-2xl font-black tracking-[-0.04em] text-white">เลือกชุดข้อมูลที่จะดึง</h2>
                 <p className="mt-1 text-xs font-semibold text-white/56">เลือกแหล่งข้อมูลที่ต้องการดึงเข้า catalog</p>
                 <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
                   {profiles.map((profile) => (
@@ -476,9 +476,9 @@ export function AdminSyncCenter() {
               </div>
 
               <div id="sync-sources" className={cardClass()}>
-                <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#ff3b45]">Dashboard Truth</p>
-                <h2 className="mt-1 text-2xl font-black tracking-[-0.04em] text-white">แหล่งข้อมูล</h2>
-                <p className="mt-1 text-xs font-semibold text-white/56">สถานะตารางที่อ่านได้จาก database</p>
+                <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#ff3b45]">แหล่งข้อมูล Sources</p>
+                <h2 className="mt-1 text-2xl font-black tracking-[-0.04em] text-white">สถานะตารางข้อมูล</h2>
+                <p className="mt-1 text-xs font-semibold text-white/56">ตรวจว่าตารางไหนอ่านได้จาก database แล้วบ้าง</p>
                 <div className="mt-4 grid gap-2">
                   {status.dataSources.map((source) => (
                     <div key={source.key} className="flex items-center justify-between gap-3 rounded-[18px] border border-white/12 bg-white/[0.045] px-3 py-2.5">
@@ -498,45 +498,45 @@ export function AdminSyncCenter() {
             <section id="sync-options" className={cardClass()}>
               <div className="flex flex-wrap items-end justify-between gap-3 border-b border-white/10 pb-4">
                 <div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#ff3b45]">Refresh / Reset Options</p>
+                  <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#ff3b45]">ตั้งค่า Sync Options</p>
                   <h2 className="mt-1 text-2xl font-black tracking-[-0.04em] text-white">{selectedProfile?.label || 'Sync Profile'}</h2>
-                  <p className="mt-1 text-xs font-semibold text-white/58">ค่า default ปลอดภัย: Keep links / Keep user data / Keep analytics / Dry run</p>
+                  <p className="mt-1 text-xs font-semibold text-white/58">ค่าเริ่มต้นปลอดภัย: เก็บลิงก์เดิม / เก็บข้อมูลผู้ใช้ / เก็บ Analytics / Dry run</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <button type="button" onClick={() => void previewSync()} disabled={working} className={buttonClass('dark')}>Preview Sync</button>
-                  <button type="button" onClick={() => void startSync()} disabled={working} className={buttonClass(safety.dryRun ? 'gold' : 'red')}>{safety.dryRun ? 'Start Dry Run' : 'Start Sync'}</button>
+                  <button type="button" onClick={() => void previewSync()} disabled={working} className={buttonClass('dark')}>พรีวิว Sync</button>
+                  <button type="button" onClick={() => void startSync()} disabled={working} className={buttonClass(safety.dryRun ? 'gold' : 'red')}>{safety.dryRun ? 'เริ่ม Dry Run' : 'เริ่ม Sync จริง'}</button>
                 </div>
               </div>
 
               <div className="mt-5 grid gap-3 md:grid-cols-4">
-                <label className="space-y-2"><span className="text-xs font-black text-white/68">ประเภท</span><select value={filters.mediaType} onChange={(event) => setFilter('mediaType', event.target.value as SyncMediaType)} className={inputClass()}><option value="both">movie + tv</option><option value="movie">movie</option><option value="tv">tv</option></select></label>
-                <label className="space-y-2"><span className="text-xs font-black text-white/68">ปีเริ่ม</span><input value={filters.yearFrom} onChange={(event) => setFilter('yearFrom', event.target.value)} inputMode="numeric" placeholder="ว่างได้" className={inputClass()} /></label>
-                <label className="space-y-2"><span className="text-xs font-black text-white/68">ปีสิ้นสุด</span><input value={filters.yearTo} onChange={(event) => setFilter('yearTo', event.target.value)} inputMode="numeric" placeholder="ว่างได้" className={inputClass()} /></label>
-                <label className="space-y-2"><span className="text-xs font-black text-white/68">คะแนนขั้นต่ำ</span><input value={filters.voteAverageMin} onChange={(event) => setFilter('voteAverageMin', event.target.value)} inputMode="decimal" className={inputClass()} /></label>
-                <label className="space-y-2"><span className="text-xs font-black text-white/68">Vote count ขั้นต่ำ</span><input value={filters.voteCountMin} onChange={(event) => setFilter('voteCountMin', event.target.value)} inputMode="numeric" className={inputClass()} /></label>
-                <label className="space-y-2"><span className="text-xs font-black text-white/68">Region</span><input value={filters.region} onChange={(event) => setFilter('region', event.target.value)} className={inputClass()} /></label>
-                <label className="space-y-2"><span className="text-xs font-black text-white/68">จำนวนสูงสุด</span><input value={filters.maxItems} onChange={(event) => setFilter('maxItems', event.target.value)} inputMode="numeric" className={inputClass()} /></label>
-                <label className="space-y-2"><span className="text-xs font-black text-white/68">Batch size</span><input value={filters.batchSize} onChange={(event) => setFilter('batchSize', event.target.value)} inputMode="numeric" className={inputClass()} /></label>
-                <label className="space-y-2"><span className="text-xs font-black text-white/68">Language</span><input value={filters.language} onChange={(event) => setFilter('language', event.target.value)} placeholder="th, ko, ja" className={inputClass()} /></label>
-                <label className="space-y-2"><span className="text-xs font-black text-white/68">Genre ID</span><input value={filters.genre} onChange={(event) => setFilter('genre', event.target.value)} placeholder="28, 35" className={inputClass()} /></label>
-                <label className="space-y-2"><span className="text-xs font-black text-white/68">Provider ID</span><input value={filters.provider} onChange={(event) => setFilter('provider', event.target.value)} placeholder="ว่าง = resolve จาก profile" className={inputClass()} /></label>
-                <label className="space-y-2"><span className="text-xs font-black text-white/68">Company ID</span><input value={filters.company} onChange={(event) => setFilter('company', event.target.value)} placeholder="ว่าง = resolve จาก profile" className={inputClass()} /></label>
-                <label className="space-y-2"><span className="text-xs font-black text-white/68">Collection ID</span><input value={filters.collection} onChange={(event) => setFilter('collection', event.target.value)} placeholder="movie only" className={inputClass()} /></label>
-                <label className="space-y-2"><span className="text-xs font-black text-white/68">Sort</span><select value={filters.sortBy} onChange={(event) => setFilter('sortBy', event.target.value)} className={inputClass()}><option value="popularity.desc">popularity.desc</option><option value="vote_average.desc">vote_average.desc</option><option value="primary_release_date.desc">primary_release_date.desc</option><option value="first_air_date.desc">first_air_date.desc</option></select></label>
+                <label className="space-y-2"><span className="text-xs font-black text-white/68">ประเภทสื่อ (media type)</span><select value={filters.mediaType} onChange={(event) => setFilter('mediaType', event.target.value as SyncMediaType)} className={inputClass()}><option value="both">movie + tv</option><option value="movie">movie</option><option value="tv">tv</option></select></label>
+                <label className="space-y-2"><span className="text-xs font-black text-white/68">ปีเริ่มต้น (year from)</span><input value={filters.yearFrom} onChange={(event) => setFilter('yearFrom', event.target.value)} inputMode="numeric" placeholder="ว่างได้" className={inputClass()} /></label>
+                <label className="space-y-2"><span className="text-xs font-black text-white/68">ปีสิ้นสุด (year to)</span><input value={filters.yearTo} onChange={(event) => setFilter('yearTo', event.target.value)} inputMode="numeric" placeholder="ว่างได้" className={inputClass()} /></label>
+                <label className="space-y-2"><span className="text-xs font-black text-white/68">คะแนนขั้นต่ำ (vote average)</span><input value={filters.voteAverageMin} onChange={(event) => setFilter('voteAverageMin', event.target.value)} inputMode="decimal" className={inputClass()} /></label>
+                <label className="space-y-2"><span className="text-xs font-black text-white/68">จำนวนโหวตขั้นต่ำ (vote count)</span><input value={filters.voteCountMin} onChange={(event) => setFilter('voteCountMin', event.target.value)} inputMode="numeric" className={inputClass()} /></label>
+                <label className="space-y-2"><span className="text-xs font-black text-white/68">ภูมิภาค (Region)</span><input value={filters.region} onChange={(event) => setFilter('region', event.target.value)} className={inputClass()} /></label>
+                <label className="space-y-2"><span className="text-xs font-black text-white/68">จำนวนสูงสุด (max items)</span><input value={filters.maxItems} onChange={(event) => setFilter('maxItems', event.target.value)} inputMode="numeric" className={inputClass()} /></label>
+                <label className="space-y-2"><span className="text-xs font-black text-white/68">จำนวนต่อรอบ (batch size)</span><input value={filters.batchSize} onChange={(event) => setFilter('batchSize', event.target.value)} inputMode="numeric" className={inputClass()} /></label>
+                <label className="space-y-2"><span className="text-xs font-black text-white/68">ภาษา (Language)</span><input value={filters.language} onChange={(event) => setFilter('language', event.target.value)} placeholder="th, ko, ja" className={inputClass()} /></label>
+                <label className="space-y-2"><span className="text-xs font-black text-white/68">รหัสแนวหนัง (Genre ID)</span><input value={filters.genre} onChange={(event) => setFilter('genre', event.target.value)} placeholder="28, 35" className={inputClass()} /></label>
+                <label className="space-y-2"><span className="text-xs font-black text-white/68">รหัสผู้ให้บริการ (Provider ID)</span><input value={filters.provider} onChange={(event) => setFilter('provider', event.target.value)} placeholder="ว่าง = resolve จาก profile" className={inputClass()} /></label>
+                <label className="space-y-2"><span className="text-xs font-black text-white/68">รหัสค่ายหนัง (Company ID)</span><input value={filters.company} onChange={(event) => setFilter('company', event.target.value)} placeholder="ว่าง = resolve จาก profile" className={inputClass()} /></label>
+                <label className="space-y-2"><span className="text-xs font-black text-white/68">รหัสชุดหนัง (Collection ID)</span><input value={filters.collection} onChange={(event) => setFilter('collection', event.target.value)} placeholder="movie only" className={inputClass()} /></label>
+                <label className="space-y-2"><span className="text-xs font-black text-white/68">การเรียงข้อมูล (Sort)</span><select value={filters.sortBy} onChange={(event) => setFilter('sortBy', event.target.value)} className={inputClass()}><option value="popularity.desc">popularity.desc</option><option value="vote_average.desc">vote_average.desc</option><option value="primary_release_date.desc">primary_release_date.desc</option><option value="first_air_date.desc">first_air_date.desc</option></select></label>
               </div>
 
               <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
                 {[
-                  ['dryRun', 'Dry run first'],
-                  ['keepMovieLinks', 'Keep watch links'],
-                  ['keepFavoritesHistory', 'Keep favorites/history'],
-                  ['keepAnalytics', 'Keep analytics'],
-                  ['archiveExistingCatalog', 'Archive existing catalog'],
-                  ['refreshMetadataOnly', 'Refresh metadata only'],
-                  ['syncMissingMetadataOnly', 'Sync missing metadata only'],
-                  ['syncNewTitlesOnly', 'Sync new titles only'],
-                  ['rebuildSections', 'Rebuild sections/categories'],
-                  ['clearImportedRows', 'Clear only imported rows'],
+                  ['dryRun', 'ทดลองก่อน ไม่เขียนข้อมูลจริง (Dry run)'],
+                  ['keepMovieLinks', 'เก็บลิงก์ดูเดิมไว้ (Keep watch links)'],
+                  ['keepFavoritesHistory', 'เก็บรายการโปรด/ประวัติดู (Keep favorites/history)'],
+                  ['keepAnalytics', 'เก็บข้อมูลสถิติเดิม (Keep analytics)'],
+                  ['archiveExistingCatalog', 'เก็บ catalog เดิมเป็น archive'],
+                  ['refreshMetadataOnly', 'อัปเดตเฉพาะ metadata'],
+                  ['syncMissingMetadataOnly', 'ดึงเฉพาะเรื่องที่ข้อมูลยังขาด'],
+                  ['syncNewTitlesOnly', 'ดึงเฉพาะเรื่องใหม่ (Sync new titles only)'],
+                  ['rebuildSections', 'สร้างหมวด/section ใหม่'],
+                  ['clearImportedRows', 'ล้างเฉพาะข้อมูลที่เคย import'],
                 ].map(([key, label]) => (
                   <label key={key} className="flex min-h-[46px] items-center gap-3 rounded-[18px] border border-white/12 bg-white/[0.045] px-3 py-2 text-xs font-black text-white/78">
                     <input type="checkbox" checked={Boolean(safety[key as keyof SafetyOptions])} onChange={(event) => setSafetyOption(key as keyof SafetyOptions, event.target.checked)} className="h-4 w-4 accent-[#e50914]" />
@@ -547,11 +547,11 @@ export function AdminSyncCenter() {
 
               {preview ? (
                 <div className="mt-5 rounded-[22px] border border-amber-300/25 bg-amber-300/10 p-4">
-                  <p className="text-[11px] font-black uppercase tracking-[0.22em] text-amber-100">Preview</p>
+                  <p className="text-[11px] font-black uppercase tracking-[0.22em] text-amber-100">ผลพรีวิว Preview</p>
                   <div className="mt-3 grid gap-2 text-sm font-bold text-white/82 md:grid-cols-4">
-                    <p>Profile: {preview.profileLabel}</p>
-                    <p>Target: {formatNumber(preview.targetCount)}</p>
-                    <p>Batch: {formatNumber(preview.batchSize)}</p>
+                    <p>ชุดข้อมูล: {preview.profileLabel}</p>
+                    <p>เป้าหมาย: {formatNumber(preview.targetCount)}</p>
+                    <p>ต่อรอบ: {formatNumber(preview.batchSize)}</p>
                     <p>ประมาณ {formatNumber(preview.estimatedBatches)} batches</p>
                   </div>
                   <p className="mt-3 text-xs font-semibold leading-5 text-white/62">{preview.note}</p>
@@ -561,8 +561,8 @@ export function AdminSyncCenter() {
 
             <section className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
               <div id="sync-jobs" className={cardClass()}>
-                <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#ff3b45]">Job Progress</p>
-                <h2 className="mt-1 text-2xl font-black tracking-[-0.04em] text-white">งานล่าสุด</h2>
+                <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#ff3b45]">ความคืบหน้า Job</p>
+                <h2 className="mt-1 text-2xl font-black tracking-[-0.04em] text-white">งาน Sync ล่าสุด</h2>
                 <div className="mt-4 space-y-3">
                   {!status.jobs.length ? <p className="rounded-[18px] bg-white/[0.055] p-4 text-sm font-bold text-white/55">ยังไม่มี sync job</p> : null}
                   {status.jobs.map((job) => {
@@ -572,7 +572,7 @@ export function AdminSyncCenter() {
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div className="min-w-0">
                             <p className="truncate text-sm font-black text-white/92">{job.profile_label}</p>
-                            <p className="mt-1 text-[10px] font-bold text-white/45">{job.id}</p>
+                            <p className="mt-1 text-[10px] font-bold text-white/45">Job ID: {job.id}</p>
                           </div>
                           <span className={`rounded-full px-3 py-1 text-[10px] font-black ${statusTone[job.status] || statusTone.preview}`}>{job.status}</span>
                         </div>
@@ -580,15 +580,15 @@ export function AdminSyncCenter() {
                           <div className="h-full rounded-full bg-[#e50914]" style={{ width: `${Math.max(progress, job.processed_count ? 4 : 0)}%` }} />
                         </div>
                         <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] font-bold text-white/62 md:grid-cols-4">
-                          <span>processed {formatNumber(job.processed_count)}</span>
-                          <span>inserted {formatNumber(job.inserted_count)}</span>
-                          <span>updated {formatNumber(job.updated_count)}</span>
-                          <span>skipped {formatNumber(job.skipped_count)}</span>
+                          <span>ประมวลผลแล้ว {formatNumber(job.processed_count)}</span>
+                          <span>เพิ่มใหม่ {formatNumber(job.inserted_count)}</span>
+                          <span>อัปเดต {formatNumber(job.updated_count)}</span>
+                          <span>ข้าม {formatNumber(job.skipped_count)}</span>
                         </div>
                         {job.last_error ? <p className="mt-2 rounded-xl bg-[#e50914]/12 p-2 text-xs font-bold text-red-100">{job.last_error}</p> : null}
                         <div className="mt-3 flex flex-wrap gap-2">
-                          {job.status !== 'completed' && job.status !== 'cancelled' ? <button type="button" onClick={() => void resumeJob(job.id)} disabled={working} className={buttonClass('dark')}>Resume Job</button> : null}
-                          {job.status !== 'completed' && job.status !== 'cancelled' ? <button type="button" onClick={() => void cancelJob(job.id)} disabled={working} className={buttonClass('red')}>Cancel Job</button> : null}
+                          {job.status !== 'completed' && job.status !== 'cancelled' ? <button type="button" onClick={() => void resumeJob(job.id)} disabled={working} className={buttonClass('dark')}>ทำต่อ Resume Job</button> : null}
+                          {job.status !== 'completed' && job.status !== 'cancelled' ? <button type="button" onClick={() => void cancelJob(job.id)} disabled={working} className={buttonClass('red')}>ยกเลิก Cancel Job</button> : null}
                         </div>
                       </article>
                     );
@@ -597,7 +597,7 @@ export function AdminSyncCenter() {
               </div>
 
               <div id="sync-logs" className={cardClass()}>
-                <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#ff3b45]">Sync Logs</p>
+                <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#ff3b45]">บันทึกการทำงาน Logs</p>
                 <h2 className="mt-1 text-2xl font-black tracking-[-0.04em] text-white">ล่าสุด 20 รายการ</h2>
                 <div className="mt-4 space-y-2">
                   {!status.logs.length ? <p className="rounded-[18px] bg-white/[0.055] p-4 text-sm font-bold text-white/55">ยังไม่มี log หรือ migration ยังไม่ถูก apply</p> : null}
@@ -616,7 +616,7 @@ export function AdminSyncCenter() {
 
             {latestJob ? (
               <section id="sync-note" className={cardClass('text-xs font-semibold leading-5 text-white/62')}>
-                <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#ff3b45]">Safety Note</p>
+                <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#ff3b45]">หมายเหตุความปลอดภัย Safety Note</p>
                 <p className="mt-2">
                   Job ล่าสุด {latestJob.dry_run ? 'เป็น Dry run ไม่เขียน catalog จริง' : 'เขียนเฉพาะ metadata ลง catalog'} และระบบนี้ไม่ลบ user/favorites/history/memberships/analytics หรือ watch links เดิม
                 </p>
