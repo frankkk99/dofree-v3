@@ -4,6 +4,7 @@ import { ActorProfileBridge } from '@/components/actor-profile-bridge';
 import { DetailInlineWatchSection } from '@/components/detail-inline-watch-section';
 import { DetailPosterImage } from '@/components/detail-poster-image';
 import { DetailRecommendationCarousel } from '@/components/detail-recommendation-carousel';
+import { FavoriteButton } from '@/components/favorite-button';
 import { absoluteUrl, mediaDetailPath, siteName } from '@/lib/seo';
 import type { DetailPayload, MediaType } from '@/lib/tmdb';
 
@@ -178,7 +179,7 @@ export function DetailPageViewInline({ detail }: { detail: DetailPayload }) {
               <a href="#summary" className="mt-1 inline-flex text-[10px] font-black text-red-200/80 hover:text-red-100 md:text-xs">ดูเพิ่มเติม</a>
               <div className="mt-3 flex flex-wrap gap-2">
                 <a href="#watch" className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#e50914] px-3 text-[11px] font-black text-white shadow-[0_14px_36px_rgba(0,0,0,0.42)] backdrop-blur-xl transition hover:brightness-110 md:h-9 md:px-4 md:text-xs"><span>▶</span>รับชม</a>
-                <a href="#recommend" className="inline-flex h-8 items-center rounded-lg bg-white/[0.1] px-3 text-[11px] font-black text-white/82 backdrop-blur-xl transition hover:bg-white/[0.16] md:h-9 md:px-4 md:text-xs">+ รายการโปรด</a>
+                <FavoriteButton mediaType={item.mediaType} mediaId={item.id} title={item.title} poster={item.posterUrl} backdrop={item.backdropUrl} />
               </div>
             </div>
           </div>
