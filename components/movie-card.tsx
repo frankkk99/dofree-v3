@@ -31,6 +31,13 @@ function statusBadge(item: MovieItem, priorityBadge?: string) {
   return item.label;
 }
 
+function cardBadges(item: MovieItem, priorityBadge?: string) {
+  const primary = statusBadge(item, priorityBadge);
+  const base = item.badges?.length ? item.badges : [primary, item.isWatchReady || item.watchUrl ? 'HD' : 'ข้อมูล'].filter(Boolean) as string[];
+  if (item.mediaType === 'tv' && item.episodeCount) return [primary, ...base.filter((badge) => badge !== primary && badge !== 'พร้อมดู')];
+  return base;
+}
+
 function uniqueImageCandidates(urls: Array<string | undefined | null>) {
   return Array.from(new Set(urls.filter((url): url is string => Boolean(url))));
 }
@@ -44,10 +51,9 @@ export function MovieCard({ item, priorityBadge, compact = false, grid = false, 
   const [detailImages, setDetailImages] = useState<string[]>([]);
   const [detailAttempted, setDetailAttempted] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
-  const badge = statusBadge(item, priorityBadge);
   const href = mediaDetailPath(item.mediaType, item.id, item.title);
   const releaseLabel = releaseMonthYear(item as MovieItem & { releaseDate?: string });
-  const badges = item.badges?.length ? item.badges : [badge, item.isWatchReady || item.watchUrl ? 'HD' : 'ข้อมูล'].filter(Boolean) as string[];
+  const badges = cardBadges(item, priorityBadge);
   const sizeClass = grid
     ? 'aspect-[2/3] h-auto w-full min-w-0'
     : compact
