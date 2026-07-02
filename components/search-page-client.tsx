@@ -52,14 +52,14 @@ const defaultFilters: FilterState = {
 };
 
 const smartSearchExamples = [
+  'Netflix หนังแอ็กชัน',
   'หนังผีเกาหลีคะแนนดี',
   'หนังไทยตลก',
   'ซีรีส์จีนย้อนยุค',
-  'หนังแอ็กชันปีใหม่',
-  'หนังคล้าย John Wick',
-  'หนังดูคืนนี้ไม่เครียด',
-  'หนังเอาชีวิตรอด',
+  'Marvel คะแนนดี',
   'อนิเมะแฟนตาซี',
+  'Disney ครอบครัว',
+  'สารคดีเรื่องจริง',
 ];
 
 const selectClass = 'h-10 w-full min-w-0 appearance-none truncate rounded-[14px] border border-white/8 bg-white/[0.075] px-3 pr-7 text-[11px] font-black text-white outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl focus:border-[#e50914]/70 focus:ring-2 focus:ring-[#e50914]/30 md:h-11 md:rounded-[16px] md:text-xs';
@@ -76,9 +76,10 @@ const countryOptions = [
   { value: 'kr', label: 'เกาหลี' },
   { value: 'jp', label: 'ญี่ปุ่น' },
   { value: 'cn', label: 'จีน' },
+  { value: 'in', label: 'อินเดีย' },
+  { value: 'es', label: 'สเปน' },
   { value: 'us', label: 'อเมริกา' },
   { value: 'uk', label: 'อังกฤษ' },
-  { value: 'in', label: 'อินเดีย' },
 ];
 
 const languageOptions = [
@@ -89,6 +90,7 @@ const languageOptions = [
   { value: 'ja', label: 'ญี่ปุ่น' },
   { value: 'zh', label: 'จีน' },
   { value: 'hi', label: 'ฮินดี' },
+  { value: 'es', label: 'สเปน' },
 ];
 
 const qualityOptions = [
@@ -112,6 +114,7 @@ const yearOptions = [
 
 const ratingOptions = [
   { value: '', label: 'ทุกคะแนน' },
+  { value: '5', label: '5+ ตาม Sync' },
   { value: '6', label: '6+ น่าดู' },
   { value: '7', label: '7+ คะแนนดี' },
   { value: '8', label: '8+ ยอดนิยม' },
@@ -176,7 +179,7 @@ export function SearchPageClient({ initialQuery = '', initialFilters }: SearchPa
   const requestIdRef = useRef(0);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
-  const categoryOptions = useMemo(() => [{ value: '', label: 'ทุกหมวด' }, ...categories.map((category) => ({ value: category.slug, label: category.title }))], [categories]);
+  const categoryOptions = useMemo(() => [{ value: '', label: 'ทุกหมวดที่ Sync มา' }, ...categories.map((category) => ({ value: category.slug, label: category.title }))], [categories]);
   const activeTitle = useMemo(() => categories.find((category) => category.slug === filters.category)?.title || '', [filters.category, categories]);
   const activeFilterCount = useMemo(() => Object.entries(filters).filter(([key, value]) => key !== 'sort' && Boolean(value)).length + (filters.sort !== defaultFilters.sort ? 1 : 0), [filters]);
   const filterSummary = useMemo(() => {
@@ -303,7 +306,7 @@ export function SearchPageClient({ initialQuery = '', initialFilters }: SearchPa
           <div className="mt-2 flex items-end justify-between gap-4 md:mt-5">
             <div className="min-w-0">
               <p className="text-[9px] font-black uppercase tracking-[0.24em] text-[#e50914] md:text-[10px]">Smart Search</p>
-              <h1 className="mt-1 text-[26px] font-black leading-none tracking-[-0.075em] md:text-5xl">ค้นหาแบบไม่ต้องจำชื่อเรื่อง</h1>
+              <h1 className="mt-1 text-[26px] font-black leading-none tracking-[-0.075em] md:text-5xl">ค้นหาจากข้อมูลที่ Sync จริง</h1>
             </div>
           </div>
 
@@ -312,7 +315,7 @@ export function SearchPageClient({ initialQuery = '', initialFilters }: SearchPa
               <div className="grid gap-2 md:grid-cols-[minmax(280px,1fr)_auto]">
                 <div className="flex h-11 items-center gap-2 rounded-[16px] bg-white/[0.08] px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] md:h-12">
                   <span className="text-lg text-white/58">⌕</span>
-                  <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="เช่น หนังผีเกาหลีคะแนนดี หรือ หนังดูคืนนี้ไม่เครียด" className="min-w-0 flex-1 bg-transparent text-sm font-bold text-white outline-none placeholder:text-white/36 md:text-base" />
+                  <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="เช่น Netflix แอ็กชัน, หนังไทยตลก, Anime แฟนตาซี" className="min-w-0 flex-1 bg-transparent text-sm font-bold text-white outline-none placeholder:text-white/36 md:text-base" />
                   {query ? <button type="button" onClick={() => setQuery('')} className="grid h-8 w-8 place-items-center rounded-full bg-white/[0.10] text-sm text-white/75">×</button> : null}
                 </div>
                 <button type="submit" className="h-10 rounded-[15px] bg-[#e50914] px-6 text-xs font-black text-white shadow-[0_18px_52px_rgba(229,9,20,0.38)] md:h-12 md:min-w-[130px]">ค้นหา</button>
@@ -320,7 +323,7 @@ export function SearchPageClient({ initialQuery = '', initialFilters }: SearchPa
 
               <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-[auto_auto] md:justify-start">
                 <button type="button" onClick={() => setFiltersOpen((value) => !value)} className="h-9 rounded-[14px] bg-white/[0.075] px-4 text-[11px] font-black text-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-white/[0.12] md:h-10 md:min-w-[132px]">
-                  ตัวกรองทั้งหมด {activeFilterCount ? `(${activeFilterCount})` : ''} {filtersOpen ? '⌃' : '⌄'}
+                  ตัวกรองจาก Sync {activeFilterCount ? `(${activeFilterCount})` : ''} {filtersOpen ? '⌃' : '⌄'}
                 </button>
                 <button type="button" onClick={clearSearch} className="h-9 rounded-[14px] bg-white/[0.055] px-4 text-[11px] font-black text-white/58 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-white/[0.10] hover:text-white md:h-10 md:min-w-[92px]">ล้าง</button>
               </div>
@@ -329,7 +332,7 @@ export function SearchPageClient({ initialQuery = '', initialFilters }: SearchPa
                 <div className="mt-2 rounded-[18px] border border-white/8 bg-white/[0.035] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
                   <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1">
                     <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#e50914]/80">Filter Group</p>
-                    <p className="text-[10px] font-semibold text-white/38">รองรับหมวดใหม่จาก catalog ที่ดึงเพิ่มเข้ามา</p>
+                    <p className="text-[10px] font-semibold text-white/38">หมวดตรงกับ Sync Profile และ source_bucket/language/genre ที่ดึงเข้า catalog</p>
                   </div>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8">
                     <FilterSelect label="หมวดหมู่" value={filters.category} options={categoryOptions} onChange={(value) => updateFilter('category', value)} />
@@ -358,7 +361,7 @@ export function SearchPageClient({ initialQuery = '', initialFilters }: SearchPa
                 ))}
               </div>
               <p className="mt-2 hidden rounded-full bg-white/[0.035] px-3 py-2 text-[10px] font-bold leading-4 text-white/42 sm:block">
-                ตัวช่วยค้นหาอัจฉริยะกำลังอยู่ระหว่างพัฒนา ทดลองใช้ได้แล้วตอนนี้ และผลลัพธ์จะค่อย ๆ แม่นขึ้นตามฐานข้อมูล
+                ผลลัพธ์อิงจาก tmdb_catalog ที่หลังบ้าน Sync เข้ามาจริง หมวดที่ไม่มีข้อมูลจะไม่ฝืนแสดงข้อมูลหลอก
               </p>
             </div>
           </div>
@@ -386,8 +389,8 @@ export function SearchPageClient({ initialQuery = '', initialFilters }: SearchPa
           </div>
         ) : searched ? (
           <div className="rounded-[24px] bg-white/[0.045] p-6 text-center text-sm font-bold text-white/58 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-            <p className="text-base font-black text-white/80">ไม่พบหนังที่ตรงกับเงื่อนไขนี้</p>
-            <p className="mt-2 text-xs font-semibold leading-5 text-white/45">ลองค้นหาแบบกว้างขึ้น เช่น “หนังผี”, “เกาหลี”, “แอ็กชัน” หรือเลือกตัวอย่างคำค้นด้านบน</p>
+            <p className="text-base font-black text-white/80">ไม่พบหนังที่ตรงกับข้อมูลที่ Sync มา</p>
+            <p className="mt-2 text-xs font-semibold leading-5 text-white/45">ลองเลือกหมวดที่ Sync แล้ว เช่น Netflix, Thai, Korea, Anime, Action หรือไปหน้า Sync เพื่อดึงข้อมูลหมวดนี้เพิ่ม</p>
           </div>
         ) : (
           <div className="rounded-[24px] bg-white/[0.045] p-6 text-center text-sm font-bold leading-6 text-white/58 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">กำลังเตรียมรายการแนะนำ</div>
