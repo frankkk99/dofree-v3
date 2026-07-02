@@ -6,6 +6,7 @@ type AdminCategoryRow = {
   title_th: string;
   subtitle_th?: string | null;
   enabled: boolean;
+  autoplay?: boolean | null;
   sort_order: number;
 };
 
@@ -19,7 +20,7 @@ function fallbackSort(slug: string) {
 export async function getAdminCategoryConfig() {
   try {
     const rows = await supabaseRest<AdminCategoryRow[]>(
-      'admin_categories?select=slug,title_th,subtitle_th,enabled,sort_order&order=sort_order.asc',
+      'admin_categories?select=slug,title_th,subtitle_th,enabled,autoplay,sort_order&order=sort_order.asc',
       { mode: 'service', next: { revalidate: 300 } }
     );
     return rows || [];
@@ -42,6 +43,7 @@ export async function applyAdminHomeConfig(home: HomePayload): Promise<HomePaylo
         title: config?.title_th || section.title,
         description: config?.subtitle_th || section.description,
         eyebrow: section.eyebrow,
+        autoplay: Boolean(config?.autoplay),
       };
     })
     .filter((section): section is MovieSection => Boolean(section))
