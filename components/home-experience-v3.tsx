@@ -358,9 +358,10 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
   const [liveSeed, setLiveSeed] = useState(shuffleSeed);
   const [smartSearchOpen, setSmartSearchOpen] = useState(false);
   const liveRandomizedSections = useMemo(() => shuffleSections(home.sections, liveSeed), [home.sections, liveSeed]);
-  const hasComingSoonSection = liveRandomizedSections.some((section) => section.slug === 'coming-soon');
+  const comingSoonSection = useMemo(() => liveRandomizedSections.find((section) => section.slug === 'coming-soon'), [liveRandomizedSections]);
+  const regularSections = useMemo(() => liveRandomizedSections.filter((section) => section.slug !== 'coming-soon'), [liveRandomizedSections]);
   const heroItems = useMemo(() => {
-    const comingSoonItems = liveRandomizedSections.find((section) => section.slug === 'coming-soon')?.items || [];
+    const comingSoonItems = comingSoonSection?.items || [];
     const comingSoonCandidates = uniqueMovies(comingSoonItems).filter((item) => (item.backdropUrl || item.posterUrl) && isRecentEnoughForHero(item));
     if (comingSoonCandidates.length) return comingSoonCandidates.slice(0, HERO_CANDIDATE_LIMIT);
 
@@ -372,7 +373,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
     ]).filter((item) => isRecentEnoughForHero(item));
     const shuffledCandidates = shuffleMovies(candidates, liveSeed + 97, 'homepage-hero');
     return shuffledCandidates.length ? shuffledCandidates.slice(0, HERO_CANDIDATE_LIMIT) : [home.hero];
-  }, [home.hero, home.heroItems, liveRandomizedSections, liveSeed]);
+  }, [comingSoonSection, home.hero, home.heroItems, liveRandomizedSections, liveSeed]);
   const [heroIndex, setHeroIndex] = useState(0);
   const hero = heroItems[heroIndex] || home.hero;
   const heroImage = hero.backdropUrl || hero.posterUrl;
@@ -415,30 +416,46 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.06)_0%,rgba(0,0,0,0.10)_42%,#030303_100%)]" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_42%,rgba(0,0,0,0.48),transparent_18rem)]" />
         </div>
-        <div className="relative z-10 mx-auto flex min-h-[442px] max-w-[1920px] flex-col justify-end px-4 pb-9 md:min-h-[509px] md:justify-center md:px-7 md:pb-0">
+        <div className="relative z-10 mx-auto flex min-h-[442px] max-w-[1920px] flex-col justify-end px-4 pb-7 md:min-h-[509px] md:justify-center md:px-7 md:pb-0">
           <div className="max-w-[680px] md:ml-[6vw] xl:ml-[10vw]">
             <p className="mb-3 text-[13px] font-black text-[#e50914] md:mb-5 md:text-[22px]">{hero.label === 'เร็ว ๆ นี้' ? 'ภาพยนตร์กำลังจะเข้าฉาย' : hero.status === 'published' ? 'ภาพยนตร์พร้อมรับชม' : 'ภาพยนตร์เริ่มฉายล่าสุด'}</p>
             <h1 className="hero-title max-w-[92vw] text-[42px] font-black leading-[0.88] tracking-[-0.085em] text-white md:whitespace-nowrap md:text-[92px] lg:text-[112px] xl:text-[120px]">{shortTitle(hero)}</h1>
             <h2 className="mt-3 max-w-[92vw] text-[16px] font-black tracking-[-0.04em] text-white md:mt-6 md:text-[28px]">{heroEnglishReleaseLine(hero)}</h2>
             <p className="mt-2 line-clamp-3 max-w-[92vw] text-[12px] leading-5 text-white/56 md:mt-3 md:max-w-[620px] md:text-[18px] md:leading-7">{hero.overview}</p>
-            <div className="mt-5 flex flex-wrap gap-2.5 md:mt-8 md:gap-4">
-              <a href="/watch-ready" className="inline-flex h-[42px] items-center gap-2 rounded-lg bg-[#e50914] px-5 text-[13px] font-black text-white shadow-glow md:h-[55px] md:px-8 md:text-[16px]">▶ เริ่มดูหนังพร้อมดู</a>
-              <a href={`${mediaDetailPath(hero.mediaType, hero.id, hero.title)}#trailer`} className="inline-flex h-[42px] items-center gap-2 rounded-lg bg-white/[0.12] px-5 text-[13px] font-black text-white/90 md:h-[55px] md:px-7 md:text-[16px]">ชมตัวอย่าง</a>
-              <a href={mediaDetailPath(hero.mediaType, hero.id, hero.title)} className="inline-flex h-[42px] items-center gap-2 rounded-lg border border-white/10 bg-white/[0.08] px-5 text-[13px] font-black text-white/78 md:h-[55px] md:px-7 md:text-[16px]">ⓘ รายละเอียด</a>
+            <div className="mt-4 grid max-w-[92vw] grid-cols-3 gap-2 md:mt-7 md:max-w-[520px] md:gap-3">
+              <a href="/watch-ready" className="inline-flex h-10 min-w-0 items-center justify-center gap-1 rounded-lg bg-[#e50914] px-2 text-[11px] font-black text-white shadow-glow md:h-12 md:px-4 md:text-sm">▶ พร้อมดู</a>
+              <a href={`${mediaDetailPath(hero.mediaType, hero.id, hero.title)}#trailer`} className="inline-flex h-10 min-w-0 items-center justify-center rounded-lg bg-white/[0.12] px-2 text-[11px] font-black text-white/90 md:h-12 md:px-4 md:text-sm">ตัวอย่าง</a>
+              <a href={mediaDetailPath(hero.mediaType, hero.id, hero.title)} className="inline-flex h-10 min-w-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.08] px-2 text-[11px] font-black text-white/78 md:h-12 md:px-4 md:text-sm">รายละเอียด</a>
             </div>
           </div>
         </div>
       </section>
 
-      <div className="mx-auto max-w-[1920px] bg-black px-4 pt-5 md:px-7">
+      {comingSoonSection ? (
+        <section id={comingSoonSection.slug} className="mx-auto max-w-[1920px] scroll-mt-[96px] bg-black px-4 pb-2 pt-5 md:px-7 md:pb-4 md:pt-7">
+          <div className="mb-3 flex items-center justify-between md:mb-5">
+            <div>
+              {comingSoonSection.eyebrow ? <p className="text-[9px] font-black uppercase tracking-[0.26em] text-[#e50914]/80">{comingSoonSection.eyebrow}</p> : null}
+              <h2 className="text-[20px] font-black tracking-[-0.04em] md:text-[30px]">{comingSoonSection.title}</h2>
+            </div>
+            <a href={sectionHref(comingSoonSection)} className="text-[12px] font-black text-white/50 hover:text-white md:text-[16px]">ทั้งหมด ›</a>
+          </div>
+          <LazyMovieRail section={comingSoonSection} sectionIndex={0} />
+        </section>
+      ) : (
+        <section className="mx-auto max-w-[1920px] bg-black px-4 pb-2 pt-5 md:px-7 md:pb-4 md:pt-7">
+          <ClipsComingSoonSection />
+        </section>
+      )}
+
+      <div className="mx-auto max-w-[1920px] bg-black px-4 pt-4 md:px-7 md:pt-5">
         <AdSlot code="AD-PC-H01" className="mx-auto max-w-5xl" />
         <AdSlot code="AD-MB-H01" className="mx-auto max-w-sm" />
       </div>
 
       <section id="sections" className="mx-auto max-w-[1920px] scroll-mt-[120px] bg-black px-4 py-7 md:px-7 md:py-10">
         <div className="space-y-8 md:space-y-12">
-          {!hasComingSoonSection ? <ClipsComingSoonSection /> : null}
-          {liveRandomizedSections.map((section, sectionIndex) => (
+          {regularSections.map((section, sectionIndex) => (
             <div id={section.slug} key={section.slug} className="relative scroll-mt-[96px]" style={{ contentVisibility: sectionIndex > 1 ? 'auto' : 'visible', containIntrinsicSize: '360px 1000px' }}>
               <div className="mb-3 flex items-center justify-between md:mb-6"><div>{section.eyebrow ? <p className="text-[9px] font-black uppercase tracking-[0.26em] text-[#e50914]/80">{section.eyebrow}</p> : null}<h2 className="text-[20px] font-black tracking-[-0.04em] md:text-[30px]">{section.title}</h2></div><a href={sectionHref(section)} className="text-[12px] font-black text-white/50 hover:text-white md:text-[16px]">ทั้งหมด ›</a></div>
               {sectionIndex === 2 ? (
@@ -447,8 +464,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
                   <AdSlot code="AD-MB-H04" className="mx-auto max-w-sm" />
                 </div>
               ) : null}
-              <LazyMovieRail section={section} sectionIndex={sectionIndex} />
-              {section.slug === 'coming-soon' ? <ClipsComingSoonSection /> : null}
+              <LazyMovieRail section={section} sectionIndex={sectionIndex + 1} />
             </div>
           ))}
         </div>
