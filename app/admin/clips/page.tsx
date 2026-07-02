@@ -43,6 +43,26 @@ type ClipsResponse = {
   error?: string;
 };
 
+type MediaSearchItem = {
+  id: number;
+  mediaType: MediaType;
+  title: string;
+  titleEn?: string;
+  year?: string;
+  posterUrl?: string;
+  backdropUrl?: string;
+  rating?: number;
+  voteCount?: number;
+  genres?: string[];
+  language?: string;
+};
+
+type MediaSearchResponse = {
+  ok?: boolean;
+  results?: MediaSearchItem[];
+  error?: string;
+};
+
 const emptyForm: ClipFormState = {
   title: '',
   description: '',
@@ -154,6 +174,9 @@ export default function AdminClipsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [mediaQuery, setMediaQuery] = useState('');
+  const [mediaResults, setMediaResults] = useState<MediaSearchItem[]>([]);
+  const [mediaSearching, setMediaSearching] = useState(false);
 
   const parsedPreview = useMemo(() => parseYouTubeUrl(form.youtubeUrl), [form.youtubeUrl]);
 
@@ -200,6 +223,45 @@ export default function AdminClipsPage() {
     setForm(formFromClip(clip));
     setEditingId(clip.id);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  async function searchMedia(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const query = mediaQuery.trim();
+    if (query.length < 2) {
+      setMediaResults([]);
+      setMessage('พิมพ์ชื่อหนังอย่างน้อย 2 ตัวอักษร');
+      return;
+    }
+
+    setMediaSearching(true);
+    setMessage('');
+    try {
+      const response = await fetch(`/api/media-search?q=${encodeURIComponent(query)}`, { cache: 'no-store' });
+      const payload = await response.json() as MediaSearchResponse;
+      if (!response.ok || !payload.ok) throw new Error(payload.error || 'ค้นหาหนังไม่ได้');
+      setMediaResults(payload.results || []);
+    } catch (error) {
+      setMediaResults([]);
+      setMessage(error instanceof Error ? error.message : 'ค้นหาหนังไม่ได้');
+    } finally {
+      setMediaSearching(false);
+    }
+  }
+
+  function selectMedia(item: MediaSearchItem) {
+    setForm((current) => ({
+      ...current,
+      title: current.title || `${item.title} - คลิปสั้นก่อนดู`,
+      mediaType: item.mediaType,
+      tmdbId: String(item.id),
+      mediaTitle: item.title,
+      posterUrl: item.posterUrl || current.posterUrl,
+      genres: item.genres?.length ? item.genres.join(', ') : current.genres,
+    }));
+    setMediaResults([]);
+    setMediaQuery(item.title);
+    setMessage(`เลือกเรื่อง ${item.title} แล้ว`);
   }
 
   async function saveClip(event: FormEvent<HTMLFormElement>) {
@@ -310,6 +372,28 @@ export default function AdminClipsPage() {
                 <label className="grid gap-1.5 text-xs font-black text-white/58">คำอธิบายสั้น
                   <textarea value={form.description} onChange={(event) => update('description', event.target.value)} placeholder="ข้อความสั้น ๆ สำหรับแสดงบนคลิป" className={areaClass()} />
                 </label>
+
+                <div className="rounded-[22px] border border-white/10 bg-black/24 p-3">
+                  <p className="text-[11px] font-black uppercase tracking-[0.22em] text-[#ff3b45]">ค้นหาหนัง / ซีรีส์</p>
+                  <form onSubmit={searchMedia} className="mt-3 flex gap-2">
+                    <input value={mediaQuery} onChange={(event) => setMediaQuery(event.target.value)} placeholder="พิมพ์ชื่อเรื่อง เช่น Wednesday, Marvel, The Boys" className={fieldClass()} />
+                    <button type="submit" disabled={mediaSearching} className="h-11 shrink-0 rounded-2xl bg-white/[0.10] px-4 text-xs font-black text-white/74 ring-1 ring-white/10 disabled:opacity-50">{mediaSearching ? 'ค้นหา...' : 'ค้นหา'}</button>
+                  </form>
+                  {mediaResults.length ? (
+                    <div className="mt-3 grid max-h-72 gap-2 overflow-y-auto pr-1">
+                      {mediaResults.map((item) => (
+                        <button key={`${item.mediaType}-${item.id}`} type="button" onClick={() => selectMedia(item)} className="grid grid-cols-[48px_1fr] gap-3 rounded-2xl border border-white/10 bg-white/[0.05] p-2 text-left hover:bg-white/[0.09]">
+                          <div className="aspect-[2/3] overflow-hidden rounded-xl bg-white/[0.06]">{item.posterUrl ? <img src={item.posterUrl} alt="" className="h-full w-full object-cover" /> : null}</div>
+                          <div className="min-w-0 py-1">
+                            <p className="truncate text-sm font-black text-white">{item.title}</p>
+                            <p className="mt-1 text-[11px] font-bold text-white/44">{item.mediaType.toUpperCase()} {item.year ? `· ${item.year}` : ''} {item.rating ? `· ${item.rating.toFixed(1)}` : ''}</p>
+                            <p className="mt-1 truncate text-[11px] font-semibold text-white/34">{item.genres?.join(' · ') || item.titleEn || 'TMDB'}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
 
                 <div className="grid gap-3 md:grid-cols-3">
                   <label className="grid gap-1.5 text-xs font-black text-white/58">ประเภท
