@@ -25,6 +25,7 @@ type ImageResponse = {
 
 function statusBadge(item: MovieItem, priorityBadge?: string) {
   if (priorityBadge) return priorityBadge;
+  if (item.mediaType === 'tv' && item.episodeCount) return `พร้อมดู ${item.episodeCount} ตอน`;
   if (item.isWatchReady) return 'พร้อมดู';
   if (item.rating >= 8) return '8+';
   return item.label;
@@ -121,9 +122,9 @@ export function MovieCard({ item, priorityBadge, compact = false, grid = false, 
           onError={tryNextImage}
         />
       ) : detailLoading ? (
-        <MediaPlaceholder variant="poster" title="กำลังโหลดโปสเตอร์" subtitle="กำลังซิงก์ภาพล่าสุด" />
+        <MediaPlaceholder variant="poster" title="กำลังโหลดโปสเตอร์" subtitle="กำลังเตรียมภาพล่าสุด" />
       ) : (
-        <MediaPlaceholder variant="poster" title="โปสเตอร์กำลังอัปเดต" subtitle="กำลังซิงก์ภาพจาก TMDB" />
+        <MediaPlaceholder variant="poster" title="โปสเตอร์กำลังอัปเดต" subtitle="กำลังเตรียมภาพ" />
       )}
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.05)_0%,rgba(0,0,0,0.0)_42%,rgba(0,0,0,0.9)_100%)]" />
 
