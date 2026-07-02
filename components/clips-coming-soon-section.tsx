@@ -39,6 +39,13 @@ type ClipsResponse = {
   clips?: MediaClipRow[];
 };
 
+type SiteFeaturesResponse = {
+  ok?: boolean;
+  settings?: {
+    homeClipsEnabled?: boolean;
+  };
+};
+
 function ComingSoonCard({ card, index }: { card: typeof placeholderCards[number]; index: number }) {
   return (
     <article className="group relative h-[208px] w-[132px] shrink-0 overflow-hidden rounded-[18px] border border-white/10 bg-white/[0.045] shadow-[0_18px_60px_rgba(0,0,0,0.46)] sm:h-[248px] sm:w-[156px] md:h-[286px] md:w-[184px]">
@@ -93,17 +100,33 @@ function RealClipCard({ clip, index }: { clip: MediaClipRow; index: number }) {
 
 export function ClipsComingSoonSection({ standalone = false }: { standalone?: boolean }) {
   const [clips, setClips] = useState<MediaClipRow[]>([]);
+  const [featureReady, setFeatureReady] = useState(false);
+  const [isEnabled, setIsEnabled] = useState(false);
   const hasRealClips = clips.length > 0;
 
   useEffect(() => {
     let active = true;
     async function loadHomeClips() {
       try {
+        const featureResponse = await fetch('/api/site-features', { cache: 'no-store' });
+        const featurePayload = await featureResponse.json() as SiteFeaturesResponse;
+        const nextEnabled = featureResponse.ok && featurePayload.ok ? featurePayload.settings?.homeClipsEnabled !== false : true;
+        if (!active) return;
+        setIsEnabled(nextEnabled);
+        setFeatureReady(true);
+        if (!nextEnabled) {
+          setClips([]);
+          return;
+        }
+
         const response = await fetch('/api/clips?home=true&limit=10', { cache: 'no-store' });
         const payload = await response.json() as ClipsResponse;
         if (active && response.ok && payload.ok) setClips(payload.clips || []);
       } catch {
-        if (active) setClips([]);
+        if (!active) return;
+        setIsEnabled(true);
+        setFeatureReady(true);
+        setClips([]);
       }
     }
     void loadHomeClips();
@@ -111,6 +134,8 @@ export function ClipsComingSoonSection({ standalone = false }: { standalone?: bo
       active = false;
     };
   }, []);
+
+  if (!featureReady || !isEnabled) return null;
 
   return (
     <section className={`${standalone ? 'mx-auto max-w-[1440px] px-4 py-5 md:px-7 md:py-8' : ''}`}>
