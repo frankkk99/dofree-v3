@@ -35,6 +35,10 @@ function arrayOfStrings(value: unknown) {
   return Array.isArray(value) ? value.map((item) => String(item).trim()).filter(Boolean) : [];
 }
 
+function optionalStringArray(source: Record<string, unknown>, key: string, fallback?: string[]) {
+  return Array.isArray(source[key]) ? arrayOfStrings(source[key]) : fallback;
+}
+
 function mediaTypeValue(value: unknown) {
   return value === 'movie' || value === 'tv' ? value : undefined;
 }
@@ -70,8 +74,8 @@ function categoryMapping(category: CategoryRow | null, fallbackSlug?: string | n
   const slug = category?.slug || text(fallbackSlug) || '';
   const defaults = catalogSectionDefs.find((section) => section.slug === slug);
   const params = category?.tmdb_params || {};
-  const sourceBuckets = arrayOfStrings(params.sourceBuckets).length ? arrayOfStrings(params.sourceBuckets) : defaults?.sourceBuckets || (slug ? [slug] : []);
-  const languages = arrayOfStrings(params.languages).length ? arrayOfStrings(params.languages) : defaults?.languages || [];
+  const sourceBuckets = optionalStringArray(params, 'sourceBuckets', defaults?.sourceBuckets || (slug ? [slug] : [])) || [];
+  const languages = optionalStringArray(params, 'languages', defaults?.languages || []) || [];
   const mediaType = mediaTypeValue(params.mediaType) || mediaTypeValue(category?.media_type) || defaults?.mediaType;
   return { slug, sourceBuckets, languages, mediaType };
 }
