@@ -22,9 +22,9 @@ function ComingSoonWatchSection({ tmdbId, mediaType, title, fallbackImage }: Det
         {fallbackImage ? <img src={fallbackImage} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover opacity-35" /> : null}
         <div className="absolute inset-0 bg-black/65" />
         <div className="relative z-10 flex h-full min-w-0 flex-col justify-end p-5 text-left sm:p-8">
-          <p className="text-[10px] font-black uppercase tracking-[0.35em] text-white/70 sm:text-xs">WATCH READY</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.35em] text-white/70 sm:text-xs">รับชม</p>
           <h2 className="mt-2 max-w-full break-words text-2xl font-black leading-tight tracking-[-0.05em] text-white sm:text-3xl md:text-4xl">จะอัปเดตเร็วๆ นี้</h2>
-          <p className="mt-2 max-w-xl text-sm font-semibold leading-6 text-white/75">ยังไม่มีลิงก์รับชมสำหรับเรื่องนี้</p>
+          <p className="mt-2 max-w-xl text-sm font-semibold leading-6 text-white/75">{mediaType === 'tv' ? 'ยังไม่มีตอนที่พร้อมรับชมสำหรับซีรีส์นี้' : 'ยังไม่มีลิงก์รับชมสำหรับเรื่องนี้'}</p>
           <div className="mt-5 flex max-w-full flex-wrap gap-3">
             <DetailReportButton tmdbId={tmdbId} mediaType={mediaType} title={title} className="rounded-2xl bg-black/45 px-5 py-3 text-sm font-black text-white shadow-[0_12px_34px_rgba(0,0,0,0.32)] backdrop-blur-xl transition hover:bg-white/[0.08] sm:px-6 sm:py-4">
               แจ้งลิงก์รับชม
@@ -40,11 +40,12 @@ export async function DetailInlineWatchSection({ tmdbId, mediaType, title, fallb
   const seriesEpisodes = mediaType === 'tv' ? await getPublishedSeriesEpisodes(tmdbId) : [];
   const firstEpisodeSourceUrl = seriesEpisodes[0]?.watch_url || undefined;
   const movieSourceUrl = mediaType === 'movie' ? await getWatchSourceUrl(mediaType, tmdbId) : undefined;
-  const sourceUrl = mediaType === 'tv' ? firstEpisodeSourceUrl || await getWatchSourceUrl(mediaType, tmdbId) : movieSourceUrl;
+  const sourceUrl = mediaType === 'tv' ? firstEpisodeSourceUrl : movieSourceUrl;
+  const seasonCount = new Set(seriesEpisodes.map((episode) => episode.season_number)).size;
   const episodes = seriesEpisodes
     .map((episode) => ({
       key: `${episode.season_number}-${episode.episode_number}`,
-      label: `ตอนที่ ${episode.episode_number}${episode.episode_title ? ` · ${episode.episode_title}` : ''}`,
+      label: `${seasonCount > 1 ? `S${episode.season_number} · ` : ''}ตอนที่ ${episode.episode_number}${episode.episode_title ? ` · ${episode.episode_title}` : ''}`,
       sourceUrl: episode.watch_url || '',
     }))
     .filter((episode) => episode.sourceUrl);
