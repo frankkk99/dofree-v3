@@ -61,6 +61,11 @@ function mediaTypeValue(value: unknown): MediaType | undefined {
   return value === 'movie' || value === 'tv' ? value : undefined;
 }
 
+function mediaTypeFromParams(params: Record<string, unknown>, rowMediaType?: string | null, fallback?: MediaType) {
+  if (Object.prototype.hasOwnProperty.call(params, 'mediaType')) return mediaTypeValue(params.mediaType);
+  return mediaTypeValue(rowMediaType) || fallback;
+}
+
 function numberValue(value: unknown) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
@@ -76,7 +81,7 @@ function adminRowToSection(row: AdminCategoryRow, index = 0): ManagedSection {
   const sourceBuckets = arrayOfStrings(params.sourceBuckets) || fallback?.sourceBuckets || [row.slug];
   const languages = arrayOfStrings(params.languages) || fallback?.languages;
   const genreKeywords = arrayOfStrings(params.genreKeywords) || fallback?.genreKeywords;
-  const mediaType = mediaTypeValue(params.mediaType) || mediaTypeValue(row.media_type) || fallback?.mediaType;
+  const mediaType = mediaTypeFromParams(params, row.media_type, fallback?.mediaType);
   const minRating = numberValue(params.minRating) ?? fallback?.minRating ?? 0;
   const sort = sortValue(params.sort) || fallback?.sort || 'popular';
 
