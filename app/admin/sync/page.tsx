@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { AdminAuthGuard } from '@/components/admin-auth-guard';
 import { AdminSyncCenterV2 } from '@/components/admin-sync-center-v2';
+import { AdminSyncProfileCounts } from '@/components/admin-sync-profile-counts';
 
 export const metadata: Metadata = {
   title: 'Admin Sync | DOFree',
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
 export default function AdminSyncPage() {
   return (
     <AdminAuthGuard>
-      <div className="admin-sync-floating-glass-theme">
+      <div className="admin-sync-floating-glass-theme bg-[#050505] px-4 py-5 md:px-8 md:py-8">
         <style>{`
           .admin-sync-floating-glass-theme main {
             background:
@@ -71,6 +72,7 @@ export default function AdminSyncPage() {
             color: rgba(255,255,255,0.42) !important;
           }
         `}</style>
+        <AdminSyncProfileCounts />
         <AdminSyncCenterV2 />
       </div>
     </AdminAuthGuard>
