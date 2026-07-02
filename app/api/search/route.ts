@@ -13,6 +13,7 @@ const CACHE_HEADERS = {
 
 const fallbackImage = 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1400&q=80';
 const knownSlugPattern = /^[a-z0-9-]+$/;
+const maxSearchFetchLimit = 360;
 const countryLanguage: Record<string, string[]> = {
   th: ['th'],
   kr: ['ko'],
@@ -414,7 +415,7 @@ function applyFilters(items: MovieItem[], filters: URLSearchParams, intent: Smar
   });
 }
 
-function termFilter(terms: string[]) {
+function legacyTermFilter(terms: string[]) {
   if (!terms.length) return '';
   return `&or=(${terms.map((term) => {
     const value = encodeURIComponent(`*${term}*`);
@@ -422,15 +423,25 @@ function termFilter(terms: string[]) {
   }).join(',')})`;
 }
 
+function searchTextTermFilter(terms: string[]) {
+  if (!terms.length) return '';
+  return `&or=(${terms.map((term) => `search_text.ilike.${encodeURIComponent(`*${term}*`)}`).join(',')})`;
+}
+
 function catalogSelect() {
   return 'select=tmdb_id,media_type,title,title_en,overview,poster_url,backdrop_url,rating,vote_count,popularity,release_year,release_date,genres,language,runtime,source_bucket,sort_score,is_active&is_active=eq.true';
 }
 
-async function fetchCatalogRows(extraFilter: string, limit: number) {
-  return supabaseRest<CatalogRow[]>(
-    `tmdb_catalog?${catalogSelect()}${extraFilter}&order=sort_score.desc.nullslast,rating.desc&limit=${limit}`,
-    { mode: 'service', next: { revalidate: 120 } },
-  ).catch(() => []);
+async function fetchCatalogRows(extraFilter: string, limit: number, fallbackFilter?: string) {
+  try {
+    return await supabaseRest<CatalogRow[]>(
+      `tmdb_catalog?${catalogSelect()}${extraFilter}&order=sort_score.desc.nullslast,rating.desc&limit=${limit}`,
+      { mode: 'service', next: { revalidate: 120 } },
+    );
+  } catch {
+    if (fallbackFilter && fallbackFilter !== extraFilter) return fetchCatalogRows(fallbackFilter, limit);
+    return [];
+  }
 }
 
 async function fetchWatchReadyRows(fetchLimit: number) {
@@ -440,7 +451,7 @@ async function fetchWatchReadyRows(fetchLimit: number) {
   ).catch(() => []);
   const ids = [...new Set((links || []).map((link) => Number(link.tmdb_id)).filter(Boolean))];
   if (!ids.length) return [];
-  return fetchCatalogRows(`&tmdb_id=in.(${ids.join(',')})`, Math.min(fetchLimit, 600));
+  return fetchCatalogRows(`&tmdb_id=in.(${ids.join(',')})`, Math.min(fetchLimit, maxSearchFetchLimit));
 }
 
 async function fetchWatchLinks(rows: CatalogRow[]) {
@@ -462,7 +473,7 @@ async function fetchWatchLinks(rows: CatalogRow[]) {
 
 async function rowsForSearch(query: string, category: string, limit: number, offset: number, intent: SmartIntent) {
   const isKnownCategory = category && knownSlugPattern.test(category);
-  const fetchLimit = Math.min(Math.max((offset + limit) * 8, 96), 720);
+  const fetchLimit = Math.min(Math.max((offset + limit) * 8, 96), maxSearchFetchLimit);
 
   if (category === 'watch-ready') return fetchWatchReadyRows(fetchLimit);
 
@@ -482,11 +493,11 @@ async function rowsForSearch(query: string, category: string, limit: number, off
   }
 
   if (intent.mediaType) {
-    rowGroups.push(await fetchCatalogRows(`&media_type=eq.${intent.mediaType}`, Math.min(fetchLimit, 360)));
+    rowGroups.push(await fetchCatalogRows(`&media_type=eq.${intent.mediaType}`, Math.min(fetchLimit, 240)));
   }
 
   if (intent.directTerms.length) {
-    rowGroups.push(await fetchCatalogRows(termFilter(intent.directTerms), fetchLimit));
+    rowGroups.push(await fetchCatalogRows(searchTextTermFilter(intent.directTerms), fetchLimit, legacyTermFilter(intent.directTerms)));
   }
 
   if (!rowGroups.length) {
