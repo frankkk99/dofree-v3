@@ -96,7 +96,11 @@ function optionalText(value: unknown) {
 }
 
 function numberValue(value: unknown) {
-  const parsed = Number(value);
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value !== 'string') return null;
+  const text = value.trim();
+  if (!text) return null;
+  const parsed = Number(text);
   return Number.isFinite(parsed) ? parsed : null;
 }
 
@@ -143,7 +147,7 @@ function clipPayload(input: MediaClipInput | ClipPatchInput, existing?: MediaCli
     status: enumValue(input.status ?? existing?.status, mediaClipStatuses, existing?.status || 'draft') as MediaClipStatus,
     show_home: booleanValue(input.showHome ?? existing?.show_home, existing?.show_home || false),
     show_clips: booleanValue(input.showClips ?? existing?.show_clips, existing?.show_clips ?? true),
-    sort_order: numberValue(input.sortOrder ?? existing?.sort_order) || 0,
+    sort_order: numberValue(input.sortOrder ?? existing?.sort_order) ?? 0,
   };
 }
 
