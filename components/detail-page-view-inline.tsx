@@ -58,7 +58,7 @@ export function DetailPageViewInline({ detail }: { detail: DetailPayload }) {
   const effectiveTrailerUrl = item.trailerUrl || trailerUrl;
   const fallbackImage = item.backdropUrl || item.posterUrl || '';
   const overview = item.overview || 'ยังไม่มีคำอธิบายเรื่องนี้ แต่ระบบเตรียมโครงหน้าไว้สำหรับแสดงรายละเอียด ตัวอย่าง นักแสดง และรายการแนะนำที่เกี่ยวข้อง';
-  const hasWatchLink = Boolean(item.watchUrl || item.isWatchReady || item.mediaType === 'tv');
+  const hasWatchLink = Boolean(item.watchUrl || item.isWatchReady);
   const canonicalPath = mediaDetailPath(item.mediaType, item.id, item.title);
   const canonicalUrl = absoluteUrl(canonicalPath);
   const imageUrls = [item.backdropUrl, item.posterUrl].filter(Boolean).map((url) => absoluteUrl(String(url)));
