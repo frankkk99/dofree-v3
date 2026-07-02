@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getCatalogSectionItems, HOME_SECTION_LOAD_LIMIT } from '@/lib/catalog-home';
+import { HOME_SECTION_LOAD_LIMIT } from '@/lib/catalog-home';
+import { getManagedCatalogSectionItems } from '@/lib/catalog-managed-sections';
 import { TMDB_RELEASE_SECTION_LIMIT } from '@/lib/tmdb-release-window';
 
 export const dynamic = 'force-dynamic';
@@ -16,7 +17,7 @@ export async function GET(request: Request) {
   const limit = Math.min(Math.max(Number(searchParams.get('limit') || HOME_SECTION_LOAD_LIMIT) || HOME_SECTION_LOAD_LIMIT, 1), maxLimit);
   const offset = Math.max(Number(searchParams.get('offset') || 0) || 0, 0);
 
-  const items = await getCatalogSectionItems(slug, limit, offset);
+  const items = await getManagedCatalogSectionItems(slug, limit, offset);
   return NextResponse.json({
     ok: true,
     slug,
