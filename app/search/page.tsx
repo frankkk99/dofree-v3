@@ -51,6 +51,7 @@ export default async function SearchPage({ searchParams }: SearchProps) {
         language: single(params, 'language'),
         quality: single(params, 'quality'),
         year: single(params, 'year'),
+        rating: single(params, 'rating'),
         sort: single(params, 'sort') || 'rating-desc',
       }}
     />
