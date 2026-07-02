@@ -4,6 +4,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type FormE
 import type { HomePayload, MovieItem, MovieSection } from '@/lib/tmdb';
 import { AdSlot } from '@/components/ad-slot';
 import { ClipsComingSoonSection } from '@/components/clips-coming-soon-section';
+import { FavoriteButton } from '@/components/favorite-button';
 import { HomeHeroMedia } from '@/components/home-hero-media';
 import { MovieCard } from '@/components/movie-card';
 import { mediaDetailPath } from '@/lib/seo';
@@ -330,12 +331,12 @@ function SmartSearchModal({ open, onClose }: { open: boolean; onClose: () => voi
           <button type="button" onClick={onClose} aria-label="ปิด Smart Search" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/[0.08] text-xl font-black text-white/76 ring-1 ring-white/10 transition hover:bg-[#e50914] hover:text-white md:h-12 md:w-12">×</button>
         </div>
 
-        <form onSubmit={submitSearch} className="mt-5 rounded-[24px] bg-white/[0.055] p-2 ring-1 ring-white/10 md:mt-6 md:flex md:items-center md:gap-2">
-          <label className="flex h-12 items-center gap-3 rounded-[18px] bg-black/36 px-4 ring-1 ring-white/8 md:h-14 md:flex-1">
-            <SearchIcon className="h-5 w-5 shrink-0 text-white/46" />
+        <form onSubmit={submitSearch} className="mt-5 rounded-[24px] bg-white/[0.055] p-2 ring-1 ring-white/10 md:mt-6">
+          <label className="flex h-14 items-center gap-3 rounded-[18px] bg-black/36 px-4 ring-1 ring-white/8 focus-within:ring-[#e50914]/60">
+            <SearchIcon className="h-5 w-5 shrink-0 text-white/58" />
             <input ref={inputRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ลองพิมพ์: หนังผีเกาหลี, Marvel, พากย์ไทย" className="min-w-0 flex-1 bg-transparent text-sm font-bold text-white outline-none placeholder:text-white/34 md:text-base" />
+            <button type="submit" className="h-9 shrink-0 rounded-[12px] bg-[#e50914] px-4 text-xs font-black text-white shadow-[0_12px_34px_rgba(229,9,20,0.28)] transition hover:brightness-110 md:px-5 md:text-sm">ค้นหา</button>
           </label>
-          <button type="submit" className="mt-2 h-12 w-full rounded-[18px] bg-[#e50914] text-sm font-black text-white shadow-[0_16px_44px_rgba(229,9,20,0.30)] md:mt-0 md:h-14 md:w-32">ค้นหา</button>
         </form>
 
         <div className="mt-5">
@@ -425,7 +426,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
             <div className="mt-4 flex max-w-[92vw] flex-wrap items-center justify-start gap-2 md:mt-7 md:gap-2.5">
               <a href="/watch-ready" className="inline-flex h-8 min-w-0 items-center justify-start gap-1 rounded-md bg-[#e50914] px-2.5 text-[11px] font-black text-white shadow-glow md:h-9 md:px-3 md:text-xs">▶ พร้อมดู</a>
               <a href={`${mediaDetailPath(hero.mediaType, hero.id, hero.title)}#trailer`} className="inline-flex h-8 min-w-0 items-center justify-start rounded-md bg-white/[0.12] px-2.5 text-[11px] font-black text-white/90 md:h-9 md:px-3 md:text-xs">ตัวอย่าง</a>
-              <a href={mediaDetailPath(hero.mediaType, hero.id, hero.title)} className="inline-flex h-8 min-w-0 items-center justify-start rounded-md border border-white/10 bg-white/[0.08] px-2.5 text-[11px] font-black text-white/78 md:h-9 md:px-3 md:text-xs">รายละเอียด</a>
+              <FavoriteButton mediaType={hero.mediaType} mediaId={hero.id} title={hero.title} poster={hero.posterUrl} backdrop={hero.backdropUrl} className="inline-flex h-8 min-w-0 items-center justify-start rounded-md border border-white/10 bg-white/[0.08] px-2.5 text-[11px] font-black text-white/78 md:h-9 md:px-3 md:text-xs" />
             </div>
           </div>
         </div>
