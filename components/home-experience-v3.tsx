@@ -422,10 +422,10 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
             <h1 className="hero-title max-w-[92vw] text-[42px] font-black leading-[0.88] tracking-[-0.085em] text-white md:whitespace-nowrap md:text-[92px] lg:text-[112px] xl:text-[120px]">{shortTitle(hero)}</h1>
             <h2 className="mt-3 max-w-[92vw] text-[16px] font-black tracking-[-0.04em] text-white md:mt-6 md:text-[28px]">{heroEnglishReleaseLine(hero)}</h2>
             <p className="mt-2 line-clamp-3 max-w-[92vw] text-[12px] leading-5 text-white/56 md:mt-3 md:max-w-[620px] md:text-[18px] md:leading-7">{hero.overview}</p>
-            <div className="mt-4 grid max-w-[92vw] grid-cols-3 gap-2 md:mt-7 md:max-w-[520px] md:gap-3">
-              <a href="/watch-ready" className="inline-flex h-10 min-w-0 items-center justify-center gap-1 rounded-lg bg-[#e50914] px-2 text-[11px] font-black text-white shadow-glow md:h-12 md:px-4 md:text-sm">▶ พร้อมดู</a>
-              <a href={`${mediaDetailPath(hero.mediaType, hero.id, hero.title)}#trailer`} className="inline-flex h-10 min-w-0 items-center justify-center rounded-lg bg-white/[0.12] px-2 text-[11px] font-black text-white/90 md:h-12 md:px-4 md:text-sm">ตัวอย่าง</a>
-              <a href={mediaDetailPath(hero.mediaType, hero.id, hero.title)} className="inline-flex h-10 min-w-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.08] px-2 text-[11px] font-black text-white/78 md:h-12 md:px-4 md:text-sm">รายละเอียด</a>
+            <div className="mt-4 flex max-w-[92vw] flex-wrap items-center justify-start gap-2 md:mt-7 md:gap-2.5">
+              <a href="/watch-ready" className="inline-flex h-8 min-w-0 items-center justify-start gap-1 rounded-md bg-[#e50914] px-2.5 text-[11px] font-black text-white shadow-glow md:h-9 md:px-3 md:text-xs">▶ พร้อมดู</a>
+              <a href={`${mediaDetailPath(hero.mediaType, hero.id, hero.title)}#trailer`} className="inline-flex h-8 min-w-0 items-center justify-start rounded-md bg-white/[0.12] px-2.5 text-[11px] font-black text-white/90 md:h-9 md:px-3 md:text-xs">ตัวอย่าง</a>
+              <a href={mediaDetailPath(hero.mediaType, hero.id, hero.title)} className="inline-flex h-8 min-w-0 items-center justify-start rounded-md border border-white/10 bg-white/[0.08] px-2.5 text-[11px] font-black text-white/78 md:h-9 md:px-3 md:text-xs">รายละเอียด</a>
             </div>
           </div>
         </div>
