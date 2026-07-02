@@ -2,6 +2,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { AdminSeriesEpisodeEditor } from '@/components/admin-series-episode-editor';
 import { adminSessionHeaders } from '@/lib/admin-session-browser';
 import { adminInputClass, adminSelectClass } from '@/lib/admin-ui-classes';
 
@@ -84,6 +85,7 @@ export function AdminControlCenter() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
   const [bulkBucket, setBulkBucket] = useState('');
+  const [episodeEditorCard, setEpisodeEditorCard] = useState<Card | null>(null);
 
   const categoryOptions = useMemo(() => categories.filter((item) => item.slug), [categories]);
   const filteredCategories = useMemo(() => categories.filter((category) => {
@@ -279,7 +281,7 @@ export function AdminControlCenter() {
                   <article key={key} className={`grid gap-3 rounded-2xl border p-3 md:grid-cols-[20px_56px_1fr] ${selected ? 'border-[#e50914]/70 bg-[#e50914]/8' : card.is_active === false ? 'border-[#f4c46b]/30 bg-[#f4c46b]/8' : 'border-white/8 bg-white/[0.04]'}`}>
                     <input type="checkbox" checked={selected} onChange={(event) => setSelectedCards((current) => event.target.checked ? [...new Set([...current, key])] : current.filter((item) => item !== key))} className="mt-7 h-4 w-4 accent-[#e50914]" />
                     <div className="h-[82px] w-14 overflow-hidden rounded-lg bg-white/[0.06]">{card.poster_url ? <img src={card.poster_url} alt="" className="h-full w-full object-cover" loading="lazy" /> : null}</div>
-                    <div className="min-w-0"><div className="flex flex-wrap items-start justify-between gap-2"><div className="min-w-0"><p className="truncate text-sm font-black text-white/90">{card.title_en || card.title}</p><p className="mt-1 text-[10px] font-bold text-white/38">{card.media_type} · TMDB {card.tmdb_id} · ★ {Number(card.rating || 0).toFixed(1)} · {card.release_year || '-'}</p></div><button onClick={() => void patchCard(card, { is_active: !card.is_active })} className={`rounded-xl px-3 py-2 text-[10px] font-black ${card.is_active ? 'bg-emerald-400/15 text-emerald-100' : 'bg-white/[0.08] text-white/45'}`}>{card.is_active ? 'แสดง' : 'ซ่อน'}</button></div><div className="mt-3 grid gap-2 md:grid-cols-[1fr_130px]"><select className={selectInput} value={card.source_bucket || ''} onChange={(event) => void patchCard(card, { source_bucket: event.target.value })}><option value="">ไม่ระบุหมวด</option>{categoryOptions.map((cat) => <option key={cat.slug} value={cat.slug}>{cat.title_th}</option>)}</select><input className={input} type="number" value={String(card.sort_score || 0)} onChange={(event) => setCards((current) => current.map((item) => item.tmdb_id === card.tmdb_id && item.media_type === card.media_type ? { ...item, sort_score: Number(event.target.value) } : item))} onBlur={(event) => void patchCard(card, { sort_score: Number(event.target.value) })} placeholder="ลำดับ" /></div></div>
+                    <div className="min-w-0"><div className="flex flex-wrap items-start justify-between gap-2"><div className="min-w-0"><p className="truncate text-sm font-black text-white/90">{card.title_en || card.title}</p><p className="mt-1 text-[10px] font-bold text-white/38">{card.media_type === 'tv' ? 'ซีรีส์' : 'หนัง'} · TMDB {card.tmdb_id} · ★ {Number(card.rating || 0).toFixed(1)} · {card.release_year || '-'}</p></div><div className="flex shrink-0 flex-wrap gap-1.5"><button onClick={() => void patchCard(card, { is_active: !card.is_active })} className={`rounded-xl px-3 py-2 text-[10px] font-black ${card.is_active ? 'bg-emerald-400/15 text-emerald-100' : 'bg-white/[0.08] text-white/45'}`}>{card.is_active ? 'แสดง' : 'ซ่อน'}</button>{card.media_type === 'tv' ? <button onClick={() => setEpisodeEditorCard(card)} className={redBtn}>จัดการตอน</button> : null}</div></div><div className="mt-3 grid gap-2 md:grid-cols-[1fr_130px]"><select className={selectInput} value={card.source_bucket || ''} onChange={(event) => void patchCard(card, { source_bucket: event.target.value })}><option value="">ไม่ระบุหมวด</option>{categoryOptions.map((cat) => <option key={cat.slug} value={cat.slug}>{cat.title_th}</option>)}</select><input className={input} type="number" value={String(card.sort_score || 0)} onChange={(event) => setCards((current) => current.map((item) => item.tmdb_id === card.tmdb_id && item.media_type === card.media_type ? { ...item, sort_score: Number(event.target.value) } : item))} onBlur={(event) => void patchCard(card, { sort_score: Number(event.target.value) })} placeholder="ลำดับ" /></div></div>
                   </article>
                 );
               })}
@@ -287,6 +289,7 @@ export function AdminControlCenter() {
           </div>
         </div>
       </div>
+      <AdminSeriesEpisodeEditor card={episodeEditorCard} onClose={() => setEpisodeEditorCard(null)} onSaved={() => void refreshAll()} setMessage={setMessage} />
     </section>
   );
 }
