@@ -111,6 +111,10 @@ const statusLabels: Record<MediaClipStatus, string> = {
   hidden: 'Hidden',
 };
 
+function clipFeedPath(id: string) {
+  return `/clips/feed?clip=${encodeURIComponent(id)}`;
+}
+
 function formFromClip(clip: MediaClipRow): ClipFormState {
   return {
     title: clip.title || '',
@@ -225,8 +229,7 @@ export default function AdminClipsPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  async function searchMedia(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function searchMedia() {
     const query = mediaQuery.trim();
     if (query.length < 2) {
       setMediaResults([]);
@@ -262,6 +265,12 @@ export default function AdminClipsPage() {
     setMediaResults([]);
     setMediaQuery(item.title);
     setMessage(`เลือกเรื่อง ${item.title} แล้ว`);
+  }
+
+  async function copyClipLink(id: string) {
+    const url = `${window.location.origin}${clipFeedPath(id)}`;
+    await navigator.clipboard?.writeText(url).catch(() => null);
+    setMessage('คัดลอกลิงก์คลิปแล้ว');
   }
 
   async function saveClip(event: FormEvent<HTMLFormElement>) {
@@ -375,10 +384,10 @@ export default function AdminClipsPage() {
 
                 <div className="rounded-[22px] border border-white/10 bg-black/24 p-3">
                   <p className="text-[11px] font-black uppercase tracking-[0.22em] text-[#ff3b45]">ค้นหาหนัง / ซีรีส์</p>
-                  <form onSubmit={searchMedia} className="mt-3 flex gap-2">
-                    <input value={mediaQuery} onChange={(event) => setMediaQuery(event.target.value)} placeholder="พิมพ์ชื่อเรื่อง เช่น Wednesday, Marvel, The Boys" className={fieldClass()} />
-                    <button type="submit" disabled={mediaSearching} className="h-11 shrink-0 rounded-2xl bg-white/[0.10] px-4 text-xs font-black text-white/74 ring-1 ring-white/10 disabled:opacity-50">{mediaSearching ? 'ค้นหา...' : 'ค้นหา'}</button>
-                  </form>
+                  <div className="mt-3 flex gap-2">
+                    <input value={mediaQuery} onChange={(event) => setMediaQuery(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void searchMedia(); } }} placeholder="พิมพ์ชื่อเรื่อง เช่น Wednesday, Marvel, The Boys" className={fieldClass()} />
+                    <button type="button" onClick={() => void searchMedia()} disabled={mediaSearching} className="h-11 shrink-0 rounded-2xl bg-white/[0.10] px-4 text-xs font-black text-white/74 ring-1 ring-white/10 disabled:opacity-50">{mediaSearching ? 'ค้นหา...' : 'ค้นหา'}</button>
+                  </div>
                   {mediaResults.length ? (
                     <div className="mt-3 grid max-h-72 gap-2 overflow-y-auto pr-1">
                       {mediaResults.map((item) => (
@@ -453,6 +462,13 @@ export default function AdminClipsPage() {
                   </div>
                 </div>
 
+                {editingId ? (
+                  <div className="grid gap-2 rounded-[20px] border border-white/10 bg-black/24 p-3 md:grid-cols-2">
+                    <a href={clipFeedPath(editingId)} target="_blank" className="rounded-2xl bg-white/[0.08] px-4 py-3 text-center text-xs font-black text-white/72 ring-1 ring-white/10">Preview Feed</a>
+                    <button type="button" onClick={() => void copyClipLink(editingId)} className="rounded-2xl bg-white/[0.08] px-4 py-3 text-xs font-black text-white/72 ring-1 ring-white/10">คัดลอกลิงก์</button>
+                  </div>
+                ) : null}
+
                 <button disabled={saving} className="mt-1 h-12 rounded-2xl bg-[#e50914] text-sm font-black text-white shadow-[0_16px_40px_rgba(229,9,20,0.28)] disabled:cursor-not-allowed disabled:opacity-50" type="submit">
                   {saving ? 'กำลังบันทึก...' : editingId ? 'บันทึกการแก้ไข' : 'เพิ่มคลิป'}
                 </button>
@@ -510,6 +526,8 @@ export default function AdminClipsPage() {
                   </div>
                   <div className="flex flex-wrap gap-2 md:justify-end">
                     <button type="button" onClick={() => editClip(clip)} className="rounded-xl bg-white/[0.08] px-3 py-2 text-xs font-black text-white/70 ring-1 ring-white/10">แก้ไข</button>
+                    <a href={clipFeedPath(clip.id)} target="_blank" className="rounded-xl bg-white/[0.08] px-3 py-2 text-xs font-black text-white/70 ring-1 ring-white/10">Preview</a>
+                    <button type="button" onClick={() => void copyClipLink(clip.id)} className="rounded-xl bg-white/[0.08] px-3 py-2 text-xs font-black text-white/70 ring-1 ring-white/10">คัดลอก</button>
                     <button type="button" onClick={() => void quickPatch(clip, { status: clip.status === 'published' ? 'hidden' : 'published' })} className="rounded-xl bg-white/[0.08] px-3 py-2 text-xs font-black text-white/70 ring-1 ring-white/10">{clip.status === 'published' ? 'ซ่อน' : 'เผยแพร่'}</button>
                     <button type="button" onClick={() => void deleteClip(clip)} className="rounded-xl bg-red-500/12 px-3 py-2 text-xs font-black text-red-100 ring-1 ring-red-300/15">ลบ</button>
                   </div>
