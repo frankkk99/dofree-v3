@@ -67,6 +67,7 @@ function categoryFilterLabel(value: string) {
     emptyVisible: 'ไม่มีการ์ดแสดง',
     hasVisible: 'มีการ์ดแสดง',
     emptyRaw: 'ไม่มีการ์ดในหมวด',
+    autoplay: 'Auto Carousel เปิดอยู่',
   };
   return labels[value] || value;
 }
@@ -91,12 +92,14 @@ export function AdminControlCenter() {
     if (categoryFilter === 'emptyVisible') return displayCards(category) === 0;
     if (categoryFilter === 'hasVisible') return displayCards(category) > 0;
     if (categoryFilter === 'emptyRaw') return totalCards(category) === 0;
+    if (categoryFilter === 'autoplay') return Boolean(category.autoplay);
     return true;
   }), [categories, categoryFilter]);
   const stats = useMemo(() => ({
     emptyVisible: categories.filter((category) => displayCards(category) === 0).length,
     hasVisible: categories.filter((category) => displayCards(category) > 0).length,
     disabled: categories.filter((category) => !category.enabled).length,
+    autoplay: categories.filter((category) => Boolean(category.autoplay)).length,
   }), [categories]);
 
   async function loadCategories() {
@@ -160,14 +163,14 @@ export function AdminControlCenter() {
     }
   }
 
-  async function bulkPatchCategories(enabled: boolean) {
+  async function bulkPatchCategories(patch: Partial<Category>, label: string) {
     if (!selectedCategories.length) return;
     setLoading(true);
     try {
-      const response = await fetch('/api/admin/categories', { method: 'PATCH', headers: adminSessionHeaders({ 'content-type': 'application/json' }), body: JSON.stringify({ slugs: selectedCategories, enabled }) });
+      const response = await fetch('/api/admin/categories', { method: 'PATCH', headers: adminSessionHeaders({ 'content-type': 'application/json' }), body: JSON.stringify({ slugs: selectedCategories, ...patch }) });
       const payload = await response.json() as CategoryPayload;
       if (!payload.ok) throw new Error(payload.error || 'บันทึกหมวดไม่สำเร็จ');
-      setMessage(`${enabled ? 'เปิด' : 'ปิด'}หมวดที่เลือกแล้ว`);
+      setMessage(`${label}หมวดที่เลือกแล้ว`);
       setSelectedCategories([]);
       await loadCategories();
     } catch (error) {
@@ -238,11 +241,11 @@ export function AdminControlCenter() {
             </div>
             <div className="mb-3 grid gap-2 md:grid-cols-[1fr_auto]">
               <select className={selectInput} value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
-                {['all', 'enabled', 'disabled', 'emptyVisible', 'hasVisible', 'emptyRaw'].map((value) => <option key={value} value={value}>{categoryFilterLabel(value)}</option>)}
+                {['all', 'enabled', 'disabled', 'autoplay', 'emptyVisible', 'hasVisible', 'emptyRaw'].map((value) => <option key={value} value={value}>{categoryFilterLabel(value)}</option>)}
               </select>
-              <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-black text-white/42"><span className="rounded-xl bg-white/[0.06] px-2.5 py-2">ไม่มีการ์ดแสดง {stats.emptyVisible}</span><span className="rounded-xl bg-white/[0.06] px-2.5 py-2">มีการ์ดแสดง {stats.hasVisible}</span><span className="rounded-xl bg-white/[0.06] px-2.5 py-2">ปิดอยู่ {stats.disabled}</span></div>
+              <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-black text-white/42"><span className="rounded-xl bg-white/[0.06] px-2.5 py-2">ไม่มีการ์ดแสดง {stats.emptyVisible}</span><span className="rounded-xl bg-white/[0.06] px-2.5 py-2">มีการ์ดแสดง {stats.hasVisible}</span><span className="rounded-xl bg-white/[0.06] px-2.5 py-2">ปิดอยู่ {stats.disabled}</span><span className="rounded-xl bg-white/[0.06] px-2.5 py-2">Auto {stats.autoplay}</span></div>
             </div>
-            <div className="mb-3 flex flex-wrap gap-1.5"><button className={ghostBtn} disabled={!selectedCategories.length || loading} onClick={() => void bulkPatchCategories(true)}>เปิดที่เลือก</button><button className={ghostBtn} disabled={!selectedCategories.length || loading} onClick={() => void bulkPatchCategories(false)}>ปิดที่เลือก</button></div>
+            <div className="mb-3 flex flex-wrap gap-1.5"><button className={ghostBtn} disabled={!selectedCategories.length || loading} onClick={() => void bulkPatchCategories({ enabled: true }, 'เปิด')}>เปิดที่เลือก</button><button className={ghostBtn} disabled={!selectedCategories.length || loading} onClick={() => void bulkPatchCategories({ enabled: false }, 'ปิด')}>ปิดที่เลือก</button><button className={ghostBtn} disabled={!selectedCategories.length || loading} onClick={() => void bulkPatchCategories({ autoplay: true }, 'เปิด Auto Carousel ')}>เปิด Auto ที่เลือก</button><button className={ghostBtn} disabled={!selectedCategories.length || loading} onClick={() => void bulkPatchCategories({ autoplay: false }, 'ปิด Auto Carousel ')}>ปิด Auto ที่เลือก</button></div>
             <div className="grid max-h-[680px] gap-3 overflow-y-auto pr-1">
               {filteredCategories.map((cat) => {
                 const selected = selectedCategories.includes(cat.slug);
@@ -252,8 +255,8 @@ export function AdminControlCenter() {
                 return (
                   <article key={cat.slug} className={`rounded-2xl border p-3 ${selected ? 'border-[#e50914]/70 bg-[#e50914]/8' : displayCount === 0 ? 'border-[#f4c46b]/30 bg-[#f4c46b]/8' : 'border-white/8 bg-white/[0.04]'}`}>
                     <div className="flex items-start justify-between gap-2">
-                      <label className="flex min-w-0 gap-2"><input type="checkbox" checked={selected} onChange={(event) => setSelectedCategories((current) => event.target.checked ? [...new Set([...current, cat.slug])] : current.filter((slug) => slug !== cat.slug))} className="mt-1 h-4 w-4 accent-[#e50914]" /><div className="min-w-0"><p className="truncate text-[10px] font-black uppercase tracking-[0.16em] text-[#e50914]/80">{cat.slug}</p><p className="text-xs font-bold text-white/38">แสดงบนหน้าเว็บ: {cat.enabled ? 'เปิด' : 'ปิด'} · แสดงจริง {displayCount} / เปิดอยู่ {activeCount} / ทั้งหมด {totalCount} การ์ด</p>{displayCount === 0 ? <p className="mt-1 text-[10px] font-black text-[#f4c46b]">ไม่มีการ์ดแสดงบนหน้าเว็บ</p> : null}</div></label>
-                      <button onClick={() => void patchCategory(cat.slug, { enabled: !cat.enabled })} className={`rounded-xl px-3 py-2 text-[10px] font-black ${cat.enabled ? 'bg-emerald-400/15 text-emerald-100' : 'bg-white/[0.08] text-white/45'}`}>{cat.enabled ? 'ON' : 'OFF'}</button>
+                      <label className="flex min-w-0 gap-2"><input type="checkbox" checked={selected} onChange={(event) => setSelectedCategories((current) => event.target.checked ? [...new Set([...current, cat.slug])] : current.filter((slug) => slug !== cat.slug))} className="mt-1 h-4 w-4 accent-[#e50914]" /><div className="min-w-0"><p className="truncate text-[10px] font-black uppercase tracking-[0.16em] text-[#e50914]/80">{cat.slug}</p><p className="text-xs font-bold text-white/38">แสดงบนหน้าเว็บ: {cat.enabled ? 'เปิด' : 'ปิด'} · Auto Carousel: {cat.autoplay ? 'เปิด' : 'ปิด'} · แสดงจริง {displayCount} / เปิดอยู่ {activeCount} / ทั้งหมด {totalCount} การ์ด</p>{displayCount === 0 ? <p className="mt-1 text-[10px] font-black text-[#f4c46b]">ไม่มีการ์ดแสดงบนหน้าเว็บ</p> : null}</div></label>
+                      <div className="flex shrink-0 gap-1.5"><button onClick={() => void patchCategory(cat.slug, { autoplay: !cat.autoplay })} className={`rounded-xl px-3 py-2 text-[10px] font-black ${cat.autoplay ? 'bg-sky-400/15 text-sky-100' : 'bg-white/[0.08] text-white/45'}`}>{cat.autoplay ? 'AUTO' : 'MANUAL'}</button><button onClick={() => void patchCategory(cat.slug, { enabled: !cat.enabled })} className={`rounded-xl px-3 py-2 text-[10px] font-black ${cat.enabled ? 'bg-emerald-400/15 text-emerald-100' : 'bg-white/[0.08] text-white/45'}`}>{cat.enabled ? 'ON' : 'OFF'}</button></div>
                     </div>
                     <div className="mt-3 grid gap-2"><input className={input} value={cat.title_th} onChange={(event) => setCategories((current) => current.map((item) => item.slug === cat.slug ? { ...item, title_th: event.target.value } : item))} onBlur={(event) => void patchCategory(cat.slug, { title_th: event.target.value })} placeholder="ชื่อหมวด" /><input className={input} value={cat.subtitle_th || ''} onChange={(event) => setCategories((current) => current.map((item) => item.slug === cat.slug ? { ...item, subtitle_th: event.target.value } : item))} onBlur={(event) => void patchCategory(cat.slug, { subtitle_th: event.target.value })} placeholder="คำอธิบายหมวด" /><input className={input} type="number" value={cat.sort_order} onChange={(event) => setCategories((current) => current.map((item) => item.slug === cat.slug ? { ...item, sort_order: Number(event.target.value) } : item))} onBlur={(event) => void patchCategory(cat.slug, { sort_order: Number(event.target.value) })} placeholder="ลำดับ" /></div>
                     <div className="mt-3 flex flex-wrap gap-1.5"><button className={ghostBtn} onClick={() => { setBucket(cat.slug); void loadCards(cat.slug); }}>ดูการ์ดทั้งหมด ({totalCount})</button></div>
