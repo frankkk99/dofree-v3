@@ -5,8 +5,9 @@ import { DetailInlineWatchSection } from '@/components/detail-inline-watch-secti
 import { DetailPosterImage } from '@/components/detail-poster-image';
 import { DetailRecommendationCarousel } from '@/components/detail-recommendation-carousel';
 import { FavoriteButton } from '@/components/favorite-button';
+import { SmartTrailerPreview } from '@/components/smart-trailer-preview';
 import { absoluteUrl, mediaDetailPath, siteName } from '@/lib/seo';
-import type { DetailPayload, MediaType } from '@/lib/tmdb';
+import type { DetailPayload, MediaType, MovieItem } from '@/lib/tmdb';
 
 const detailTabs = [
   { label: 'ตัวอย่าง', href: '#trailer' },
@@ -29,27 +30,11 @@ function statusLabel(status?: string, isWatchReady?: boolean) {
   return 'ข้อมูล';
 }
 
-function youtubeKey(url: URL) {
-  if (url.hostname.includes('youtu.be')) return url.pathname.replace('/', '');
-  if (url.searchParams.get('v')) return url.searchParams.get('v') || undefined;
-  const parts = url.pathname.split('/').filter(Boolean);
-  if (parts[0] === 'embed' || parts[0] === 'shorts' || parts[0] === 'live') return parts[1];
-  return undefined;
-}
-
-function youtubeEmbedUrl(value?: string) {
-  const raw = value?.trim();
-  if (!raw) return undefined;
-
-  try {
-    const url = new URL(raw);
-    if (url.hostname.includes('youtube.com') || url.hostname.includes('youtu.be')) {
-      const key = youtubeKey(url);
-      return key ? `https://www.youtube.com/embed/${key}?autoplay=0&rel=0&playsinline=1` : undefined;
-    }
-  } catch {}
-
-  return undefined;
+function trailerMode(item: MovieItem) {
+  const text = `${item.title} ${item.titleEn || ''} ${(item.badges || []).join(' ')}`.toLowerCase();
+  if (text.includes('ซับไทย') || text.includes('thai sub')) return 'thai_sub' as const;
+  if (text.includes('พากย์ไทย') || item.language === 'th') return 'thai_dub' as const;
+  return 'thai_first' as const;
 }
 
 function personInitial(name: string) {
@@ -61,44 +46,6 @@ function StatusBadge({ children, active = false }: { children: ReactNode; active
     <span className={`rounded-full px-2.5 py-1 text-[9px] font-black backdrop-blur-md md:text-[11px] ${active ? 'bg-[#e50914]/25 text-red-100' : 'bg-white/[0.105] text-white/78'}`}>
       {children}
     </span>
-  );
-}
-
-function TrailerPreview({ title, trailerUrl, fallbackImage }: { title: string; trailerUrl?: string; fallbackImage: string }) {
-  const embedUrl = youtubeEmbedUrl(trailerUrl);
-
-  return (
-    <section id="trailer" className="scroll-mt-20 px-4 sm:px-5">
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-red-100/68 md:text-xs">Trailer Preview</p>
-        <span className="rounded-full bg-white/[0.08] px-2.5 py-1 text-[9px] font-black text-white/42 backdrop-blur-xl md:text-[10px]">ตัวอย่าง</span>
-      </div>
-      <div className="relative aspect-video w-full max-w-full overflow-hidden rounded-[28px] bg-black shadow-[0_24px_90px_rgba(0,0,0,0.72)] sm:rounded-[32px]">
-        {embedUrl ? (
-          <iframe
-            src={embedUrl}
-            title={`ตัวอย่าง ${title}`}
-            loading="lazy"
-            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-            allowFullScreen
-            referrerPolicy="no-referrer-when-downgrade"
-            className="absolute inset-0 h-full w-full border-0 bg-black"
-          />
-        ) : (
-          <>
-            {fallbackImage ? <img src={fallbackImage} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover opacity-35" /> : null}
-            <div className="absolute inset-0 bg-black/68" />
-            <div className="relative z-10 grid h-full place-items-center px-6 text-center">
-              <div>
-                <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-white/[0.10] text-xl font-black text-white/45 backdrop-blur-xl">▶</div>
-                <p className="mt-3 text-xs font-black text-white/72 md:text-sm">ยังไม่มีตัวอย่างที่เล่นในเว็บ</p>
-                <p className="mt-1 text-[10px] font-bold text-white/40 md:text-xs">เรื่องนี้ยังไม่มีลิงก์ trailer แบบฝังในเว็บ ระบบจึงไม่พาออกไป YouTube</p>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-    </section>
   );
 }
 
@@ -184,7 +131,7 @@ export function DetailPageViewInline({ detail }: { detail: DetailPayload }) {
           </div>
 
           <div className="relative z-10 grid gap-4">
-            <TrailerPreview title={item.title} trailerUrl={effectiveTrailerUrl} fallbackImage={fallbackImage} />
+            <SmartTrailerPreview title={item.title} titleEn={item.titleEn} year={item.year} tmdbId={item.id} mediaType={item.mediaType} mode={trailerMode(item)} trailerUrl={effectiveTrailerUrl} fallbackImage={fallbackImage} />
           </div>
         </section>
 
