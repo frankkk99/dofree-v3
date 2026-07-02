@@ -33,13 +33,20 @@ type WatchLinkRecord = {
   trailer_url?: string | null;
 };
 
-type SectionDef = {
+export type CatalogSectionDef = {
   slug: string;
   eyebrow: string;
   title: string;
   description: string;
   limit: number;
   offset: number;
+  mediaType?: MediaType;
+  sourceBuckets?: string[];
+  languages?: string[];
+  genreKeywords?: string[];
+  minRating?: number;
+  sort?: 'score' | 'popular' | 'rating' | 'recent';
+  showOnHome?: boolean;
 };
 
 type EpisodeSummaryLookup = Awaited<ReturnType<typeof getSeriesEpisodeSummaries>>;
@@ -50,30 +57,65 @@ const HOME_HERO_LIMIT = 6;
 const PUBLIC_CATALOG_REVALIDATE = 300;
 const minRating = 6.5;
 const fallbackImage = 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1400&q=80';
+const catalogSelect = 'tmdb_id,media_type,title,title_en,overview,poster_url,backdrop_url,rating,vote_count,popularity,release_year,release_date,genres,language,runtime,source_bucket,sort_score';
 
-const sectionDefs: SectionDef[] = [
-  { slug: 'top-rated', eyebrow: 'คะแนนสูง', title: 'คะแนน 6.5+ น่าดู', description: 'คัดจาก catalog เรียงคะแนนและความนิยม', limit: HOME_SECTION_LIMIT, offset: 0 },
-  { slug: 'popular', eyebrow: 'กำลังนิยม', title: 'ยอดนิยมคะแนนดี', description: 'หนังยอดนิยมที่คะแนนผ่านเกณฑ์', limit: HOME_SECTION_LIMIT, offset: 200 },
-  { slug: 'now-playing', eyebrow: 'มาใหม่', title: 'ภาพยนตร์มาใหม่คะแนนดี', description: 'หนังใหม่ที่พร้อมขึ้นหน้าแรก', limit: HOME_SECTION_LIMIT, offset: 400 },
-  { slug: 'series', eyebrow: 'ซีรีส์', title: 'ซีรีส์น่าติดตาม', description: 'ซีรีส์คะแนนดีจาก catalog', limit: HOME_SECTION_LIMIT, offset: 540 },
-  { slug: 'thai', eyebrow: 'Local Focus', title: 'หนังไทยคะแนนดี', description: 'หนังไทยสำหรับตลาดไทยและ SEO', limit: HOME_SECTION_LIMIT, offset: 700 },
-  { slug: 'action', eyebrow: 'Action', title: 'แอ็กชัน', description: 'หนังแอ็กชันจังหวะเร็ว', limit: HOME_SECTION_LIMIT, offset: 860 },
-  { slug: 'adventure', eyebrow: 'Adventure', title: 'ผจญภัย', description: 'หนังเดินทางและโลกกว้าง', limit: HOME_SECTION_LIMIT, offset: 980 },
-  { slug: 'animation', eyebrow: 'Animation', title: 'แอนิเมชัน', description: 'แอนิเมชันคะแนนดีสำหรับทุกวัย', limit: HOME_SECTION_LIMIT, offset: 1100 },
-  { slug: 'drama', eyebrow: 'Drama', title: 'ดราม่า', description: 'ดราม่าที่มีอารมณ์และตัวละครชัด', limit: HOME_SECTION_LIMIT, offset: 1220 },
-  { slug: 'thriller', eyebrow: 'Thriller', title: 'ระทึกขวัญ', description: 'หนังลุ้นและเข้มข้น', limit: HOME_SECTION_LIMIT, offset: 1340 },
-  { slug: 'horror', eyebrow: 'Horror', title: 'สยองขวัญ', description: 'หนังสยองสำหรับโทนมืดของเว็บ', limit: HOME_SECTION_LIMIT, offset: 1460 },
-  { slug: 'comedy', eyebrow: 'Comedy', title: 'คอมเมดี้', description: 'หนังดูง่ายและเบรกอารมณ์', limit: HOME_SECTION_LIMIT, offset: 1580 },
-  { slug: 'sci-fi', eyebrow: 'Sci-Fi', title: 'ไซไฟ', description: 'หนังโลกอนาคตและจินตนาการ', limit: HOME_SECTION_LIMIT, offset: 1700 },
-  { slug: 'romance', eyebrow: 'Romance', title: 'โรแมนติก', description: 'หนังรักและความสัมพันธ์', limit: HOME_SECTION_LIMIT, offset: 1820 },
-  { slug: 'fantasy', eyebrow: 'Fantasy', title: 'แฟนตาซี', description: 'โลกเหนือจริงและการผจญภัย', limit: HOME_SECTION_LIMIT, offset: 1940 },
-  { slug: 'crime', eyebrow: 'Crime', title: 'อาชญากรรม', description: 'หนังอาชญากรรมและการสืบสวน', limit: HOME_SECTION_LIMIT, offset: 2060 },
-  { slug: 'mystery', eyebrow: 'Mystery', title: 'ลึกลับ', description: 'หนังปริศนาและความลับ', limit: HOME_SECTION_LIMIT, offset: 2180 },
-  { slug: 'korea', eyebrow: 'Korea', title: 'หนังเกาหลี', description: 'คัดหนังเกาหลีคะแนนดี', limit: HOME_SECTION_LIMIT, offset: 2300 },
-  { slug: 'japan', eyebrow: 'Japan', title: 'หนังญี่ปุ่น', description: 'คัดหนังญี่ปุ่นคะแนนดี', limit: HOME_SECTION_LIMIT, offset: 2420 },
-  { slug: 'china', eyebrow: 'China', title: 'หนังจีน', description: 'คัดหนังจีนคะแนนดี', limit: HOME_SECTION_LIMIT, offset: 2540 },
-  { slug: 'documentary', eyebrow: 'Documentary', title: 'สารคดี', description: 'สารคดีและเรื่องจริง', limit: HOME_SECTION_LIMIT, offset: 2660 },
+export const catalogSectionDefs: CatalogSectionDef[] = [
+  { slug: 'top-rated', eyebrow: 'Top Rated', title: 'คะแนนสูงน่าดู', description: 'คัดจาก catalog เรียงคะแนนสูง คะแนนโหวต และความนิยม', limit: HOME_SECTION_LIMIT, offset: 0, minRating: 7, sort: 'rating' },
+  { slug: 'popular', eyebrow: 'Popular', title: 'ยอดนิยมจาก TMDB', description: 'รวมหนังและซีรีส์ยอดนิยมที่ Sync เข้ามาแล้วจาก TMDB', limit: HOME_SECTION_LIMIT, offset: 160, sourceBuckets: ['popular'], minRating: 5, sort: 'popular' },
+  { slug: 'now-playing', eyebrow: 'Now Playing', title: 'หนังใหม่ / กำลังฉาย', description: 'คัดจากชุด Now Playing และรายการ release date ล่าสุด', limit: HOME_SECTION_LIMIT, offset: 320, mediaType: 'movie', sourceBuckets: ['new-release'], minRating: 5, sort: 'recent' },
+  { slug: 'upcoming', eyebrow: 'Upcoming', title: 'ใกล้เข้าฉาย', description: 'หนังใกล้เข้าฉายและรายการที่เหมาะสำหรับหมวดเร็ว ๆ นี้', limit: HOME_SECTION_LIMIT, offset: 480, mediaType: 'movie', sourceBuckets: ['coming-soon'], minRating: 0, sort: 'recent' },
+  { slug: 'popular-series', eyebrow: 'Series', title: 'ซีรีส์ยอดนิยม', description: 'ซีรีส์ยอดนิยมและซีรีส์ที่เหมาะกับการดูต่อเนื่อง', limit: HOME_SECTION_LIMIT, offset: 640, mediaType: 'tv', sourceBuckets: ['series'], minRating: 5, sort: 'popular' },
+
+  { slug: 'netflix-style', eyebrow: 'Netflix', title: 'โทน Netflix', description: 'คอนเทนต์ที่ถูก Sync จาก provider กลุ่ม Netflix', limit: HOME_SECTION_LIMIT, offset: 800, sourceBuckets: ['netflix'], minRating: 5, sort: 'popular' },
+  { slug: 'disney-style', eyebrow: 'Disney+', title: 'Disney / Family Hits', description: 'คอนเทนต์ Disney และคอนเทนต์สำหรับครอบครัว', limit: HOME_SECTION_LIMIT, offset: 960, sourceBuckets: ['disney'], genreKeywords: ['ครอบครัว', 'แอนิเมชัน'], minRating: 5, sort: 'popular' },
+  { slug: 'hbo-max', eyebrow: 'HBO / Max', title: 'HBO / Max', description: 'คอนเทนต์สไตล์ HBO และ Max จากชุด provider sync', limit: HOME_SECTION_LIMIT, offset: 1120, sourceBuckets: ['hbo'], minRating: 5, sort: 'popular' },
+  { slug: 'prime-video', eyebrow: 'Prime Video', title: 'Prime Video', description: 'คอนเทนต์จากชุด Prime Video ที่ Sync เข้าระบบ', limit: HOME_SECTION_LIMIT, offset: 1280, sourceBuckets: ['prime'], minRating: 5, sort: 'popular' },
+  { slug: 'apple-tv-style', eyebrow: 'Apple TV', title: 'Apple TV Style', description: 'คอนเทนต์จาก provider Apple TV และรายการคะแนนดี', limit: HOME_SECTION_LIMIT, offset: 1440, sourceBuckets: ['apple'], minRating: 5, sort: 'popular' },
+
+  { slug: 'thai-content', eyebrow: 'Thai', title: 'หนังและซีรีส์ไทย', description: 'คอนเทนต์ภาษาไทยและรายการที่เหมาะกับผู้ชมในประเทศไทย', limit: HOME_SECTION_LIMIT, offset: 1600, sourceBuckets: ['thai'], languages: ['th'], minRating: 4.5, sort: 'popular' },
+  { slug: 'korean-drama', eyebrow: 'Korea', title: 'เกาหลี / K-Drama', description: 'หนังและซีรีส์เกาหลีจากชุดภาษา ko และหมวด drama', limit: HOME_SECTION_LIMIT, offset: 1760, sourceBuckets: ['korea'], languages: ['ko'], genreKeywords: ['ดราม่า'], minRating: 5, sort: 'popular' },
+  { slug: 'anime', eyebrow: 'Anime', title: 'อนิเมะญี่ปุ่น', description: 'อนิเมะและแอนิเมชันญี่ปุ่นจากชุด Anime Sync', limit: HOME_SECTION_LIMIT, offset: 1920, sourceBuckets: ['anime'], languages: ['ja'], genreKeywords: ['แอนิเมชัน'], minRating: 5, sort: 'popular' },
+  { slug: 'japanese', eyebrow: 'Japan', title: 'คอนเทนต์ญี่ปุ่น', description: 'หนัง ซีรีส์ และแอนิเมชันญี่ปุ่น', limit: HOME_SECTION_LIMIT, offset: 2080, sourceBuckets: ['japan'], languages: ['ja'], minRating: 5, sort: 'popular' },
+  { slug: 'chinese', eyebrow: 'China', title: 'คอนเทนต์จีน', description: 'หนังและซีรีส์จีนที่คัดจากภาษา zh และชุด China', limit: HOME_SECTION_LIMIT, offset: 2240, sourceBuckets: ['china'], languages: ['zh'], minRating: 5, sort: 'popular' },
+  { slug: 'indian', eyebrow: 'India', title: 'คอนเทนต์อินเดีย', description: 'หนังและซีรีส์อินเดียจากภาษา hi และชุด Indian Sync', limit: HOME_SECTION_LIMIT, offset: 2400, sourceBuckets: ['indian'], languages: ['hi'], minRating: 5, sort: 'popular' },
+  { slug: 'spanish', eyebrow: 'Spanish', title: 'คอนเทนต์สเปน', description: 'หนังและซีรีส์ภาษาสเปนจากชุด Spanish Sync', limit: HOME_SECTION_LIMIT, offset: 2560, sourceBuckets: ['spanish'], languages: ['es'], minRating: 5, sort: 'popular' },
+
+  { slug: 'marvel', eyebrow: 'Marvel', title: 'Marvel', description: 'คอนเทนต์ Marvel จาก company sync และรายการที่เกี่ยวข้อง', limit: HOME_SECTION_LIMIT, offset: 2720, sourceBuckets: ['marvel'], minRating: 5, sort: 'popular' },
+  { slug: 'dc', eyebrow: 'DC', title: 'DC', description: 'คอนเทนต์ DC จาก company sync และรายการที่เกี่ยวข้อง', limit: HOME_SECTION_LIMIT, offset: 2880, sourceBuckets: ['dc'], minRating: 5, sort: 'popular' },
+
+  { slug: 'action', eyebrow: 'Action', title: 'แอ็กชัน', description: 'หนังแอ็กชัน ภารกิจ การต่อสู้ และจังหวะเร็ว', limit: HOME_SECTION_LIMIT, offset: 3040, mediaType: 'movie', sourceBuckets: ['action'], genreKeywords: ['แอ็กชัน'], minRating: 5, sort: 'popular' },
+  { slug: 'crime-thriller', eyebrow: 'Crime / Thriller', title: 'อาชญากรรม / ระทึกขวัญ', description: 'อาชญากรรม สืบสวน ฆาตกรรม และเรื่องระทึกขวัญ', limit: HOME_SECTION_LIMIT, offset: 3200, sourceBuckets: ['crime'], genreKeywords: ['อาชญากรรม', 'ระทึกขวัญ', 'ลึกลับ'], minRating: 5, sort: 'popular' },
+  { slug: 'horror', eyebrow: 'Horror', title: 'สยองขวัญ', description: 'หนังผี สยองขวัญ ซอมบี้ และคอนเทนต์โทนมืด', limit: HOME_SECTION_LIMIT, offset: 3360, mediaType: 'movie', sourceBuckets: ['horror'], genreKeywords: ['สยองขวัญ'], minRating: 5, sort: 'popular' },
+  { slug: 'comedy', eyebrow: 'Comedy', title: 'คอมเมดี้', description: 'หนังตลก คอมเมดี้ และรายการดูง่าย', limit: HOME_SECTION_LIMIT, offset: 3520, sourceBuckets: ['comedy'], genreKeywords: ['คอมเมดี้'], minRating: 5, sort: 'popular' },
+  { slug: 'romance', eyebrow: 'Romance', title: 'โรแมนติก', description: 'หนังรัก ความสัมพันธ์ และเรื่องอบอุ่นหัวใจ', limit: HOME_SECTION_LIMIT, offset: 3680, sourceBuckets: ['romance'], genreKeywords: ['โรแมนติก'], minRating: 5, sort: 'popular' },
+  { slug: 'sci-fi-fantasy', eyebrow: 'Sci-Fi / Fantasy', title: 'ไซไฟ / แฟนตาซี', description: 'อวกาศ โลกอนาคต เวทมนตร์ และแฟนตาซี', limit: HOME_SECTION_LIMIT, offset: 3840, mediaType: 'movie', sourceBuckets: ['sci-fi'], genreKeywords: ['ไซไฟ', 'แฟนตาซี'], minRating: 5, sort: 'popular' },
+  { slug: 'animation', eyebrow: 'Animation', title: 'แอนิเมชัน', description: 'แอนิเมชันคะแนนดีสำหรับหลายวัย', limit: HOME_SECTION_LIMIT, offset: 4000, sourceBuckets: ['animation'], genreKeywords: ['แอนิเมชัน'], minRating: 5, sort: 'popular' },
+  { slug: 'family-kids', eyebrow: 'Family / Kids', title: 'ครอบครัว / เด็ก', description: 'รายการสำหรับครอบครัว เด็ก และดูร่วมกันได้ง่าย', limit: HOME_SECTION_LIMIT, offset: 4160, sourceBuckets: ['family'], genreKeywords: ['ครอบครัว', 'แอนิเมชัน'], minRating: 5, sort: 'popular' },
+  { slug: 'documentary', eyebrow: 'Documentary', title: 'สารคดี', description: 'สารคดี เรื่องจริง และคอนเทนต์เชิงข้อมูล', limit: HOME_SECTION_LIMIT, offset: 4320, sourceBuckets: ['documentary'], genreKeywords: ['สารคดี'], minRating: 5, sort: 'popular' },
+
+  { slug: 'series', eyebrow: 'ซีรีส์', title: 'ซีรีส์น่าติดตาม', description: 'ทางลัดเดิมสำหรับซีรีส์ทั้งหมด', limit: HOME_SECTION_LIMIT, offset: 640, mediaType: 'tv', sourceBuckets: ['series'], minRating: 5, sort: 'popular', showOnHome: false },
+  { slug: 'thai', eyebrow: 'Thai', title: 'หนังไทยคะแนนดี', description: 'ทางลัดเดิมสำหรับคอนเทนต์ไทย', limit: HOME_SECTION_LIMIT, offset: 1600, sourceBuckets: ['thai'], languages: ['th'], minRating: 4.5, sort: 'popular', showOnHome: false },
+  { slug: 'korea', eyebrow: 'Korea', title: 'หนังเกาหลี', description: 'ทางลัดเดิมสำหรับคอนเทนต์เกาหลี', limit: HOME_SECTION_LIMIT, offset: 1760, sourceBuckets: ['korea'], languages: ['ko'], minRating: 5, sort: 'popular', showOnHome: false },
+  { slug: 'japan', eyebrow: 'Japan', title: 'หนังญี่ปุ่น', description: 'ทางลัดเดิมสำหรับคอนเทนต์ญี่ปุ่น', limit: HOME_SECTION_LIMIT, offset: 2080, sourceBuckets: ['japan'], languages: ['ja'], minRating: 5, sort: 'popular', showOnHome: false },
+  { slug: 'china', eyebrow: 'China', title: 'หนังจีน', description: 'ทางลัดเดิมสำหรับคอนเทนต์จีน', limit: HOME_SECTION_LIMIT, offset: 2240, sourceBuckets: ['china'], languages: ['zh'], minRating: 5, sort: 'popular', showOnHome: false },
+  { slug: 'sci-fi', eyebrow: 'Sci-Fi', title: 'ไซไฟ', description: 'ทางลัดเดิมสำหรับไซไฟ', limit: HOME_SECTION_LIMIT, offset: 3840, mediaType: 'movie', sourceBuckets: ['sci-fi'], genreKeywords: ['ไซไฟ'], minRating: 5, sort: 'popular', showOnHome: false },
+  { slug: 'crime', eyebrow: 'Crime', title: 'อาชญากรรม', description: 'ทางลัดเดิมสำหรับอาชญากรรม', limit: HOME_SECTION_LIMIT, offset: 3200, sourceBuckets: ['crime'], genreKeywords: ['อาชญากรรม'], minRating: 5, sort: 'popular', showOnHome: false },
+  { slug: 'thriller', eyebrow: 'Thriller', title: 'ระทึกขวัญ', description: 'ทางลัดเดิมสำหรับระทึกขวัญ', limit: HOME_SECTION_LIMIT, offset: 3200, sourceBuckets: ['crime'], genreKeywords: ['ระทึกขวัญ'], minRating: 5, sort: 'popular', showOnHome: false },
+  { slug: 'adventure', eyebrow: 'Adventure', title: 'ผจญภัย', description: 'ทางลัดเดิมสำหรับผจญภัย', limit: HOME_SECTION_LIMIT, offset: 4480, genreKeywords: ['ผจญภัย'], minRating: 5, sort: 'popular', showOnHome: false },
+  { slug: 'drama', eyebrow: 'Drama', title: 'ดราม่า', description: 'ทางลัดเดิมสำหรับดราม่า', limit: HOME_SECTION_LIMIT, offset: 4640, genreKeywords: ['ดราม่า'], minRating: 5, sort: 'popular', showOnHome: false },
+  { slug: 'fantasy', eyebrow: 'Fantasy', title: 'แฟนตาซี', description: 'ทางลัดเดิมสำหรับแฟนตาซี', limit: HOME_SECTION_LIMIT, offset: 4800, genreKeywords: ['แฟนตาซี'], minRating: 5, sort: 'popular', showOnHome: false },
+  { slug: 'mystery', eyebrow: 'Mystery', title: 'ลึกลับ', description: 'ทางลัดเดิมสำหรับลึกลับ', limit: HOME_SECTION_LIMIT, offset: 4960, genreKeywords: ['ลึกลับ'], minRating: 5, sort: 'popular', showOnHome: false },
 ];
+
+export const homeSectionDefs = catalogSectionDefs.filter((section) => section.showOnHome !== false);
+
+export function getCatalogSectionMeta(slug: string) {
+  return catalogSectionDefs.find((section) => section.slug === slug) || null;
+}
+
+export function getCatalogStaticCategoryParams() {
+  return catalogSectionDefs.map((section) => ({ slug: section.slug }));
+}
 
 function isoDate(date: Date) {
   return date.toISOString().slice(0, 10);
@@ -234,6 +276,12 @@ function unique(items: MovieItem[]) {
   return [...map.values()];
 }
 
+function uniqueRows(rows: CatalogRow[]) {
+  const map = new Map<string, CatalogRow>();
+  for (const row of rows) map.set(watchKey(row.media_type, row.tmdb_id), row);
+  return [...map.values()];
+}
+
 function shuffleSeed() {
   return Math.floor(Date.now() / (1000 * 60 * 5));
 }
@@ -277,17 +325,81 @@ function sortRecentHeroItems(items: MovieItem[]) {
   });
 }
 
-async function rowsForBucket(slug: string, limit: number, offset = 0) {
-  return supabaseRest<CatalogRow[]>(
-    `tmdb_catalog?select=tmdb_id,media_type,title,title_en,overview,poster_url,backdrop_url,rating,vote_count,popularity,release_year,release_date,genres,language,runtime,source_bucket,sort_score&is_active=eq.true&source_bucket=eq.${encodeURIComponent(slug)}&order=sort_score.desc&limit=${limit}&offset=${offset}`,
+function rowMatchesSection(row: CatalogRow, section: CatalogSectionDef) {
+  if (section.mediaType && row.media_type !== section.mediaType) return false;
+
+  const rating = Number(row.rating || 0);
+  if (rating < (section.minRating ?? minRating)) return false;
+
+  const sourceBucket = String(row.source_bucket || '').toLowerCase();
+  const language = String(row.language || '').toLowerCase();
+  const genres = (row.genres || []).map((genre) => String(genre).toLowerCase());
+  const text = [row.title, row.title_en, row.overview, sourceBucket, language, ...genres].filter(Boolean).join(' ').toLowerCase();
+
+  const sourceMatch = !section.sourceBuckets?.length || section.sourceBuckets.some((bucket) => sourceBucket === bucket.toLowerCase());
+  const languageMatch = !section.languages?.length || section.languages.some((value) => language === value.toLowerCase());
+  const genreMatch = !section.genreKeywords?.length || section.genreKeywords.some((keyword) => text.includes(keyword.toLowerCase()));
+
+  if (section.sourceBuckets?.length && (section.languages?.length || section.genreKeywords?.length)) {
+    return sourceMatch || languageMatch || genreMatch;
+  }
+
+  return sourceMatch && languageMatch && genreMatch;
+}
+
+function orderByForSection(section: CatalogSectionDef) {
+  if (section.sort === 'rating') return 'rating.desc.nullslast,vote_count.desc.nullslast,sort_score.desc.nullslast';
+  if (section.sort === 'recent') return 'release_date.desc.nullslast,sort_score.desc.nullslast';
+  if (section.sort === 'popular') return 'popularity.desc.nullslast,sort_score.desc.nullslast';
+  return 'sort_score.desc.nullslast,rating.desc';
+}
+
+function inList(values: string[]) {
+  return values.map((value) => encodeURIComponent(value)).join(',');
+}
+
+async function rowsForSection(section: CatalogSectionDef, limit: number, offset = 0) {
+  const fetchLimit = Math.min(Math.max(offset + limit * 8, limit + 80), 960);
+  const filters = [
+    'is_active=eq.true',
+    'poster_url=not.is.null',
+    `rating=gte.${section.minRating ?? 0}`,
+  ];
+
+  if (section.mediaType) filters.push(`media_type=eq.${section.mediaType}`);
+  if (section.sourceBuckets?.length === 1) filters.push(`source_bucket=eq.${encodeURIComponent(section.sourceBuckets[0])}`);
+  if (section.sourceBuckets && section.sourceBuckets.length > 1) filters.push(`source_bucket=in.(${inList(section.sourceBuckets)})`);
+  if (section.languages?.length === 1 && !section.sourceBuckets?.length) filters.push(`language=eq.${encodeURIComponent(section.languages[0])}`);
+  if (section.languages && section.languages.length > 1 && !section.sourceBuckets?.length) filters.push(`language=in.(${inList(section.languages)})`);
+
+  const directRows = await supabaseRest<CatalogRow[]>(
+    `tmdb_catalog?select=${catalogSelect}&${filters.join('&')}&order=${orderByForSection(section)}&limit=${fetchLimit}`,
     { mode: 'service', next: { revalidate: PUBLIC_CATALOG_REVALIDATE } }
   ).catch(() => []);
+
+  let rows = uniqueRows(directRows).filter((row) => rowMatchesSection(row, section));
+
+  if (rows.length < offset + limit && (section.genreKeywords?.length || section.languages?.length)) {
+    const broadFilters = [
+      'is_active=eq.true',
+      'poster_url=not.is.null',
+      `rating=gte.${section.minRating ?? 0}`,
+      section.mediaType ? `media_type=eq.${section.mediaType}` : '',
+    ].filter(Boolean);
+    const fallbackRows = await supabaseRest<CatalogRow[]>(
+      `tmdb_catalog?select=${catalogSelect}&${broadFilters.join('&')}&order=${orderByForSection(section)}&limit=${fetchLimit}`,
+      { mode: 'service', next: { revalidate: PUBLIC_CATALOG_REVALIDATE } }
+    ).catch(() => []);
+    rows = uniqueRows([...rows, ...fallbackRows.filter((row) => rowMatchesSection(row, section))]);
+  }
+
+  return rows.slice(offset, offset + limit);
 }
 
 async function rowsForRecentHero(limit = HOME_HERO_LIMIT) {
   const window = recentWindow();
   return supabaseRest<CatalogRow[]>(
-    `tmdb_catalog?select=tmdb_id,media_type,title,title_en,overview,poster_url,backdrop_url,rating,vote_count,popularity,release_year,release_date,genres,language,runtime,source_bucket,sort_score&is_active=eq.true&release_date=gte.${window.from}&release_date=lte.${window.to}&order=release_date.asc&limit=${limit}`,
+    `tmdb_catalog?select=${catalogSelect}&is_active=eq.true&release_date=gte.${window.from}&release_date=lte.${window.to}&order=release_date.asc&limit=${limit}`,
     { mode: 'service', next: { revalidate: PUBLIC_CATALOG_REVALIDATE } }
   ).catch(() => []);
 }
@@ -295,7 +407,7 @@ async function rowsForRecentHero(limit = HOME_HERO_LIMIT) {
 async function rowsForIds(ids: number[]) {
   if (!ids.length) return [];
   return supabaseRest<CatalogRow[]>(
-    `tmdb_catalog?select=tmdb_id,media_type,title,title_en,overview,poster_url,backdrop_url,rating,vote_count,popularity,release_year,release_date,genres,language,runtime,source_bucket,sort_score&is_active=eq.true&tmdb_id=in.(${ids.join(',')})&limit=${ids.length}`,
+    `tmdb_catalog?select=${catalogSelect}&is_active=eq.true&tmdb_id=in.(${ids.join(',')})&limit=${ids.length}`,
     { mode: 'service', next: { revalidate: PUBLIC_CATALOG_REVALIDATE } },
   ).catch(() => []);
 }
@@ -315,7 +427,7 @@ async function rowsForWatchReady(limit: number, offset = 0) {
 
 async function randomCatalogItems(limit: number, offset = 0) {
   const rows = await supabaseRest<CatalogRow[]>(
-    'tmdb_catalog?select=tmdb_id,media_type,title,title_en,overview,poster_url,backdrop_url,rating,vote_count,popularity,release_year,release_date,genres,language,runtime,source_bucket,sort_score&is_active=eq.true&poster_url=not.is.null&order=sort_score.desc.nullslast,rating.desc&limit=240',
+    `tmdb_catalog?select=${catalogSelect}&is_active=eq.true&poster_url=not.is.null&order=sort_score.desc.nullslast,rating.desc&limit=240`,
     { mode: 'service', next: { revalidate: PUBLIC_CATALOG_REVALIDATE } },
   ).catch(() => []);
   const items = await hydrateRows(rows, 0);
@@ -328,9 +440,10 @@ export async function getCatalogSectionItems(slug: string, limit = HOME_SECTION_
   const safeOffset = Math.max(Number(offset) || 0, 0);
   if (slug === 'coming-soon') return getFreshComingSoonItems(safeLimit, safeOffset);
   if (slug === 'random-picks') return randomCatalogItems(safeLimit, safeOffset);
-  const rows = slug === 'watch-ready'
-    ? await rowsForWatchReady(safeLimit, safeOffset)
-    : await rowsForBucket(sectionDefs.find((section) => section.slug === slug)?.slug || 'top-rated', safeLimit, safeOffset);
+  if (slug === 'watch-ready') return hydrateRows(await rowsForWatchReady(safeLimit, safeOffset), safeOffset);
+
+  const section = getCatalogSectionMeta(slug) || getCatalogSectionMeta('top-rated') || homeSectionDefs[0];
+  const rows = await rowsForSection(section, safeLimit, safeOffset);
   return hydrateRows(rows, safeOffset);
 }
 
@@ -367,7 +480,7 @@ export async function searchCatalogItems(query: string, category?: string | null
     }).join(',')})`
     : '';
   const rows = await supabaseRest<CatalogRow[]>(
-    `tmdb_catalog?select=tmdb_id,media_type,title,title_en,overview,poster_url,backdrop_url,rating,vote_count,popularity,release_year,release_date,genres,language,runtime,source_bucket,sort_score&is_active=eq.true${termFilter}&order=sort_score.desc.nullslast,rating.desc&limit=${safeLimit * 3}`,
+    `tmdb_catalog?select=${catalogSelect}&is_active=eq.true${termFilter}&order=sort_score.desc.nullslast,rating.desc&limit=${safeLimit * 3}`,
     { mode: 'service', next: { revalidate: 120 } },
   ).catch(() => []);
   const items = await hydrateRows(rows, 0);
@@ -378,29 +491,34 @@ export async function searchCatalogItems(query: string, category?: string | null
 }
 
 export async function getCatalogHomePayload(): Promise<HomePayload> {
-  const [recentRows, readyRows, rowsByBucket] = await Promise.all([
+  const [recentRows, readyRows, rowsBySection] = await Promise.all([
     rowsForRecentHero(),
     rowsForWatchReady(HOME_SECTION_LIMIT),
-    Promise.all(sectionDefs.map((section) => rowsForBucket(section.slug, section.limit))),
+    Promise.all(homeSectionDefs.map((section) => rowsForSection(section, section.limit, 0))),
   ]);
 
-  const sections: MovieSection[] = sectionDefs
+  const sections: MovieSection[] = homeSectionDefs
     .map((section, sectionIndex) => ({
       slug: section.slug,
       eyebrow: section.eyebrow,
       title: section.title,
       description: section.description,
-      items: rowsByBucket[sectionIndex].map((row, rowIndex) => rowToMovie(row, section.offset + rowIndex)),
+      items: rowsBySection[sectionIndex].map((row, rowIndex) => rowToMovie(row, section.offset + rowIndex)),
     }))
     .filter((section) => section.items.length);
 
   if (!sections.length) return getTmdbHomePayload();
 
   const [hydratedSections, readyItems, recentHeroItemsRaw] = await Promise.all([
-    Promise.all(sections.map(async (section) => ({ ...section, items: await hydrateRows(rowsByBucket[sectionDefs.findIndex((def) => def.slug === section.slug)] || [], sectionDefs.find((def) => def.slug === section.slug)?.offset || 0) }))),
+    Promise.all(sections.map(async (section) => {
+      const sectionDef = homeSectionDefs.find((def) => def.slug === section.slug);
+      const rows = rowsBySection[homeSectionDefs.findIndex((def) => def.slug === section.slug)] || [];
+      return { ...section, items: await hydrateRows(rows, sectionDef?.offset || 0) };
+    })),
     hydrateRows(readyRows, 0),
     hydrateRows(recentRows, 0),
   ]);
+
   const allItems = unique(hydratedSections.flatMap((section) => section.items));
   const recentHeroItems = sortRecentHeroItems(unique(recentHeroItemsRaw).filter((item) => item.backdropUrl && item.rating >= minRating));
   const fallbackHeroItems = allItems.filter((item) => item.backdropUrl && item.rating >= minRating).slice(0, 18);
