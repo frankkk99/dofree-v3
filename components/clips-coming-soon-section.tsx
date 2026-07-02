@@ -1,9 +1,9 @@
 const clipCards = [
-  { badge: 'Shorts', title: 'คลิปสั้นก่อนเลือกดู', meta: '9:16 · ไม่สปอย', tone: 'from-[#e50914]/80 via-[#5a1016]/70 to-black' },
-  { badge: 'สรุปหนัง', title: 'เล่าเรื่องย่อแบบเร็ว', meta: 'ช่วยตัดสินใจ', tone: 'from-[#6d28d9]/80 via-[#251050]/75 to-black' },
-  { badge: 'มีสปอย', title: 'สปอยก่อนดู', meta: 'กดเปิดเองเท่านั้น', tone: 'from-[#f59e0b]/75 via-[#522f08]/75 to-black' },
-  { badge: 'ตัวอย่าง', title: 'ตัวอย่างพากย์ไทย', meta: 'เล่นในเว็บ', tone: 'from-[#0ea5e9]/75 via-[#083344]/75 to-black' },
-  { badge: 'ฉากเด็ด', title: 'ฉากที่ทำให้อยากดู', meta: 'คัดโดยแอดมิน', tone: 'from-[#10b981]/70 via-[#063d2b]/75 to-black' },
+  { badge: 'Shorts', title: 'คลิปสั้นก่อนเลือกดู', meta: 'ดูฟีลก่อนตัดสินใจ', tone: 'from-[#e50914]/80 via-[#5a1016]/70 to-black' },
+  { badge: 'สรุปหนัง', title: 'เล่าเร็วเข้าใจง่าย', meta: 'ช่วยเลือกเรื่อง', tone: 'from-[#6d28d9]/80 via-[#251050]/75 to-black' },
+  { badge: 'มีสปอย', title: 'สปอยแบบกดเปิดเอง', meta: 'มีคำเตือนก่อนดู', tone: 'from-[#f59e0b]/75 via-[#522f08]/75 to-black' },
+  { badge: 'ตัวอย่าง', title: 'ตัวอย่างพากย์ไทย', meta: 'ดูในเว็บ', tone: 'from-[#0ea5e9]/75 via-[#083344]/75 to-black' },
+  { badge: 'ฉากเด็ด', title: 'ฉากที่ทำให้อยากดู', meta: 'คัดให้ตัดสินใจเร็ว', tone: 'from-[#10b981]/70 via-[#063d2b]/75 to-black' },
 ];
 
 function ComingSoonCard({ card, index }: { card: typeof clipCards[number]; index: number }) {
@@ -31,29 +31,23 @@ function ComingSoonCard({ card, index }: { card: typeof clipCards[number]; index
 
 export function ClipsComingSoonSection({ standalone = false }: { standalone?: boolean }) {
   return (
-    <section className={`${standalone ? 'mx-auto max-w-[1440px] px-4 py-8 md:px-7 md:py-12' : ''}`}>
-      <div className="overflow-hidden rounded-[30px] border border-white/10 bg-[radial-gradient(circle_at_18%_0%,rgba(229,9,20,0.18),transparent_24rem),linear-gradient(135deg,rgba(255,255,255,0.065),rgba(255,255,255,0.025))] p-4 shadow-[0_26px_90px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.08)] md:rounded-[36px] md:p-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+    <section className={`${standalone ? 'mx-auto max-w-[1440px] px-4 py-5 md:px-7 md:py-8' : ''}`}>
+      <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_18%_0%,rgba(229,9,20,0.18),transparent_24rem),linear-gradient(135deg,rgba(255,255,255,0.065),rgba(255,255,255,0.025))] p-4 shadow-[0_26px_90px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.08)] md:rounded-[34px] md:p-5">
+        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div className="max-w-3xl">
             <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[#e50914]/85">Coming Soon</p>
-            <h2 className="mt-1 text-[26px] font-black leading-none tracking-[-0.06em] text-white md:text-5xl">ไม่รู้จะดูอะไรดี?</h2>
-            <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-white/56 md:text-base md:leading-7">
-              เตรียมเปิดหมวดคลิปสั้น สรุปหนัง ตัวอย่าง และสปอยแบบกดเปิดเอง เพื่อช่วยเลือกเรื่องก่อนรับชม
+            <h2 className="mt-1 text-[24px] font-black leading-none tracking-[-0.06em] text-white md:text-4xl">ไม่รู้จะดูอะไรดี?</h2>
+            <p className="mt-2 max-w-2xl text-xs font-semibold leading-5 text-white/52 md:text-sm md:leading-6">
+              ดูคลิปสั้น ตัวอย่าง สรุป และสปอยแบบมีคำเตือนก่อนเลือกเรื่องที่จะดู
             </p>
           </div>
-          <a href="/clips" className="inline-flex h-11 items-center justify-center rounded-full bg-white/[0.09] px-5 text-xs font-black text-white/70 ring-1 ring-white/10 transition hover:bg-white/[0.14] hover:text-white md:h-12 md:px-6">
-            ดูหน้าฟีเจอร์ ›
+          <a href="/clips" className="inline-flex h-10 items-center justify-center rounded-full bg-white/[0.09] px-4 text-xs font-black text-white/70 ring-1 ring-white/10 transition hover:bg-white/[0.14] hover:text-white md:h-11 md:px-5">
+            ดูฟีเจอร์ ›
           </a>
         </div>
 
-        <div className="movie-rail mt-5 flex gap-3 overflow-x-auto pb-2 md:mt-7 md:gap-4">
+        <div className="movie-rail mt-4 flex gap-3 overflow-x-auto pb-1 md:mt-5 md:gap-4">
           {clipCards.map((card, index) => <ComingSoonCard key={card.badge} card={card} index={index} />)}
-        </div>
-
-        <div className="mt-4 grid gap-2 text-[11px] font-bold text-white/42 md:grid-cols-3 md:text-xs">
-          <p className="rounded-2xl bg-black/24 px-3 py-2 ring-1 ring-white/8">สปอยจะถูกซ่อนหลังคำเตือน ไม่เล่นเองอัตโนมัติ</p>
-          <p className="rounded-2xl bg-black/24 px-3 py-2 ring-1 ring-white/8">แอดมินจะเปิด/ปิดการแสดงได้จากหลังบ้าน</p>
-          <p className="rounded-2xl bg-black/24 px-3 py-2 ring-1 ring-white/8">รองรับ YouTube URL แบบ embed เล่นในเว็บ</p>
         </div>
       </div>
     </section>
