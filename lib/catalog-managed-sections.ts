@@ -1,4 +1,5 @@
 import { getCatalogHomePayload, getCatalogSectionItems, HOME_SECTION_LIMIT, HOME_SECTION_LOAD_LIMIT, type CatalogSectionDef, catalogSectionDefs } from './catalog-home';
+import { episodeWatchHref, getSeriesEpisodeSummaries } from './series-episodes';
 import { mediaDetailPath } from './seo';
 import { supabaseRest } from './supabase-rest';
 import { TMDB_RELEASE_SECTION_LIMIT } from './tmdb-release-window';
@@ -42,6 +43,8 @@ type AdminCategoryRow = {
   media_type?: string | null;
   tmdb_params?: Record<string, unknown> | null;
 };
+
+type EpisodeSummaryLookup = Awaited<ReturnType<typeof getSeriesEpisodeSummaries>>;
 
 const catalogSelect = 'tmdb_id,media_type,title,title_en,overview,poster_url,backdrop_url,rating,vote_count,popularity,release_year,release_date,genres,language,runtime,source_bucket,sort_score';
 const fallbackImage = 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1400&q=80';
@@ -89,7 +92,7 @@ function adminRowToSection(row: AdminCategoryRow, index = 0): ManagedSection {
     slug: row.slug,
     eyebrow: fallback?.eyebrow || String(params.eyebrow || row.slug),
     title: row.title_th || fallback?.title || row.slug,
-    description: row.subtitle_th || fallback?.description || 'หมวดจากหลังบ้านที่เชื่อมกับข้อมูล catalog ที่ Sync เข้ามาแล้ว',
+    description: row.subtitle_th || fallback?.description || 'คัดเรื่องน่าดูไว้ให้เลือกตามอารมณ์',
     limit: numberValue(params.limit) || fallback?.limit || HOME_SECTION_LIMIT,
     offset: numberValue(params.offset) || fallback?.offset || index * 160,
     mediaType,
@@ -152,9 +155,10 @@ function watchKey(mediaType: MediaType, id: number) {
   return `${mediaType}-${id}`;
 }
 
-function badges(item: Pick<MovieItem, 'rating' | 'language' | 'isWatchReady'>) {
+function badges(item: Pick<MovieItem, 'rating' | 'language' | 'isWatchReady' | 'mediaType' | 'episodeCount'>) {
   const items: string[] = [];
-  if (item.isWatchReady) items.push('พร้อมดู', 'HD');
+  if (item.mediaType === 'tv' && item.episodeCount) items.push(`พร้อมดู ${item.episodeCount} ตอน`, 'HD');
+  else if (item.isWatchReady) items.push('พร้อมดู', 'HD');
   if (item.rating >= 8) items.push('8+');
   if (item.rating >= 6.5) items.push('6.5+');
   if (item.language === 'th') items.push('พากย์ไทย');
@@ -176,13 +180,16 @@ async function fetchWatchLinks(rows: CatalogRow[]) {
   return map;
 }
 
-function rowToMovie(row: CatalogRow, link: WatchLinkRecord | undefined, index: number): MovieItem {
+function rowToMovie(row: CatalogRow, link: WatchLinkRecord | undefined, index: number, episodeSummary?: EpisodeSummaryLookup extends Map<number, infer T> ? T : never): MovieItem {
   const rating = Number(row.rating || 0);
-  const watchUrl = normalizeDrivePreviewUrl(link?.watch_url);
+  const id = Number(row.tmdb_id);
+  const movieWatchUrl = normalizeDrivePreviewUrl(link?.watch_url);
   const trailerUrl = normalizeDrivePreviewUrl(link?.trailer_url);
   const title = link?.title_th || link?.title || row.title_en || row.title || `รายการ ${row.tmdb_id}`;
+  const episodeCount = row.media_type === 'tv' ? Number(episodeSummary?.episodeCount || 0) || undefined : undefined;
+  const isPlayable = row.media_type === 'tv' ? Boolean(episodeSummary?.firstWatchUrl) : Boolean(movieWatchUrl);
   const item: MovieItem = {
-    id: Number(row.tmdb_id),
+    id,
     mediaType: row.media_type,
     title,
     titleEn: link?.title || row.title_en || row.title || undefined,
@@ -194,18 +201,22 @@ function rowToMovie(row: CatalogRow, link: WatchLinkRecord | undefined, index: n
     genres: row.genres || [],
     runtime: row.runtime || undefined,
     language: row.language || undefined,
-    status: watchUrl ? 'published' : rating >= 8 ? 'review' : 'draft',
-    isWatchReady: Boolean(watchUrl),
-    watchUrl: watchUrl ? mediaDetailPath(row.media_type, row.tmdb_id, title, 'watch') : undefined,
+    status: isPlayable ? 'published' : rating >= 8 ? 'review' : 'draft',
+    isWatchReady: isPlayable,
+    watchUrl: isPlayable ? row.media_type === 'tv' ? episodeWatchHref('tv', id, undefined, title) : mediaDetailPath('movie', id, title, 'watch') : undefined,
     trailerUrl,
-    label: watchUrl ? 'พร้อมดู' : rating >= 8 ? '8+' : '6.5+',
+    episodeCount,
+    label: isPlayable ? episodeCount ? `พร้อมดู ${episodeCount} ตอน` : 'พร้อมดู' : rating >= 8 ? '8+' : '6.5+',
   };
   return { ...item, badges: badges(item), searchText: rowText(row) } as MovieItem;
 }
 
 async function hydrateManagedRows(rows: CatalogRow[], startIndex = 0) {
-  const links = await fetchWatchLinks(rows);
-  return rows.map((row, index) => rowToMovie(row, links.get(watchKey(row.media_type, row.tmdb_id)), startIndex + index));
+  const [links, episodeSummaries] = await Promise.all([
+    fetchWatchLinks(rows),
+    getSeriesEpisodeSummaries(rows.filter((row) => row.media_type === 'tv').map((row) => Number(row.tmdb_id))),
+  ]);
+  return rows.map((row, index) => rowToMovie(row, links.get(watchKey(row.media_type, row.tmdb_id)), startIndex + index, episodeSummaries.get(Number(row.tmdb_id)) as never));
 }
 
 async function rowsForManagedSection(section: CatalogSectionDef, limit: number, offset = 0) {
