@@ -67,6 +67,12 @@ export function AdminFloatingTopbar({
           >
             Sync
           </a>
+          <a
+            href="/admin/clips"
+            className="hidden h-9 shrink-0 items-center rounded-xl bg-white/[0.08] px-3 text-xs font-black text-white/72 ring-1 ring-white/10 transition hover:bg-white/[0.14] hover:text-white md:inline-flex"
+          >
+            Clips
+          </a>
           <div className="ml-auto min-w-0 text-right text-[10px] font-bold text-white/42 max-sm:hidden">
             <span className="inline-block max-w-[220px] truncate align-bottom">{accountLabel(session)}</span>
             <span className="ml-2 rounded-full bg-white/[0.08] px-2 py-1 text-white/58">{roleLabel(session)}</span>
@@ -94,6 +100,10 @@ export function AdminFloatingTopbar({
                 <a href="/admin/sync" className="rounded-xl px-3 py-2 text-xs font-black text-red-100 hover:bg-[#e50914]/18 hover:text-white">
                   <span className="block">Sync Catalog</span>
                   <span className="mt-0.5 block text-[10px] font-semibold leading-4 text-white/40">นำเข้า/อัปเดต TMDB catalog</span>
+                </a>
+                <a href="/admin/clips" className="rounded-xl px-3 py-2 text-xs font-black text-white/72 hover:bg-white/[0.08] hover:text-white">
+                  <span className="block">Clips / Spoil</span>
+                  <span className="mt-0.5 block text-[10px] font-semibold leading-4 text-white/40">เตรียมจัดการคลิปสั้นและสปอย</span>
                 </a>
                 <button
                   type="button"
