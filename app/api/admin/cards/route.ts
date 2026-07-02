@@ -43,6 +43,11 @@ function mediaTypeValue(value: unknown) {
   return value === 'movie' || value === 'tv' ? value : undefined;
 }
 
+function mediaTypeFromParams(params: Record<string, unknown>, rowMediaType?: string | null, fallback?: string) {
+  if (Object.prototype.hasOwnProperty.call(params, 'mediaType')) return mediaTypeValue(params.mediaType);
+  return mediaTypeValue(rowMediaType) || mediaTypeValue(fallback);
+}
+
 function inList(values: string[]) {
   return values.map((value) => encodeURIComponent(value)).join(',');
 }
@@ -76,7 +81,7 @@ function categoryMapping(category: CategoryRow | null, fallbackSlug?: string | n
   const params = category?.tmdb_params || {};
   const sourceBuckets = optionalStringArray(params, 'sourceBuckets', defaults?.sourceBuckets || (slug ? [slug] : [])) || [];
   const languages = optionalStringArray(params, 'languages', defaults?.languages || []) || [];
-  const mediaType = mediaTypeValue(params.mediaType) || mediaTypeValue(category?.media_type) || defaults?.mediaType;
+  const mediaType = mediaTypeFromParams(params, category?.media_type, defaults?.mediaType);
   return { slug, sourceBuckets, languages, mediaType };
 }
 
