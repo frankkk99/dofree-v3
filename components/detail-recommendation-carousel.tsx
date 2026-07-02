@@ -13,12 +13,30 @@ export function DetailRecommendationCarousel({ current, items }: { current: Movi
   const lastFrameRef = useRef<number>(0);
   const interactionPausedUntilRef = useRef(0);
   const [hoverPaused, setHoverPaused] = useState(false);
+  const [visible, setVisible] = useState(false);
   const safeItems = useMemo(() => items.filter((item) => `${item.mediaType}-${item.id}` !== `${current.mediaType}-${current.id}`), [current.id, current.mediaType, items]);
   const carouselItems = useMemo(() => (safeItems.length > 4 ? [...safeItems, ...safeItems] : safeItems), [safeItems]);
 
   useEffect(() => {
     const rail = railRef.current;
-    if (!rail || carouselItems.length < 4) return;
+    if (!rail || visible) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      setVisible(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) setVisible(true);
+    }, { rootMargin: '120px 0px' });
+
+    observer.observe(rail);
+    return () => observer.disconnect();
+  }, [visible]);
+
+  useEffect(() => {
+    const rail = railRef.current;
+    if (!rail || !visible || carouselItems.length < 4) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     function pauseAfterInteraction() {
       interactionPausedUntilRef.current = performance.now() + RESUME_DELAY;
@@ -61,7 +79,7 @@ export function DetailRecommendationCarousel({ current, items }: { current: Movi
       rail.removeEventListener('touchmove', pauseAfterInteraction);
       rail.removeEventListener('wheel', pauseAfterInteraction);
     };
-  }, [carouselItems.length, hoverPaused, safeItems.length]);
+  }, [carouselItems.length, hoverPaused, safeItems.length, visible]);
 
   if (!safeItems.length) {
     return (
@@ -73,20 +91,20 @@ export function DetailRecommendationCarousel({ current, items }: { current: Movi
 
   return (
     <div
-        ref={railRef}
-        onMouseEnter={() => setHoverPaused(true)}
-        onMouseLeave={() => setHoverPaused(false)}
-        className="movie-rail flex w-full max-w-full min-w-0 gap-2.5 overflow-x-auto overflow-y-hidden pb-2 sm:gap-3 md:gap-4"
-        style={{ WebkitOverflowScrolling: 'touch' }}
-      >
-        {carouselItems.map((movie, index) => (
-          <MovieCard
-            key={`detail-recommend-${movie.mediaType}-${movie.id}-${index}`}
-            item={movie}
-            compact
-            priorityBadge={index % 2 === 0 ? 'แนะนำ' : undefined}
-          />
-        ))}
+      ref={railRef}
+      onMouseEnter={() => setHoverPaused(true)}
+      onMouseLeave={() => setHoverPaused(false)}
+      className="movie-rail flex w-full max-w-full min-w-0 gap-2.5 overflow-x-auto overflow-y-hidden pb-2 sm:gap-3 md:gap-4"
+      style={{ WebkitOverflowScrolling: 'touch' }}
+    >
+      {carouselItems.map((movie, index) => (
+        <MovieCard
+          key={`detail-recommend-${movie.mediaType}-${movie.id}-${index}`}
+          item={movie}
+          compact
+          priorityBadge={index % 2 === 0 ? 'แนะนำ' : undefined}
+        />
+      ))}
     </div>
   );
 }
