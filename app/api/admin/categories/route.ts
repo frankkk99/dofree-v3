@@ -2,6 +2,8 @@
 import { NextResponse } from 'next/server';
 import { recordAdminAuditLog } from '@/lib/admin-audit';
 import { requireAdminAccess } from '@/lib/admin-auth';
+import { catalogSectionDefs } from '@/lib/catalog-home';
+import { catalogSectionParams } from '@/lib/catalog-managed-sections';
 import { supabaseRest, supabaseRestCount } from '@/lib/supabase-rest';
 
 type CategoryRow = {
@@ -11,7 +13,7 @@ type CategoryRow = {
   subtitle_th?: string | null;
   tmdb_path?: string;
   media_type?: string;
-  tmdb_params?: Record<string, unknown>;
+  tmdb_params?: Record<string, unknown> | null;
   pages?: number;
   enabled: boolean;
   autoplay?: boolean;
@@ -21,30 +23,46 @@ type CategoryRow = {
   visible_card_count?: number;
 };
 
-type DefaultCategory = [string, string, string, number];
+type DefaultCategory = {
+  slug: string;
+  title_th: string;
+  subtitle_th: string;
+  sort_order: number;
+  media_type: string;
+  tmdb_params: Record<string, unknown>;
+};
+
+const fixedDefaultCategories: DefaultCategory[] = [
+  {
+    slug: 'watch-ready',
+    title_th: 'แนะนำสำหรับคุณ',
+    subtitle_th: 'รายการที่มีลิงก์พร้อมรับชม',
+    sort_order: 0,
+    media_type: 'both',
+    tmdb_params: { special: 'watch-ready', sourceBuckets: [], languages: [], genreKeywords: [], minRating: 0, sort: 'recent', eyebrow: 'พร้อมรับชม' },
+  },
+  {
+    slug: 'random-picks',
+    title_th: 'สุ่มแนะนำรอบนี้',
+    subtitle_th: 'สลับรายการจาก catalog ที่ Sync เข้ามาแล้ว',
+    sort_order: 5,
+    media_type: 'both',
+    tmdb_params: { special: 'random-picks', sourceBuckets: [], languages: [], genreKeywords: [], minRating: 6.5, sort: 'score', eyebrow: 'Random' },
+  },
+];
+
 const defaultCategories: DefaultCategory[] = [
-  ['watch-ready', 'แนะนำสำหรับคุณ', 'พร้อมรับชม', 0],
-  ['top-rated', 'คะแนน 6.5+ น่าดู', 'คะแนนสูง', 10],
-  ['popular', 'ยอดนิยมคะแนนดี', 'กำลังนิยม', 20],
-  ['now-playing', 'ภาพยนตร์มาใหม่คะแนนดี', 'มาใหม่', 30],
-  ['series', 'ซีรีส์น่าติดตาม', 'ซีรีส์', 40],
-  ['thai', 'หนังไทยคะแนนดี', 'Local Focus', 50],
-  ['action', 'แอ็กชัน', 'Action', 60],
-  ['adventure', 'ผจญภัย', 'Adventure', 70],
-  ['animation', 'แอนิเมชัน', 'Animation', 80],
-  ['drama', 'ดราม่า', 'Drama', 90],
-  ['thriller', 'ระทึกขวัญ', 'Thriller', 100],
-  ['horror', 'สยองขวัญ', 'Horror', 110],
-  ['comedy', 'คอมเมดี้', 'Comedy', 120],
-  ['sci-fi', 'ไซไฟ', 'Sci-Fi', 130],
-  ['romance', 'โรแมนติก', 'Romance', 140],
-  ['fantasy', 'แฟนตาซี', 'Fantasy', 150],
-  ['crime', 'อาชญากรรม', 'Crime', 160],
-  ['mystery', 'ลึกลับ', 'Mystery', 170],
-  ['korea', 'หนังเกาหลี', 'Korea', 180],
-  ['japan', 'หนังญี่ปุ่น', 'Japan', 190],
-  ['china', 'หนังจีน', 'China', 200],
-  ['documentary', 'สารคดี', 'Documentary', 210],
+  ...fixedDefaultCategories,
+  ...catalogSectionDefs
+    .filter((section) => section.showOnHome !== false)
+    .map((section, index) => ({
+      slug: section.slug,
+      title_th: section.title,
+      subtitle_th: section.description,
+      sort_order: index * 10 + 10,
+      media_type: section.mediaType || 'both',
+      tmdb_params: catalogSectionParams(section),
+    })),
 ];
 
 function text(value: unknown) {
@@ -55,18 +73,60 @@ function slugify(value: unknown) {
   return text(value)?.toLowerCase().replace(/[^a-z0-9-]/g, '-');
 }
 
+function arrayOfStrings(value: unknown) {
+  return Array.isArray(value) ? value.map((item) => String(item).trim()).filter(Boolean) : [];
+}
+
+function mediaTypeValue(value: unknown) {
+  return value === 'movie' || value === 'tv' ? value : undefined;
+}
+
+function inList(values: string[]) {
+  return values.map((value) => encodeURIComponent(value)).join(',');
+}
+
+function paramsForCategory(category: CategoryRow) {
+  const defaults = catalogSectionDefs.find((section) => section.slug === category.slug);
+  const params = category.tmdb_params || {};
+  return {
+    special: text(params.special),
+    sourceBuckets: arrayOfStrings(params.sourceBuckets).length ? arrayOfStrings(params.sourceBuckets) : defaults?.sourceBuckets || [category.slug],
+    languages: arrayOfStrings(params.languages).length ? arrayOfStrings(params.languages) : defaults?.languages || [],
+    mediaType: mediaTypeValue(params.mediaType) || mediaTypeValue(category.media_type) || defaults?.mediaType,
+    minRating: Number.isFinite(Number(params.minRating)) ? Number(params.minRating) : defaults?.minRating,
+  };
+}
+
 async function admin(request: Request) {
   const auth = await requireAdminAccess(request);
   if (auth.ok === true) return { actor: auth };
   return { response: NextResponse.json({ ok: false, error: auth.error }, { status: auth.status }) };
 }
 
+function countPathForCategory(category: CategoryRow, onlyActive = false) {
+  const params = paramsForCategory(category);
+  const active = onlyActive ? '&is_active=eq.true' : '';
+
+  if (params.special === 'watch-ready' || category.slug === 'watch-ready') return `admin_movie_links?is_active=eq.true&watch_url=not.is.null&select=tmdb_id`;
+  if (params.special === 'random-picks' || category.slug === 'random-picks') return `tmdb_catalog?poster_url=not.is.null${active}&select=tmdb_id`;
+
+  const filters = [`select=tmdb_id`];
+  if (onlyActive) filters.push('is_active=eq.true');
+  if (Number.isFinite(params.minRating)) filters.push(`rating=gte.${params.minRating}`);
+  if (params.mediaType) filters.push(`media_type=eq.${params.mediaType}`);
+  if (params.sourceBuckets.length === 1) filters.push(`source_bucket=eq.${encodeURIComponent(params.sourceBuckets[0])}`);
+  if (params.sourceBuckets.length > 1) filters.push(`source_bucket=in.(${inList(params.sourceBuckets)})`);
+  if (!params.sourceBuckets.length && params.languages.length === 1) filters.push(`language=eq.${encodeURIComponent(params.languages[0])}`);
+  if (!params.sourceBuckets.length && params.languages.length > 1) filters.push(`language=in.(${inList(params.languages)})`);
+
+  return `tmdb_catalog?${filters.join('&')}`;
+}
+
 async function attachCounts(categories: CategoryRow[]) {
   const counted = await Promise.all(categories.map(async (category) => {
-    const encodedSlug = encodeURIComponent(category.slug);
     const [cardCount, visibleCardCount] = await Promise.all([
-      supabaseRestCount(`tmdb_catalog?source_bucket=eq.${encodedSlug}`, { mode: 'service' }).catch(() => 0),
-      supabaseRestCount(`tmdb_catalog?source_bucket=eq.${encodedSlug}&is_active=eq.true`, { mode: 'service' }).catch(() => 0),
+      supabaseRestCount(countPathForCategory(category, false), { mode: 'service' }).catch(() => 0),
+      supabaseRestCount(countPathForCategory(category, true), { mode: 'service' }).catch(() => 0),
     ]);
     return { ...category, card_count: cardCount, visible_card_count: visibleCardCount };
   }));
@@ -74,27 +134,27 @@ async function attachCounts(categories: CategoryRow[]) {
 }
 
 async function seedDefaults(request: Request, actor: unknown) {
-  const rows = defaultCategories.map(([slug, title, subtitle, order]) => ({
-    slug,
-    title_th: title,
-    subtitle_th: subtitle,
-    tmdb_path: `/${slug}`,
-    media_type: slug === 'series' ? 'tv' : 'movie',
-    tmdb_params: {},
+  const rows = defaultCategories.map((category) => ({
+    slug: category.slug,
+    title_th: category.title_th,
+    subtitle_th: category.subtitle_th,
+    tmdb_path: `/${category.slug}`,
+    media_type: category.media_type,
+    tmdb_params: category.tmdb_params,
     pages: 1,
     enabled: true,
     autoplay: false,
-    sort_order: order,
+    sort_order: category.sort_order,
   }));
   const saved = await supabaseRest<CategoryRow[]>('admin_categories?on_conflict=slug', { method: 'POST', mode: 'service', prefer: 'resolution=merge-duplicates,return=representation', body: rows });
-  await recordAdminAuditLog({ request, actor, action: 'categories.seed', entityType: 'admin_categories', entityId: 'defaults', afterData: { count: saved.length } });
+  await recordAdminAuditLog({ request, actor, action: 'categories.seed_sync_profiles', entityType: 'admin_categories', entityId: 'sync-defaults', afterData: { count: saved.length } });
   return attachCounts(saved);
 }
 
 export async function GET(request: Request) {
   const access = await admin(request);
   if (access.response) return access.response;
-  const categories = await supabaseRest<CategoryRow[]>('admin_categories?select=id,slug,title_th,subtitle_th,enabled,autoplay,sort_order,updated_at&order=sort_order.asc', { mode: 'service' }).catch(() => []);
+  const categories = await supabaseRest<CategoryRow[]>('admin_categories?select=id,slug,title_th,subtitle_th,enabled,autoplay,sort_order,media_type,tmdb_params,updated_at&order=sort_order.asc', { mode: 'service' }).catch(() => []);
   return NextResponse.json({ ok: true, categories: await attachCounts(categories) });
 }
 
@@ -113,8 +173,8 @@ export async function POST(request: Request) {
     title_th: title,
     subtitle_th: text(body?.subtitle_th) || null,
     tmdb_path: text(body?.tmdb_path) || `/${slug}`,
-    media_type: text(body?.media_type) || 'movie',
-    tmdb_params: {},
+    media_type: text(body?.media_type) || 'both',
+    tmdb_params: body?.tmdb_params && typeof body.tmdb_params === 'object' ? body.tmdb_params : { sourceBuckets: [slug], languages: [], genreKeywords: [], minRating: 0, sort: 'popular' },
     pages: Number(body?.pages || 1),
     enabled: body?.enabled !== false,
     autoplay: Boolean(body?.autoplay),
@@ -142,6 +202,7 @@ export async function PATCH(request: Request) {
   if (typeof body?.enabled === 'boolean') patch.enabled = body.enabled;
   if (typeof body?.autoplay === 'boolean') patch.autoplay = body.autoplay;
   if (body?.sort_order !== undefined && targetSlugs.length === 1) patch.sort_order = Number(body.sort_order);
+  if (body?.tmdb_params && typeof body.tmdb_params === 'object' && targetSlugs.length === 1) patch.tmdb_params = body.tmdb_params;
 
   const path = targetSlugs.length === 1
     ? `admin_categories?slug=eq.${encodeURIComponent(targetSlugs[0])}`
