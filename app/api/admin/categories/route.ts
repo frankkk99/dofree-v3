@@ -12,7 +12,7 @@ type CategoryRow = {
   title_th: string;
   subtitle_th?: string | null;
   tmdb_path?: string;
-  media_type?: string | null;
+  media_type?: string;
   tmdb_params?: Record<string, unknown> | null;
   pages?: number;
   enabled: boolean;
@@ -28,7 +28,7 @@ type DefaultCategory = {
   title_th: string;
   subtitle_th: string;
   sort_order: number;
-  media_type: string | null;
+  media_type: string;
   tmdb_params: Record<string, unknown>;
 };
 
@@ -38,16 +38,16 @@ const fixedDefaultCategories: DefaultCategory[] = [
     title_th: 'แนะนำสำหรับคุณ',
     subtitle_th: 'รายการที่มีลิงก์พร้อมรับชม',
     sort_order: 0,
-    media_type: null,
-    tmdb_params: { special: 'watch-ready', sourceBuckets: [], languages: [], genreKeywords: [], minRating: 0, sort: 'recent', eyebrow: 'พร้อมรับชม' },
+    media_type: 'movie',
+    tmdb_params: { special: 'watch-ready', sourceBuckets: [], languages: [], genreKeywords: [], mediaType: null, minRating: 0, sort: 'recent', eyebrow: 'พร้อมรับชม' },
   },
   {
     slug: 'random-picks',
     title_th: 'สุ่มแนะนำรอบนี้',
     subtitle_th: 'สลับรายการจาก catalog ที่ Sync เข้ามาแล้ว',
     sort_order: 5,
-    media_type: null,
-    tmdb_params: { special: 'random-picks', sourceBuckets: [], languages: [], genreKeywords: [], minRating: 6.5, sort: 'score', eyebrow: 'Random' },
+    media_type: 'movie',
+    tmdb_params: { special: 'random-picks', sourceBuckets: [], languages: [], genreKeywords: [], mediaType: null, minRating: 6.5, sort: 'score', eyebrow: 'Random' },
   },
 ];
 
@@ -60,7 +60,7 @@ const defaultCategories: DefaultCategory[] = [
       title_th: section.title,
       subtitle_th: section.description,
       sort_order: index * 10 + 10,
-      media_type: section.mediaType || null,
+      media_type: section.mediaType || 'movie',
       tmdb_params: catalogSectionParams(section),
     })),
 ];
@@ -85,6 +85,11 @@ function mediaTypeValue(value: unknown) {
   return value === 'movie' || value === 'tv' ? value : undefined;
 }
 
+function mediaTypeFromParams(params: Record<string, unknown>, rowMediaType?: string, fallback?: string) {
+  if (Object.prototype.hasOwnProperty.call(params, 'mediaType')) return mediaTypeValue(params.mediaType);
+  return mediaTypeValue(rowMediaType) || mediaTypeValue(fallback);
+}
+
 function inList(values: string[]) {
   return values.map((value) => encodeURIComponent(value)).join(',');
 }
@@ -96,7 +101,7 @@ function paramsForCategory(category: CategoryRow) {
     special: text(params.special),
     sourceBuckets: optionalStringArray(params, 'sourceBuckets', defaults?.sourceBuckets || [category.slug]) || [],
     languages: optionalStringArray(params, 'languages', defaults?.languages || []) || [],
-    mediaType: mediaTypeValue(params.mediaType) || mediaTypeValue(category.media_type) || defaults?.mediaType,
+    mediaType: mediaTypeFromParams(params, category.media_type, defaults?.mediaType),
     minRating: Number.isFinite(Number(params.minRating)) ? Number(params.minRating) : defaults?.minRating,
   };
 }
@@ -177,8 +182,8 @@ export async function POST(request: Request) {
     title_th: title,
     subtitle_th: text(body?.subtitle_th) || null,
     tmdb_path: text(body?.tmdb_path) || `/${slug}`,
-    media_type: mediaTypeValue(body?.media_type) || null,
-    tmdb_params: body?.tmdb_params && typeof body.tmdb_params === 'object' ? body.tmdb_params : { sourceBuckets: [slug], languages: [], genreKeywords: [], minRating: 0, sort: 'popular' },
+    media_type: mediaTypeValue(body?.media_type) || 'movie',
+    tmdb_params: body?.tmdb_params && typeof body.tmdb_params === 'object' ? body.tmdb_params : { sourceBuckets: [slug], languages: [], genreKeywords: [], mediaType: null, minRating: 0, sort: 'popular' },
     pages: Number(body?.pages || 1),
     enabled: body?.enabled !== false,
     autoplay: Boolean(body?.autoplay),
