@@ -1,0 +1,6 @@
+Trigger production deployment for public-facing wording cleanup.
+
+Expected visible changes:
+- Search page speaks only to viewers
+- No technical wording on public search UI
+- Public category labels and descriptions use viewing-friendly wording
