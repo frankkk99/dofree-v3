@@ -17,28 +17,52 @@ type AnalyticsEventInput = {
   search_query?: unknown;
   sectionSlug?: unknown;
   section_slug?: unknown;
+  adCode?: unknown;
+  ad_code?: unknown;
   referrer?: unknown;
   visitorId?: unknown;
   visitor_id?: unknown;
+  sessionId?: unknown;
+  session_id?: unknown;
+  userId?: unknown;
+  user_id?: unknown;
   device?: unknown;
+  browser?: unknown;
+  os?: unknown;
+  utmSource?: unknown;
+  utm_source?: unknown;
+  utmMedium?: unknown;
+  utm_medium?: unknown;
+  utmCampaign?: unknown;
+  utm_campaign?: unknown;
   metadata?: unknown;
 };
 
 const allowedEvents = new Set([
   'page_view',
+  'session_start',
+  'heartbeat',
   'movie_detail_open',
+  'tv_detail_open',
   'detail_open',
   'watch_click',
+  'trailer_click',
   'search',
+  'search_no_result',
+  'search_result_click',
   'favorite_add',
   'favorite_remove',
+  'favorite_click',
   'actor_open',
+  'clip_open',
+  'ad_view',
+  'ad_click',
+  'ad_close',
   'login_success',
   'signup_success',
   'premium_click',
   'report_broken_link',
   'category_click',
-  'favorite_click',
   'history_click',
   'link_report',
   'admin_view',
@@ -67,18 +91,43 @@ function cleanNumber(value: unknown) {
   return Number.isFinite(number) && number > 0 ? Math.round(number) : null;
 }
 
+function cleanUuid(value: unknown) {
+  const text = cleanText(value, 80);
+  return text && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(text) ? text : null;
+}
+
 function cleanMetadata(value: unknown) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
   return Object.fromEntries(
     Object.entries(value as Record<string, unknown>)
       .filter(([key]) => /^[a-z0-9_:-]{1,40}$/i.test(key))
-      .slice(0, 20)
-      .map(([key, entry]) => [key, typeof entry === 'string' ? entry.slice(0, 240) : entry])
+      .slice(0, 30)
+      .map(([key, entry]) => [key, typeof entry === 'string' ? entry.slice(0, 300) : entry])
   );
 }
 
 function userAgent(request: Request) {
-  return (request.headers.get('user-agent') || '').slice(0, 400) || null;
+  return (request.headers.get('user-agent') || '').slice(0, 500) || null;
+}
+
+function inferBrowser(ua: string) {
+  const text = ua.toLowerCase();
+  if (text.includes('edg/')) return 'edge';
+  if (text.includes('fb_iab') || text.includes('fbav')) return 'facebook_in_app';
+  if (text.includes('line/')) return 'line_in_app';
+  if (text.includes('crios') || text.includes('chrome/')) return 'chrome';
+  if (text.includes('safari/') && !text.includes('chrome/')) return 'safari';
+  if (text.includes('firefox/')) return 'firefox';
+  return 'other';
+}
+
+function inferOs(ua: string) {
+  const text = ua.toLowerCase();
+  if (text.includes('iphone') || text.includes('ipad') || text.includes('ios')) return 'ios';
+  if (text.includes('android')) return 'android';
+  if (text.includes('windows')) return 'windows';
+  if (text.includes('mac os')) return 'macos';
+  return 'other';
 }
 
 function clientDevice(input: AnalyticsEventInput, request: Request) {
@@ -98,24 +147,34 @@ export async function POST(request: Request) {
   const eventName = cleanEventName(body.eventName ?? body.event_name);
   if (!eventName) return NextResponse.json({ ok: true, skipped: true });
 
+  const ua = userAgent(request);
+  const searchQuery = cleanText(body.searchQuery ?? body.search_query, 220);
+  const mediaId = cleanNumber(body.mediaId ?? body.media_id);
   const record = {
     event_name: eventName,
     event_type: eventName,
-    page_path: cleanText(body.pagePath ?? body.page_path, 500),
-    path: cleanText(body.pagePath ?? body.page_path, 500),
-    page_title: cleanText(body.pageTitle ?? body.page_title, 240),
+    page_path: cleanText(body.pagePath ?? body.page_path, 700),
+    path: cleanText(body.pagePath ?? body.page_path, 700),
+    page_title: cleanText(body.pageTitle ?? body.page_title, 260),
     media_type: cleanMediaType(body.mediaType ?? body.media_type),
-    media_id: cleanNumber(body.mediaId ?? body.media_id),
-    tmdb_id: cleanNumber(body.mediaId ?? body.media_id),
-    title: cleanText(body.title, 240),
-    search_query: cleanText(body.searchQuery ?? body.search_query, 180),
-    query: cleanText(body.searchQuery ?? body.search_query, 180),
-    section_slug: cleanText(body.sectionSlug ?? body.section_slug, 80),
-    referrer: cleanText(body.referrer, 500),
-    visitor_id: cleanText(body.visitorId ?? body.visitor_id, 120),
-    session_id: cleanText(body.visitorId ?? body.visitor_id, 120),
+    media_id: mediaId,
+    tmdb_id: mediaId,
+    title: cleanText(body.title, 260),
+    search_query: searchQuery,
+    query: searchQuery,
+    section_slug: cleanText(body.sectionSlug ?? body.section_slug, 100),
+    ad_code: cleanText(body.adCode ?? body.ad_code, 80),
+    referrer: cleanText(body.referrer, 700),
+    visitor_id: cleanText(body.visitorId ?? body.visitor_id, 160),
+    session_id: cleanText(body.sessionId ?? body.session_id ?? body.visitorId ?? body.visitor_id, 160),
+    user_id: cleanUuid(body.userId ?? body.user_id),
     device: clientDevice(body, request),
-    user_agent: userAgent(request),
+    browser: cleanText(body.browser, 60) || (ua ? inferBrowser(ua) : null),
+    os: cleanText(body.os, 60) || (ua ? inferOs(ua) : null),
+    utm_source: cleanText(body.utmSource ?? body.utm_source, 120),
+    utm_medium: cleanText(body.utmMedium ?? body.utm_medium, 120),
+    utm_campaign: cleanText(body.utmCampaign ?? body.utm_campaign, 160),
+    user_agent: ua,
     metadata: cleanMetadata(body.metadata),
   };
 
@@ -155,8 +214,6 @@ export async function POST(request: Request) {
 
       return NextResponse.json({ ok: true, legacy: true });
     } catch (error) {
-      // Analytics must never break the public website. If the migration/env is missing,
-      // report a soft success so the browser can continue normally.
       return NextResponse.json({ ok: true, disabled: true, reason: error instanceof Error ? error.message : firstError instanceof Error ? firstError.message : 'analytics unavailable' });
     }
   }
