@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { AdminAuthGuard } from '@/components/admin-auth-guard';
 import {
   mediaClipLanguages,
@@ -202,7 +202,7 @@ export default function AdminClipsPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  async function saveClip(event: React.FormEvent<HTMLFormElement>) {
+  async function saveClip(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
     setMessage('');
