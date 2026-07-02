@@ -21,6 +21,15 @@ type SectionItemsResponse = {
   hasMore?: boolean;
 };
 
+function SearchIcon({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.15">
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
+    </svg>
+  );
+}
+
 function uniqueMovies(items: MovieItem[]) {
   const map = new Map<string, MovieItem>();
   for (const item of items) map.set(`${item.mediaType}-${item.id}`, item);
@@ -276,7 +285,7 @@ function SmartSearchModal({ open, onClose }: { open: boolean; onClose: () => voi
 
         <form onSubmit={submitSearch} className="mt-5 rounded-[24px] bg-white/[0.055] p-2 ring-1 ring-white/10 md:mt-6 md:flex md:items-center md:gap-2">
           <label className="flex h-12 items-center gap-3 rounded-[18px] bg-black/36 px-4 ring-1 ring-white/8 md:h-14 md:flex-1">
-            <span className="text-white/46">⌕</span>
+            <SearchIcon className="h-5 w-5 shrink-0 text-white/46" />
             <input ref={inputRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ลองพิมพ์: หนังผีเกาหลี, Marvel, พากย์ไทย" className="min-w-0 flex-1 bg-transparent text-sm font-bold text-white outline-none placeholder:text-white/34 md:text-base" />
           </label>
           <button type="submit" className="mt-2 h-12 w-full rounded-[18px] bg-[#e50914] text-sm font-black text-white shadow-[0_16px_44px_rgba(229,9,20,0.30)] md:mt-0 md:h-14 md:w-32">ค้นหา</button>
@@ -342,7 +351,7 @@ export function HomeExperienceV3({ home }: { home: HomePayload }) {
           <button type="button" onClick={() => setSmartSearchOpen(true)} className="ml-auto inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-white/[0.09] px-3 text-[11px] font-black text-white/82 ring-1 ring-white/10 transition hover:bg-[#e50914] hover:text-white md:ml-0 md:h-11 md:px-4 md:text-xs xl:px-5">
             <span className="max-[360px]:hidden">พิมพ์ผิดก็หาเจอ</span>
             <span className="min-[361px]:hidden">ค้นหา</span>
-            <span>🔍</span>
+            <SearchIcon className="h-4 w-4 shrink-0 md:h-4.5 md:w-4.5" />
           </button>
           <div className="flex items-center gap-3 md:gap-5"><div data-dofree-menu-host="true" className="grid h-9 w-9 place-items-center md:h-12 md:w-12" /></div>
         </nav>
