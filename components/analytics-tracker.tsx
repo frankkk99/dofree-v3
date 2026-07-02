@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { mediaIdFromSlug } from '@/lib/seo';
 
 type AnalyticsEvent = {
@@ -133,14 +133,12 @@ function currentPayload(eventName: string): AnalyticsEvent {
 
 function postAnalytics(payload: AnalyticsEvent) {
   const body = JSON.stringify(payload);
-  const url = '/api/analytics';
-
   if ('sendBeacon' in navigator) {
     const blob = new Blob([body], { type: 'application/json' });
-    if (navigator.sendBeacon(url, blob)) return;
+    if (navigator.sendBeacon('/api/analytics', blob)) return;
   }
 
-  void fetch(url, {
+  void fetch('/api/analytics', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body,
@@ -149,18 +147,17 @@ function postAnalytics(payload: AnalyticsEvent) {
 }
 
 function parseMediaPath(pathname: string) {
-  const [mediaType, id] = pathname.split('/').filter(Boolean);
+  const parts = pathname.split('/').filter(Boolean);
+  const [mediaType, id] = parts;
   const mediaId = Number(mediaIdFromSlug(id || ''));
-  if ((mediaType === 'movie' || mediaType === 'tv') && mediaId) {
-    return { mediaType, mediaId } as const;
-  }
+  if ((mediaType === 'movie' || mediaType === 'tv') && mediaId) return { mediaType, mediaId } as const;
+
   if (mediaType === 'watch') {
-    const [, watchMediaType, watchId] = pathname.split('/').filter(Boolean);
+    const [, watchMediaType, watchId] = parts;
     const watchMediaId = Number(mediaIdFromSlug(watchId || ''));
-    if ((watchMediaType === 'movie' || watchMediaType === 'tv') && watchMediaId) {
-      return { mediaType: watchMediaType, mediaId: watchMediaId } as const;
-    }
+    if ((watchMediaType === 'movie' || watchMediaType === 'tv') && watchMediaId) return { mediaType: watchMediaType, mediaId: watchMediaId } as const;
   }
+
   return null;
 }
 
@@ -181,11 +178,7 @@ function titleFromElement(element: Element | null) {
 
 function trackEvent(eventName: string, payload: Partial<AnalyticsEvent> = {}) {
   const base = currentPayload(eventName);
-  postAnalytics({
-    ...base,
-    ...payload,
-    metadata: { ...(base.metadata || {}), ...(payload.metadata || {}) },
-  });
+  postAnalytics({ ...base, ...payload, metadata: { ...(base.metadata || {}), ...(payload.metadata || {}) } });
 }
 
 function trackPageView() {
@@ -193,14 +186,10 @@ function trackPageView() {
   const searchQuery = new URLSearchParams(window.location.search).get('q') || undefined;
   postAnalytics(payload);
 
-  if (window.location.pathname === '/search' && searchQuery) {
-    postAnalytics({ ...payload, eventName: 'search', searchQuery });
-  }
+  if (window.location.pathname === '/search' && searchQuery) postAnalytics({ ...payload, eventName: 'search', searchQuery });
 
   const media = parseMediaPath(window.location.pathname);
-  if (media) {
-    postAnalytics({ ...payload, eventName: media.mediaType === 'tv' ? 'tv_detail_open' : 'movie_detail_open', ...media, title: document.title });
-  }
+  if (media) postAnalytics({ ...payload, eventName: media.mediaType === 'tv' ? 'tv_detail_open' : 'movie_detail_open', ...media, title: document.title });
 }
 
 function trackClick(event: MouseEvent) {
@@ -239,12 +228,7 @@ function trackClick(event: MouseEvent) {
       const url = new URL(href, window.location.origin);
       const media = parseMediaPath(url.pathname);
       if (media) {
-        postAnalytics({
-          ...currentPayload(url.pathname.startsWith('/watch/') ? 'watch_click' : media.mediaType === 'tv' ? 'tv_detail_open' : 'movie_detail_open'),
-          ...media,
-          title: titleFromElement(link),
-          metadata: { href: url.pathname },
-        });
+        postAnalytics({ ...currentPayload(url.pathname.startsWith('/watch/') ? 'watch_click' : media.mediaType === 'tv' ? 'tv_detail_open' : 'movie_detail_open'), ...media, title: titleFromElement(link), metadata: { href: url.pathname } });
         return;
       }
 
@@ -305,9 +289,7 @@ function trackClick(event: MouseEvent) {
 function trackSubmit(event: SubmitEvent) {
   const target = event.target;
   if (!(target instanceof HTMLFormElement)) return;
-
-  const formData = new FormData(target);
-  const query = String(formData.get('q') || '').trim();
+  const query = String(new FormData(target).get('q') || '').trim();
   if (query) trackEvent('search', { searchQuery: query });
 }
 
@@ -347,19 +329,20 @@ function setupAdViewObserver() {
 
 export function AnalyticsTracker() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const lastPageRef = useRef('');
 
   useEffect(() => {
     const session = getSessionId();
     if (session.isNew) trackEvent('session_start');
     window.dofreeTrack = trackEvent;
-    window.addEventListener('dofree-analytics-event', ((event: Event) => {
+
+    const customListener = ((event: Event) => {
       const detail = event instanceof CustomEvent ? event.detail : null;
       if (!detail?.eventName) return;
       trackEvent(detail.eventName, detail.payload || {});
-    }) as EventListener);
+    }) as EventListener;
 
+    window.addEventListener('dofree-analytics-event', customListener);
     document.addEventListener('click', trackClick, true);
     document.addEventListener('submit', trackSubmit, true);
     const cleanupAdObserver = setupAdViewObserver();
@@ -368,6 +351,7 @@ export function AnalyticsTracker() {
     }, 45_000);
 
     return () => {
+      window.removeEventListener('dofree-analytics-event', customListener);
       document.removeEventListener('click', trackClick, true);
       document.removeEventListener('submit', trackSubmit, true);
       cleanupAdObserver?.();
@@ -377,11 +361,11 @@ export function AnalyticsTracker() {
   }, []);
 
   useEffect(() => {
-    const key = `${pathname || ''}?${searchParams?.toString() || ''}`;
+    const key = typeof window !== 'undefined' ? `${window.location.pathname}${window.location.search}` : pathname || '';
     if (!pathname || lastPageRef.current === key) return;
     lastPageRef.current = key;
     trackPageView();
-  }, [pathname, searchParams]);
+  }, [pathname]);
 
   return null;
 }
