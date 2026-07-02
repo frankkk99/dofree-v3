@@ -77,6 +77,10 @@ function arrayOfStrings(value: unknown) {
   return Array.isArray(value) ? value.map((item) => String(item).trim()).filter(Boolean) : [];
 }
 
+function optionalStringArray(source: Record<string, unknown>, key: string, fallback?: string[]) {
+  return Array.isArray(source[key]) ? arrayOfStrings(source[key]) : fallback;
+}
+
 function mediaTypeValue(value: unknown) {
   return value === 'movie' || value === 'tv' ? value : undefined;
 }
@@ -90,8 +94,8 @@ function paramsForCategory(category: CategoryRow) {
   const params = category.tmdb_params || {};
   return {
     special: text(params.special),
-    sourceBuckets: arrayOfStrings(params.sourceBuckets).length ? arrayOfStrings(params.sourceBuckets) : defaults?.sourceBuckets || [category.slug],
-    languages: arrayOfStrings(params.languages).length ? arrayOfStrings(params.languages) : defaults?.languages || [],
+    sourceBuckets: optionalStringArray(params, 'sourceBuckets', defaults?.sourceBuckets || [category.slug]) || [],
+    languages: optionalStringArray(params, 'languages', defaults?.languages || []) || [],
     mediaType: mediaTypeValue(params.mediaType) || mediaTypeValue(category.media_type) || defaults?.mediaType,
     minRating: Number.isFinite(Number(params.minRating)) ? Number(params.minRating) : defaults?.minRating,
   };
